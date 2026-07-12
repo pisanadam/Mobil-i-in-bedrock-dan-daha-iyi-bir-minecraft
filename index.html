@@ -163,21 +163,28 @@
     <button id="chatsend">➤</button>
   </div>
 </div>
+<button class="btn hud" id="uidone" style="display:none; left:50%; top:14px; transform:translateX(-50%); width:auto; padding:0 20px; border-radius:12px; font-size:15px; z-index:45; background:#57a832">✔ Bitti</button>
 <div id="deathscreen">
   <h1>☠️ Öldün!</h1>
   <button id="respawnbtn">Yeniden Doğ</button>
 </div>
 <div class="hud" id="menu">
   <h3>Ayarlar</h3>
-  <label>Görüş mesafesi</label>
+  <label>Görüş mesafesi (chunk)</label>
   <select id="rdist">
-    <option value="2">Yakın (hızlı)</option>
-    <option value="3" selected>Normal</option>
-    <option value="4">Uzak</option>
+    <option value="2">2 — Yakın (hızlı)</option>
+    <option value="3" selected>3 — Normal</option>
+    <option value="4">4 — Uzak</option>
+    <option value="5">5 — Çok Uzak</option>
+    <option value="6">6 — Maksimum (yavaş!)</option>
   </select>
+  <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
+  <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
   <label>Ses</label>
   <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
-  <button id="mpbtn" style="margin-top:14px">🎮 Çok Oyunculu</button>
+  <button id="uibtn" style="margin-top:10px">🎛 Tuşları Taşı</button>
+  <button id="uireset">↩ Tuş Yerlerini Sıfırla</button>
+  <button id="mpbtn" style="margin-top:10px">🎮 Çok Oyunculu</button>
   <button id="newworld" class="danger" style="margin-top:8px">🌍 Yeni Dünya (siler!)</button>
   <button id="closemenu" style="margin-top:8px">Kapat</button>
 </div>
@@ -621,29 +628,73 @@ function vnoise3(x, y, z) {
   const l3 = n(0,0,1)+(n(1,0,1)-n(0,0,1))*u, l4 = n(0,1,1)+(n(1,1,1)-n(0,1,1))*u;
   return (l1+(l2-l1)*v) + ((l3+(l4-l3)*v) - (l1+(l2-l1)*v))*w;
 }
+/* --- 21 biyom: 18 Minecraft + 3 özel --- */
+// tree tipleri: 1 meşe, 2 ladin, 3 huş, 4 kiraz, 5 kaktüs, 6 orman(jungle), 7 akasya, 8 koyu meşe, 10 buz dikeni, 11 kristal
+const BIOME_DEFS = {
+  plains:         {n:'Ova', top:'grass_block', tree:[[1,1]], tp:0.2, gr:0.07, fl:0.015},
+  forest:         {n:'Orman', top:'grass_block', tree:[[1,0.7],[3,0.3]], tp:0.75, gr:0.05, fl:0.01, mush:0.004},
+  birch_forest:   {n:'Huş Ormanı', top:'grass_block', tree:[[3,1]], tp:0.7, gr:0.05, fl:0.012},
+  dark_forest:    {n:'Koyu Orman', top:'grass_block', tree:[[8,1]], tp:0.85, gr:0.03, mush:0.014},
+  flower_forest:  {n:'Çiçekli Orman', top:'grass_block', tree:[[1,1]], tp:0.3, gr:0.05, fl:0.17},
+  cherry_grove:   {n:'Kiraz Korusu', top:'grass_block', tree:[[4,1]], tp:0.6, gr:0.06, fl:0.04},
+  jungle:         {n:'Yağmur Ormanı', top:'grass_block', tree:[[6,0.85],[1,0.15]], tp:0.85, gr:0.09, melon:0.005},
+  savanna:        {n:'Savan', top:'grass_block', tree:[[7,1]], tp:0.25, gr:0.11, dead:0.008},
+  swamp:          {n:'Bataklık', top:'grass_block', tree:[[1,1]], tp:0.35, gr:0.06, mush:0.012, mud:0.2},
+  mushroom_fields:{n:'Mantar Tarlası', top:'mycelium', tree:[], tp:0, mush:0.06},
+  desert:         {n:'Çöl', top:'sand', under:'sandstone', tree:[[5,1]], tp:0.12, dead:0.015},
+  badlands:       {n:'Çorak Topraklar', top:'red_sand', layers:1, tree:[], tp:0, dead:0.012},
+  taiga:          {n:'Tayga', top:'grass_block', tree:[[2,1]], tp:0.6, gr:0.05, mush:0.005},
+  snowy_taiga:    {n:'Karlı Tayga', top:'snow_block', tree:[[2,1]], tp:0.5},
+  snowy_plains:   {n:'Karlı Ova', top:'snow_block', tree:[[2,1]], tp:0.05},
+  ice_spikes:     {n:'Buz Dikenleri', top:'snow_block', tree:[[10,1]], tp:0.35},
+  mountains:      {n:'Dağlar', top:'grass_block', stoneTop:1, tree:[[2,1]], tp:0.12, gr:0.03},
+  beach:          {n:'Kumsal', top:'sand', tree:[], tp:0},
+  crystal_valley: {n:'Kristal Vadisi ✨', top:'calcite', under:'calcite', tree:[[11,1]], tp:0.3},
+  rainbow_hills:  {n:'Gökkuşağı Tepeleri 🌈', rainbow:1, tree:[[4,0.5],[3,0.5]], tp:0.06},
+  obsidian_waste: {n:'Obsidyen Çorak 🌑', top:'blackstone', under:'blackstone', tree:[], tp:0, dead:0.012, magma:0.04, lavaSea:1},
+};
+const RAINBOW = ['red_concrete','orange_concrete','yellow_concrete','lime_concrete','cyan_concrete','light_blue_concrete','purple_concrete','magenta_concrete'];
+const TERRA_LAYERS = ['terracotta','orange_terracotta','red_terracotta','brown_terracotta','yellow_terracotta','white_terracotta','orange_terracotta'];
+function biomeAt(wx, wz) {
+  const t = fbm(wx*0.0028+900, wz*0.0028-70);   // sıcaklık
+  const m = fbm(wx*0.004+555, wz*0.004-333);    // nem
+  const w = fbm(wx*0.0055-40, wz*0.0055+120);   // tuhaflık
+  if (w > 0.8) return t < 0.42 ? 'crystal_valley' : t < 0.58 ? 'rainbow_hills' : 'obsidian_waste';
+  if (w < 0.16) return 'mushroom_fields';
+  if (t < 0.3) return m < 0.38 ? 'snowy_plains' : m < 0.5 ? 'ice_spikes' : m < 0.68 ? 'snowy_taiga' : 'taiga';
+  if (t > 0.7) return m < 0.32 ? 'desert' : m < 0.46 ? 'badlands' : m < 0.62 ? 'savanna' : 'jungle';
+  if (m < 0.26) return 'plains';
+  if (m < 0.36) return w > 0.62 ? 'mountains' : 'plains';
+  if (m < 0.46) return 'flower_forest';
+  if (m < 0.56) return 'forest';
+  if (m < 0.64) return 'birch_forest';
+  if (m < 0.7) return 'cherry_grove';
+  if (m < 0.78) return 'dark_forest';
+  return 'swamp';
+}
 function heightAt(wx, wz) {
   const n = fbm(wx*0.009+31, wz*0.009+7);
   const m = fbm(wx*0.035+900, wz*0.035+400);
   let h = 15 + n*n*40 + m*7;
+  const b = biomeAt(wx, wz);
+  if (b === 'mountains') h += 16*Math.max(0, n-0.25);
+  else if (b === 'swamp') h = WATER_Y + (h-WATER_Y)*0.3 + 0.8;
+  else if (b === 'badlands') h = 20 + Math.floor(Math.max(0,h-16)/7)*7 + m*2;
+  else if (b === 'rainbow_hills') h += 7*Math.sin(n*9);
   return Math.max(2, Math.min(58, h|0));
-}
-function biomeAt(wx, wz) {
-  const m = fbm(wx*0.004+555, wz*0.004-333);
-  return m < 0.37 ? 0 : m > 0.66 ? 2 : 1; // 0 çöl, 1 ova, 2 orman
 }
 function treeAt(wx, wz) {
   const cxx = Math.floor(wx/5), czz = Math.floor(wz/5);
   const r = hash2(cxx*7919+3, czz*6337+11);
-  const bio = biomeAt(wx, wz);
-  const p = bio===2 ? 0.75 : bio===1 ? 0.28 : 0.12;
-  if (r > p) return 0;
+  const bd = BIOME_DEFS[biomeAt(cxx*5+2, czz*5+2)];
+  if (!bd.tree.length || r > bd.tp) return 0;
   const ox = Math.floor(hash2(cxx*13+1, czz*17+2)*3)+1;
   const oz = Math.floor(hash2(cxx*29+5, czz*31+8)*3)+1;
   if ((wx - cxx*5) !== ox || (wz - czz*5) !== oz) return 0;
-  if (bio === 0) return 5; // kaktüs
   const t = hash2(cxx*41+7, czz*43+9);
-  if (bio === 2) return t<0.35 ? 2 : t<0.55 ? 3 : t<0.62 ? 4 : 1; // ladin/huş/kiraz/meşe
-  return t < 0.85 ? 1 : 3;
+  let acc = 0;
+  for (const [ty, wgt] of bd.tree) { acc += wgt; if (t < acc) return ty; }
+  return bd.tree[0][0];
 }
 function oreAt(wx, y, wz, deep) {
   const v = hash3(wx*3+7, y*5+1, wz*7+3);
@@ -684,9 +735,26 @@ function genTree(data, x0, z0, wx, wz, g, type) {
     for (let i=1;i<=n;i++) put(wx-x0, g+i, wz-z0, BID.cactus);
     return;
   }
-  const woods = {1:['oak_log','oak_leaves'],2:['spruce_log','spruce_leaves'],3:['birch_log','birch_leaves'],4:['cherry_log','cherry_leaves']};
+  if (type === 10) { // buz dikeni
+    const th = 5 + (hash2(wx,wz*7)*6|0);
+    for (let dy=1; dy<=th; dy++) {
+      const rad = dy < 3 ? 1 : 0;
+      for (let dx=-rad; dx<=rad; dx++) for (let dz=-rad; dz<=rad; dz++)
+        putF(wx+dx-x0, g+dy, wz+dz-z0, BID.ice);
+    }
+    return;
+  }
+  if (type === 11) { // parlayan kristal (özel biyom)
+    const th = 2 + (hash2(wx,wz*7)*2|0);
+    for (let dy=1; dy<=th; dy++) putF(wx-x0, g+dy, wz-z0, BID.sea_lantern);
+    for (let dy=th+1; dy<=th+2; dy++) putF(wx-x0, g+dy, wz-z0, BID.glass);
+    return;
+  }
+  const woods = {1:['oak_log','oak_leaves'],2:['spruce_log','spruce_leaves'],3:['birch_log','birch_leaves'],
+    4:['cherry_log','cherry_leaves'],6:['jungle_log','jungle_leaves'],7:['acacia_log','acacia_leaves'],
+    8:['dark_oak_log','dark_oak_leaves']};
   const [logId, leafId] = woods[type].map(k=>BID[k]);
-  const th = (type===2?6:4) + (hash2(wx*3, wz*5)*2|0);
+  let th = (type===2?6:type===6?8:4) + (hash2(wx*3, wz*5)*2|0);
   if (type === 2) { // ladin: koni
     for (let dy=1; dy<=th; dy++) putF(wx-x0, g+dy, wz-z0, logId);
     for (let dy=3; dy<=th+1; dy++) {
@@ -699,7 +767,16 @@ function genTree(data, x0, z0, wx, wz, g, type) {
     }
     return;
   }
-  const wide = type===4 ? 1 : 0;
+  if (type === 7) { // akasya: düz tepeli
+    for (let dy=1; dy<=th; dy++) putF(wx-x0, g+dy, wz-z0, logId);
+    for (let dx=-3; dx<=3; dx++) for (let dz=-3; dz<=3; dz++) {
+      if (Math.abs(dx)+Math.abs(dz) > 4) continue;
+      put(wx+dx-x0, g+th, wz+dz-z0, leafId);
+      if (Math.abs(dx)<2 && Math.abs(dz)<2) put(wx+dx-x0, g+th+1, wz+dz-z0, leafId);
+    }
+    return;
+  }
+  const wide = (type===4 || type===8) ? 1 : 0;
   for (let dy=1; dy<=th; dy++) putF(wx-x0, g+dy, wz-z0, logId);
   for (let dy=th-2; dy<=th+1; dy++) {
     const rad = (dy > th-1 ? 1 : 2) + (dy===th-1?wide:0);
@@ -792,32 +869,49 @@ function genOverworld(cx, cz) {
   const data = new Uint8Array(CH*H*CH);
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
-    const wx = x0+x, wz = z0+z, h = heightAt(wx,wz), bio = biomeAt(wx,wz);
+    const wx = x0+x, wz = z0+z, h = heightAt(wx,wz);
+    let bio = biomeAt(wx,wz);
+    let bd = BIOME_DEFS[bio];
+    if (h <= WATER_Y+1 && !bd.lavaSea && !bd.rainbow && bio !== 'badlands' && bio !== 'crystal_valley') { bio = 'beach'; bd = BIOME_DEFS.beach; }
     const deepY = 9 + (hash2(wx,wz)*4|0);
+    // üst blok seçimi
+    let topB;
+    if (bd.rainbow) topB = BID[RAINBOW[Math.abs(h>>1) % RAINBOW.length]];
+    else if (bd.stoneTop && h > 38) topB = h > 48 ? BID.snow_block : BID.stone;
+    else if (h > 50) topB = BID.snow_block;
+    else topB = BID[bd.top];
+    const underB = bd.rainbow ? topB : (bd.under ? BID[bd.under] : (bio==='beach' ? BID.sand : BID.dirt));
     for (let y=0; y<=h; y++) {
       let b;
       const deep = y < deepY;
       if (y === 0) b = BID.bedrock;
       else if (y > 3 && y < h-3 && vnoise3(wx*0.09, y*0.11, wz*0.09) > 0.73) b = 0; // mağara
-      else if (y === h) b = bio===0 ? BID.sand : (h > 46 ? BID.snow_block : (h <= WATER_Y+1 ? BID.sand : BID.grass_block));
-      else if (y > h-3) b = bio===0 ? BID.sandstone : (h <= WATER_Y+1 ? BID.sand : BID.dirt);
+      else if (y === h) b = topB;
+      else if (bd.layers && y > h-8) b = BID[TERRA_LAYERS[y % TERRA_LAYERS.length]];
+      else if (y > h-3) b = underB;
       else b = oreAt(wx,y,wz,deep) || (deep ? BID.deepslate : BID.stone);
       data[bidx(x,y,z)] = b;
     }
-    for (let y=h+1; y<=WATER_Y; y++) data[bidx(x,y,z)] = BID.water;
-    // yüzey bitkileri
-    if (h > WATER_Y && h < 46 && data[bidx(x,h,z)]) {
+    const fluid = bd.lavaSea ? BID.lava : BID.water;
+    for (let y=h+1; y<=WATER_Y; y++) data[bidx(x,y,z)] = fluid;
+    // yüzey süsleri
+    if (h > WATER_Y && h < 50 && data[bidx(x,h,z)] && h+1 < H) {
       const k = hash2(wx*13+5, wz*17+8);
       const top = data[bidx(x,h,z)];
-      if (top === BID.grass_block && h+1 < H) {
-        if (k < 0.07) data[bidx(x,h+1,z)] = BID.short_grass;
-        else if (k < 0.085) data[bidx(x,h+1,z)] = BID[FLOWERS[(hash2(wx,wz*9)*6)|0]];
-        else if (k < 0.087) data[bidx(x,h+1,z)] = BID.pumpkin;
-        else if (bio===2 && k > 0.9 && k < 0.915) data[bidx(x,h+1,z)] = k<0.907 ? BID.brown_mushroom : BID.red_mushroom;
+      const put1 = b => data[bidx(x,h+1,z)] = b;
+      if (bd.mud && k > 0.5 && k < 0.5+bd.mud && top === BID.grass_block) data[bidx(x,h,z)] = BID.mud;
+      else if (bd.magma && k < bd.magma) data[bidx(x,h,z)] = BID.magma_block;
+      else if (top === BID.grass_block || top === BID.mycelium) {
+        let acc = 0;
+        if (bd.gr && k < (acc += bd.gr)) put1(BID.short_grass);
+        else if (bd.fl && k < (acc += bd.fl)) put1(BID[FLOWERS[(hash2(wx,wz*9)*6)|0]]);
+        else if (bd.mush && k < (acc += bd.mush)) put1(hash2(wx,wz*3) < 0.5 ? BID.brown_mushroom : BID.red_mushroom);
+        else if (bd.melon && k < (acc += bd.melon)) put1(BID.melon);
+        else if (k > 0.995) put1(BID.pumpkin);
       }
-      if (top === BID.sand && bio===0 && k < 0.03 && h+1 < H) data[bidx(x,h+1,z)] = BID.dead_bush;
+      else if ((top === BID.sand || top === BID.red_sand || top === BID.blackstone) && bd.dead && k < bd.dead) put1(BID.dead_bush);
     }
-    if (h === WATER_Y+1 && hash2(wx*7,wz*11) < 0.10 && data[bidx(x,h,z)]) {
+    if (h === WATER_Y+1 && !bd.lavaSea && hash2(wx*7,wz*11) < 0.10 && data[bidx(x,h,z)]) {
       const n = 2 + (hash2(wx,wz)*2|0);
       for (let i=1;i<=n && h+i<H;i++) data[bidx(x,h+i,z)] = BID.sugar_cane;
     }
@@ -826,7 +920,7 @@ function genOverworld(cx, cz) {
     const t = treeAt(wx,wz);
     if (!t) continue;
     const g = heightAt(wx,wz);
-    if (g <= WATER_Y+1 || g > 45) continue;
+    if (g <= WATER_Y || g > 52) continue;
     genTree(data, x0, z0, wx, wz, g, t);
   }
   const e = edits[ckey(cx,cz)];
@@ -1474,6 +1568,7 @@ function updateTnt(dt) {
 /* ================= PARTİKÜLLER ================= */
 let parts = [];
 function emitParts(x, y, z, rgb, n, spd, life) {
+  if (!shaderOn) return;
   for (let i=0; i<n && parts.length<300; i++)
     parts.push({ x, y, z, vx:(Math.random()-0.5)*spd, vy:Math.random()*spd*0.9, vz:(Math.random()-0.5)*spd,
       t: life*(0.6+Math.random()*0.8), c:[rgb[0]/255, rgb[1]/255, rgb[2]/255], s: 0.06+Math.random()*0.08 });
@@ -2117,7 +2212,7 @@ function runCmd(line) {
   const [c, ...a] = line.slice(1).split(/\s+/);
   const cmd = c.toLowerCase();
   if (cmd === 'help' || cmd === 'yardım') {
-    chatMsg('Komutlar: /give <eşya> [adet], /effect <efekt> [sn] [seviye], /effect clear, /gamemode <c|s>, /summon <canlı> [adet], /dim <overworld|nether|end>, /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
+    chatMsg('Komutlar: /give <eşya> [adet], /effect <efekt> [sn] [seviye], /effect clear, /tick rate <n>|freeze|unfreeze, /gamemode <c|s>, /summon <canlı> [adet], /dim <overworld|nether|end>, /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
     chatMsg('Efektler: ' + Object.keys(EFFECTS).slice(0,14).join(', ') + '…');
     chatMsg('Canlılar: ' + Object.keys(MOBS).join(', '));
   } else if (cmd === 'give') {
@@ -2169,6 +2264,17 @@ function runCmd(line) {
     if (!key) return chatMsg('✖ Kural yok: ' + r);
     RULES[key] = v === 'true' || v === '1';
     chatMsg(`✔ ${key} = ${RULES[key]}`);
+  } else if (cmd === 'tick') {
+    const sub = (a[0]||'').toLowerCase();
+    if (sub === 'rate') {
+      const n = parseFloat(a[1]);
+      if (isNaN(n) || n < 2 || n > 200) return chatMsg('Kullanım: /tick rate <2-200> (varsayılan 20)');
+      tickScale = n/20;
+      chatMsg(`✔ Tick hızı: ${n} (oyun ${tickScale}× hızda — canlılar, gün döngüsü, efektler)`);
+    } else if (sub === 'freeze' || sub === 'dondur') { tickFrozen = true; chatMsg('✔ Oyun donduruldu (oyuncu hariç). /tick unfreeze ile çöz'); }
+    else if (sub === 'unfreeze' || sub === 'çöz' || sub === 'coz') { tickFrozen = false; chatMsg('✔ Oyun çözüldü'); }
+    else if (sub === 'query' || sub === 'sorgu' || !sub) chatMsg(`Tick: ${Math.round(tickScale*20)}/sn${tickFrozen?' (DONMUŞ)':''}`);
+    else chatMsg('Kullanım: /tick rate <sayı> | freeze | unfreeze | query');
   } else if (cmd === 'effect' || cmd === 'efekt') {
     const v = (a[0]||'').toLowerCase();
     if (v === 'clear' || v === 'temizle') { clearEffects(); return chatMsg('✔ Tüm efektler temizlendi'); }
@@ -2231,6 +2337,17 @@ const breakbar = $('breakbar');
 function startBreaking() { breaking = true; breakSt = null; breakbar.style.display = 'block'; }
 function stopBreaking() { breaking = false; breakSt = null; breakbar.style.display = 'none'; breakbar.firstElementChild.style.width = '0%'; }
 window.addEventListener('pointerdown', (e) => {
+  if (uiEdit) {
+    if (e.target && e.target.closest && e.target.closest('#uidone')) return;
+    for (const id of MOVABLE) {
+      const el = $(id), r = el.getBoundingClientRect();
+      if (e.clientX >= r.left-8 && e.clientX <= r.right+8 && e.clientY >= r.top-8 && e.clientY <= r.bottom+8) {
+        uiDrag = el; uiOffX = e.clientX - r.left; uiOffY = e.clientY - r.top;
+        return;
+      }
+    }
+    return;
+  }
   if (P.dead || uiOpen()) return;
   const tg = e.target;
   if (tg && tg.closest && tg.closest('#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#splash,.panel,#chatpanel,#deathscreen')) return;
@@ -2259,6 +2376,13 @@ window.addEventListener('pointerdown', (e) => {
   }
 });
 window.addEventListener('pointermove', (e) => {
+  if (uiEdit) {
+    if (uiDrag) {
+      uiDrag.style.left = (e.clientX - uiOffX)+'px'; uiDrag.style.top = (e.clientY - uiOffY)+'px';
+      uiDrag.style.right = 'auto'; uiDrag.style.bottom = 'auto'; uiDrag.style.transform = 'none';
+    }
+    return;
+  }
   if (e.pointerId === joyId) {
     let dx = e.clientX-joyOX, dy = e.clientY-joyOY;
     const l = Math.hypot(dx,dy), max = 52;
@@ -2287,6 +2411,7 @@ function endPointer(e) {
   }
 }
 window.addEventListener('pointerup', (e) => {
+  if (uiEdit) { if (uiDrag) { uiSavePos(); uiDrag = null; } return; }
   if (e.pointerType === 'mouse') { if (breaking) stopBreaking(); }
   endPointer(e);
 });
@@ -2431,8 +2556,52 @@ $('menubtn').addEventListener('pointerdown', (e) => {
   e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
-$('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; });
-$('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; });
+let shaderOn = true;
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn })); } catch(e) {} }
+$('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; saveOpts(); });
+$('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
+$('shadersel').addEventListener('change', (e) => { shaderOn = e.target.value === '1'; saveOpts(); });
+/* --- tuş yerlerini taşıma --- */
+const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','hotbar'];
+let uiEdit = false, uiDrag = null, uiOffX = 0, uiOffY = 0;
+function uiApply() {
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem('ck2_ui')||'{}'); } catch(e) {}
+  for (const id in saved) {
+    const el = $(id); if (!el) continue;
+    el.style.left = saved[id][0]+'px'; el.style.top = saved[id][1]+'px';
+    el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.transform = 'none';
+  }
+}
+function uiSavePos() {
+  const o = {}; try { Object.assign(o, JSON.parse(localStorage.getItem('ck2_ui')||'{}')); } catch(e) {}
+  if (uiDrag) { const r = uiDrag.getBoundingClientRect(); o[uiDrag.id] = [Math.round(r.left), Math.round(r.top)]; }
+  try { localStorage.setItem('ck2_ui', JSON.stringify(o)); } catch(e) {}
+}
+$('uibtn').addEventListener('click', () => {
+  menu.style.display = 'none'; closePanels();
+  uiEdit = true;
+  $('uidone').style.display = 'flex';
+  $('downbtn').style.display = 'flex';
+  MOVABLE.forEach(id => { const el = $(id); el.style.pointerEvents = 'none'; el.style.outline = '2px dashed #ffd24a'; });
+  toast('🎛 Tuşları sürükle, bitince ✔ Bitti\'ye bas');
+});
+$('uidone').addEventListener('click', () => {
+  uiEdit = false; uiDrag = null;
+  $('uidone').style.display = 'none';
+  $('downbtn').style.display = P.fly ? 'flex' : 'none';
+  MOVABLE.forEach(id => { const el = $(id); el.style.pointerEvents = ''; el.style.outline = ''; });
+  toast('✔ Tuş yerleri kaydedildi');
+});
+$('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui'); location.reload(); });
+(function loadOpts() {
+  try {
+    const o = JSON.parse(localStorage.getItem('ck2_opts')||'{}');
+    if (o.rdist) { RDIST = o.rdist; $('rdist').value = o.rdist; }
+    if (o.shader !== undefined) { shaderOn = !!o.shader; $('shadersel').value = o.shader ? '1' : '0'; }
+    if (o.snd !== undefined) { sndOn = !!o.snd; $('sndsel').value = o.snd ? '1' : '0'; }
+  } catch(e) {}
+  uiApply();
+})();
 $('newworld').addEventListener('click', () => {
   if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
   localStorage.removeItem('ck2_edits_'+seed);
@@ -2532,6 +2701,7 @@ $('playc').addEventListener('click', () => startGame('creative'));
 $('plays').addEventListener('click', () => startGame('survival'));
 updateHotbar(); updateHearts();
 
+let tickScale = 1, tickFrozen = false;
 let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
@@ -2539,6 +2709,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now-last)/1000);
   last = now;
+  const sdt = tickFrozen ? 0 : dt * tickScale; // /tick oyun hızı
   fpsN++; fpsT += dt;
   if (fpsT >= 0.5) { fps = Math.round(fpsN/fpsT); fpsN = 0; fpsT = 0; }
   const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
@@ -2550,16 +2721,16 @@ function frame(now) {
     queued.delete(ckey(mx,mz));
     buildMesh(mx,mz);
   }
-  if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + dt/DAY_LEN) % 1;
+  if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
   const light = dim==='nether' ? 0.55 : dim==='end' ? 0.5 : 0.25 + 0.75*Math.min(1, sun);
   physics(dt);
   checkPortal(dt);
   stepBreaking(dt);
-  updateMobs(dt, light);
-  updateTnt(dt);
-  tickEffects(dt);
-  updateParts(dt);
+  updateMobs(sdt, light);
+  updateTnt(sdt);
+  tickEffects(sdt);
+  updateParts(sdt);
   if (MP.peer) { MP.posT -= dt;
     if (MP.posT <= 0) { MP.posT = 0.1; mpSend({t:'pos', x:P.x, y:P.y, z:P.z, yaw:P.yaw, vx:P.vx, vz:P.vz, dim}); } }
   stateT += dt;
@@ -2577,11 +2748,11 @@ function frame(now) {
   const mvp = mmul(proj, view);
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
-  gl.uniform1f(loc.uFogFar, (RDIST*CH+14) * ((hasEff('blindness')||hasEff('darkness')) ? 0.22 : 1));
+  gl.uniform1f(loc.uFogFar, shaderOn ? (RDIST*CH+14) * ((hasEff('blindness')||hasEff('darkness')) ? 0.22 : 1) : 4000);
   gl.uniform1f(loc.uLight, hasEff('night_vision') ? Math.max(light, 0.95) : light);
   const heldIt = heldItem() ? ITEMS[heldItem().id] : null;
   const lightSrc = Math.max(offhand && ITEMS[offhand.id] && ITEMS[offhand.id].light || 0, heldIt && heldIt.light || 0);
-  gl.uniform1f(loc.uPLight, lightSrc*0.9);
+  gl.uniform1f(loc.uPLight, shaderOn ? lightSrc*0.9 : 0);
   gl.uniform3f(loc.uPPos, P.x, P.y+1, P.z);
   gl.uniform1f(loc.uUseTex, 1);
   gl.uniform3f(loc.uColor, 1, 1, 1);
@@ -2623,7 +2794,8 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, dim:()=>dim, setDim,
   offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
   hurt:(d)=>damagePlayer(d,'test'), effects:()=>effects, addEffect, EFFECTS,
-  parts:()=>parts, arrows:()=>arrows, MP, ver:'4.0' };
+  parts:()=>parts, arrows:()=>arrows, MP, biomeAt, BIOME_DEFS,
+  tick:()=>({ scale:tickScale, frozen:tickFrozen }), ver:'5.0' };
 </script>
 </body>
 </html>

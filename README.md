@@ -28,7 +28,7 @@ Tek bir `index.html` dosyası — kütüphane yok, bağımlılık yok, telifli m
 ## ✨ Özellikler
 
 ### Dünya
-- 🌍 Sonsuz, prosedürel dünya: **çöl, ova ve orman biyomları**, göller, kumsallar, karlı dağlar
+- 🌍 Sonsuz, prosedürel dünya, **21 biyomla**: Ova, Orman, Huş Ormanı, Koyu Orman, Çiçekli Orman, Kiraz Korusu, Yağmur Ormanı, Savan, Bataklık, Mantar Tarlası, Çöl, Çorak Topraklar (terakota katmanlı platolar), Tayga, Karlı Tayga, Karlı Ova, Buz Dikenleri, Dağlar, Kumsal + **3 özel biyom**: Kristal Vadisi ✨ (parlayan kristaller), Gökkuşağı Tepeleri 🌈 (renkli beton katmanları), Obsidyen Çorak 🌑 (lav gölleri ve magma)
 - 🕳️ **Mağaralar** ve derinliğe göre **8 cevher türü** (kömür, demir, bakır, altın, lapis, kızıltaş, elmas, zümrüt — taş **ve derin kayrak** varyantlarıyla)
 - 🌳 8 ağaç türü (meşe, ladin, huş, kiraz…), çiçekler, mantarlar, şeker kamışı, kaktüsler
 - 🌅 Gündüz/gece döngüsü, sis, sesler
@@ -70,8 +70,12 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### 🌟 Efektler (/effect)
 30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
 
+### ⚙️ Ayarlar
+- Görüş mesafesi **2–6 chunk**, gölgelendirici aç/kapa (sis + dinamik ışık + partiküller; kapatınca hızlanır), ses
+- 🎛 **Tuşları Taşı**: zıplama/envanter/sohbet/menü düğmelerini ve eşya çubuğunu sürükleyip istediğin yere koy — kaydedilir
+
 ### 💬 Komut sistemi
-`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
+`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` (oyun hızı!) · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
 ## 🚫 Henüz olmayanlar
 Büyüler/iksir demleme, kızıltaş devreleri, vagon/tekne, oyuncunun yay kullanması, kısmi bloklar (basamak/çit), Ender Ejderhası. Çok oyunculuda moblar senkronize edilmez (her oyuncu kendi canavarlarını görür).
