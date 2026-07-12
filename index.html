@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CepKraft — Mobil Voksel Oyunu</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; touch-action:none;
+    font-family:'Segoe UI',system-ui,sans-serif; user-select:none; -webkit-user-select:none; }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .hud { position:fixed; z-index:10; }
+  #crosshair { left:50%; top:50%; transform:translate(-50%,-50%); width:20px; height:20px; pointer-events:none; }
+  #crosshair:before,#crosshair:after { content:''; position:absolute; background:rgba(255,255,255,.75); }
+  #crosshair:before { left:9px; top:0; width:2px; height:20px; }
+  #crosshair:after { left:0; top:9px; width:20px; height:2px; }
+  #breakbar { left:50%; top:calc(50% + 20px); transform:translateX(-50%); width:60px; height:6px;
+    background:rgba(0,0,0,.4); border-radius:3px; display:none; pointer-events:none; }
+  #breakbar div { height:100%; width:0%; background:#fff; border-radius:3px; }
+  #joy { left:0; bottom:0; width:45%; height:60%; }
+  #joybase { position:absolute; width:110px; height:110px; border-radius:50%;
+    background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.25); display:none; pointer-events:none; }
+  #joyknob { position:absolute; width:48px; height:48px; border-radius:50%;
+    background:rgba(255,255,255,.4); display:none; pointer-events:none; }
+  .btn { position:fixed; z-index:12; width:64px; height:64px; border-radius:50%;
+    background:rgba(255,255,255,.14); border:2px solid rgba(255,255,255,.3); color:#fff;
+    font-size:26px; display:flex; align-items:center; justify-content:center; }
+  .btn:active { background:rgba(255,255,255,.35); }
+  #jumpbtn { right:18px; bottom:110px; }
+  #downbtn { right:96px; bottom:96px; display:none; }
+  #hotbar { left:50%; bottom:10px; transform:translateX(-50%); display:flex; gap:4px; z-index:11; }
+  .slot { width:44px; height:44px; border:2px solid rgba(255,255,255,.35); border-radius:6px;
+    background-color:rgba(0,0,0,.35); background-repeat:no-repeat; image-rendering:pixelated; }
+  .slot.sel { border-color:#fff; box-shadow:0 0 8px rgba(255,255,255,.8); transform:scale(1.12); }
+  #menubtn { right:14px; top:14px; width:44px; height:44px; font-size:20px; border-radius:10px; }
+  #info { left:10px; top:10px; color:rgba(255,255,255,.85); font-size:11px; text-shadow:0 1px 2px #000; pointer-events:none; white-space:pre; }
+  #menu { display:none; right:14px; top:66px; background:rgba(20,24,34,.92); color:#eee; padding:14px;
+    border-radius:12px; z-index:20; width:230px; font-size:14px; }
+  #menu h3 { margin-bottom:10px; font-size:15px; }
+  #menu label { display:block; margin:8px 0 4px; opacity:.8; font-size:12px; }
+  #menu select,#menu button { width:100%; padding:8px; border-radius:8px; border:none; margin-top:4px;
+    background:#2e3b52; color:#fff; font-size:14px; }
+  #menu button.danger { background:#8a3030; }
+  #toast { left:50%; top:18%; transform:translateX(-50%); background:rgba(0,0,0,.6); color:#fff;
+    padding:8px 16px; border-radius:20px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #wateroverlay { inset:0; background:rgba(20,60,160,.3); display:none; pointer-events:none; z-index:5; }
+  #splash { inset:0; z-index:50; background:linear-gradient(#2a4d1e,#152a0e); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; color:#fff; text-align:center; padding:20px; }
+  #splash h1 { font-size:42px; letter-spacing:2px; text-shadow:3px 3px 0 #000; margin-bottom:8px; }
+  #splash p { opacity:.85; margin:4px 0; max-width:480px; font-size:14px; line-height:1.5; }
+  #splash button { margin-top:24px; padding:14px 46px; font-size:20px; border:none; border-radius:12px;
+    background:#57a832; color:#fff; box-shadow:0 4px 0 #38701e; }
+  #splash button:active { transform:translateY(3px); box-shadow:0 1px 0 #38701e; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="wateroverlay"></div>
+<div class="hud" id="crosshair"></div>
+<div class="hud" id="breakbar"><div></div></div>
+<div class="hud" id="joy"><div id="joybase"></div><div id="joyknob"></div></div>
+<button class="btn" id="jumpbtn">⤒</button>
+<button class="btn" id="downbtn">⤓</button>
+<button class="btn hud" id="menubtn">☰</button>
+<div class="hud" id="hotbar"></div>
+<div class="hud" id="info"></div>
+<div class="hud" id="toast"></div>
+<div class="hud" id="menu">
+  <h3>Ayarlar</h3>
+  <label>Görüş mesafesi</label>
+  <select id="rdist">
+    <option value="2">Yakın (hızlı)</option>
+    <option value="3" selected>Normal</option>
+    <option value="4">Uzak</option>
+  </select>
+  <label>Ses</label>
+  <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
+  <button id="newworld" class="danger" style="margin-top:14px">🌍 Yeni Dünya (siler!)</button>
+  <button id="closemenu" style="margin-top:8px">Kapat</button>
+</div>
+<div class="hud" id="splash">
+  <h1>CepKraft</h1>
+  <p><b>Mobil için blok dünyası oyunu.</b> Sonsuz arazi, ağaçlar, su, gündüz-gece, 9 blok çeşidi. Dünyan otomatik kaydedilir.</p>
+  <p>🕹️ Sol taraf: yürüme &nbsp;|&nbsp; Sağ taraf: kaydırarak bakınma<br>
+     👆 Kısa dokun: blok <b>koy</b> &nbsp;|&nbsp; Basılı tut: blok <b>kır</b><br>
+     ⤒ Zıpla — <b>çift dokun: uçuş modu</b> &nbsp;|&nbsp; PC: WASD + fare</p>
+  <button id="playbtn">OYNA</button>
+</div>
+<script>
+'use strict';
+/* ================= TEMEL ================= */
+const CH = 16, H = 64, WATER_Y = 22;
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', { antialias:false });
+let seed = parseInt(localStorage.getItem('ck_seed') || '0');
+if (!seed) { seed = (Math.random()*2e9)|0; localStorage.setItem('ck_seed', seed); }
+
+const BLOCKS = {
+  1:{n:'Çim',      t:[0,1,2],    solid:1},
+  2:{n:'Toprak',   t:[2,2,2],    solid:1},
+  3:{n:'Taş',      t:[3,3,3],    solid:1},
+  4:{n:'Kum',      t:[4,4,4],    solid:1},
+  5:{n:'Su',       t:[5,5,5],    solid:0, water:1},
+  6:{n:'Kütük',    t:[7,6,7],    solid:1},
+  7:{n:'Yaprak',   t:[8,8,8],    solid:1, cutout:1},
+  8:{n:'Tahta',    t:[9,9,9],    solid:1},
+  9:{n:'Kırıktaş', t:[10,10,10], solid:1},
+  10:{n:'Cam',     t:[11,11,11], solid:1, cutout:1},
+  11:{n:'Tuğla',   t:[12,12,12], solid:1},
+  12:{n:'Kar',     t:[13,13,13], solid:1},
+  13:{n:'Anakaya', t:[14,14,14], solid:1, unbreakable:1},
+};
+const HOTBAR = [1,2,3,4,6,7,8,9,10];
+const isTransp = b => b===5 || b===7 || b===10;
+const isSolid  = b => b>0 && BLOCKS[b].solid;
+
+/* ================= GÜRÜLTÜ / ARAZİ ================= */
+function hash2(x, z) {
+  let h = (x|0)*374761393 + (z|0)*668265263 + seed*974711;
+  h = Math.imul(h ^ (h>>>13), 1274126177);
+  return ((h ^ (h>>>16)) >>> 0) / 4294967295;
+}
+function smooth(t){ return t*t*(3-2*t); }
+function vnoise(x, z) {
+  const xi = Math.floor(x), zi = Math.floor(z);
+  const xf = x-xi, zf = z-zi, u = smooth(xf), v = smooth(zf);
+  const a = hash2(xi,zi), b = hash2(xi+1,zi), c = hash2(xi,zi+1), d = hash2(xi+1,zi+1);
+  return a + (b-a)*u + (c-a)*v + (a-b-c+d)*u*v;
+}
+function fbm(x, z) {
+  let s = 0, amp = 0.5, f = 1;
+  for (let i=0;i<4;i++){ s += vnoise(x*f, z*f)*amp; f*=2; amp*=0.5; }
+  return s; // ~0..1
+}
+function heightAt(wx, wz) {
+  const n = fbm(wx*0.009+31, wz*0.009+7);
+  const m = fbm(wx*0.035+900, wz*0.035+400);
+  let h = 15 + n*n*40 + m*7;
+  return Math.max(2, Math.min(58, h|0));
+}
+// 5x5'lik hücre başına en fazla bir ağaç → ağaçlar hiç üst üste binmez
+function treeAt(wx, wz) {
+  const cxx = Math.floor(wx/5), czz = Math.floor(wz/5);
+  const r = hash2(cxx*7919+3, czz*6337+11);
+  if (r > 0.55) return false;
+  const ox = Math.floor(hash2(cxx*13+1, czz*17+2)*3)+1;
+  const oz = Math.floor(hash2(cxx*29+5, czz*31+8)*3)+1;
+  return (wx - cxx*5) === ox && (wz - czz*5) === oz;
+}
+
+/* ================= DÜNYA ================= */
+const chunks = new Map();          // "cx,cz" -> {data,vboO,cntO,vboW,cntW,meshed}
+let edits = {};                    // "cx,cz" -> {idx: blockId}
+try { edits = JSON.parse(localStorage.getItem('ck_edits_'+seed) || '{}'); } catch(e) { edits = {}; }
+const ckey = (cx,cz) => cx+','+cz;
+const bidx = (x,y,z) => (y*CH+z)*CH+x;
+
+function genChunk(cx, cz) {
+  const data = new Uint8Array(CH*H*CH);
+  const x0 = cx*CH, z0 = cz*CH;
+  for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
+    const wx = x0+x, wz = z0+z, h = heightAt(wx,wz);
+    for (let y=0; y<=h; y++) {
+      let b = 3;
+      if (y === 0) b = 13;
+      else if (y === h) b = h > 46 ? 12 : (h <= WATER_Y+1 ? 4 : 1);
+      else if (y > h-3) b = h <= WATER_Y+1 ? 4 : 2;
+      data[bidx(x,y,z)] = b;
+    }
+    for (let y=h+1; y<=WATER_Y; y++) data[bidx(x,y,z)] = 5;
+  }
+  // ağaçlar (komşu chunk sınırından taşan yapraklar dahil)
+  for (let wz=z0-2; wz<z0+CH+2; wz++) for (let wx=x0-2; wx<x0+CH+2; wx++) {
+    if (!treeAt(wx,wz)) continue;
+    const g = heightAt(wx,wz);
+    if (g <= WATER_Y+1 || g > 45) continue;
+    const th = 4 + (hash2(wx*3, wz*5)*2|0);
+    for (let dy=1; dy<=th; dy++) {
+      if (wx>=x0 && wx<x0+CH && wz>=z0 && wz<z0+CH && g+dy<H)
+        data[bidx(wx-x0, g+dy, wz-z0)] = 6;
+    }
+    for (let dy=th-2; dy<=th+1; dy++) {
+      const rad = dy > th-1 ? 1 : 2;
+      for (let dx=-rad; dx<=rad; dx++) for (let dz=-rad; dz<=rad; dz++) {
+        if (dx===0 && dz===0 && dy<=th) continue;
+        if (Math.abs(dx)===rad && Math.abs(dz)===rad && hash2(wx+dx*7,wz+dz*13+dy) < 0.5) continue;
+        const lx = wx+dx-x0, lz = wz+dz-z0, ly = g+dy;
+        if (lx>=0 && lx<CH && lz>=0 && lz<CH && ly<H && !data[bidx(lx,ly,lz)])
+          data[bidx(lx,ly,lz)] = 7;
+      }
+    }
+  }
+  const e = edits[ckey(cx,cz)];
+  if (e) for (const i in e) data[i] = e[i];
+  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
+}
+
+function getBlock(wx, wy, wz) {
+  if (wy < 0) return 13;
+  if (wy >= H) return 0;
+  const cx = Math.floor(wx/CH), cz = Math.floor(wz/CH);
+  const c = chunks.get(ckey(cx,cz));
+  if (!c) return 0;
+  return c.data[bidx(wx-cx*CH, wy, wz-cz*CH)];
+}
+
+let saveTimer = null;
+function setBlock(wx, wy, wz, b) {
+  if (wy < 0 || wy >= H) return;
+  const cx = Math.floor(wx/CH), cz = Math.floor(wz/CH);
+  const c = chunks.get(ckey(cx,cz));
+  if (!c) return;
+  const lx = wx-cx*CH, lz = wz-cz*CH;
+  c.data[bidx(lx,wy,lz)] = b;
+  const k = ckey(cx,cz);
+  (edits[k] = edits[k] || {})[bidx(lx,wy,lz)] = b;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem('ck_edits_'+seed, JSON.stringify(edits)); } catch(e) {}
+  }, 800);
+  queueMesh(cx,cz);
+  if (lx===0) queueMesh(cx-1,cz); if (lx===CH-1) queueMesh(cx+1,cz);
+  if (lz===0) queueMesh(cx,cz-1); if (lz===CH-1) queueMesh(cx,cz+1);
+}
+
+/* ================= DOKU ATLASI ================= */
+function makeAtlas() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const ctx = cv.getContext('2d');
+  let rs = seed || 12345;
+  const rnd = () => { rs = Math.imul(rs^(rs>>>15), rs|1); rs ^= rs + Math.imul(rs^(rs>>>7), rs|61); return ((rs^(rs>>>14))>>>0)/4294967296; };
+  function tile(ti, fn) {
+    const ox = (ti%16)*16, oy = ((ti/16)|0)*16;
+    const img = ctx.createImageData(16,16);
+    for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
+      const [r,g,b,a] = fn(x,y,rnd);
+      const i = (y*16+x)*4;
+      img.data[i]=r; img.data[i+1]=g; img.data[i+2]=b; img.data[i+3]=a===undefined?255:a;
+    }
+    ctx.putImageData(img, ox, oy);
+  }
+  const nz = (v,n,r) => Math.max(0, Math.min(255, v + (r()-0.5)*n));
+  tile(0,(x,y,r)=>{ const n=r()*36; return [nz(88,20,r)+n*0.3, nz(150,26,r)+n*0.4, nz(56,18,r)]; });      // çim üst
+  tile(1,(x,y,r)=>{ if (y<3 || (y===3 && r()<0.5)) { const n=r()*30; return [90+n*0.3,148+n*0.4,58]; }
+                    return [nz(122,30,r), nz(86,24,r), nz(56,18,r)]; });                                    // çim yan
+  tile(2,(x,y,r)=>[nz(122,34,r), nz(86,26,r), nz(56,20,r)]);                                                // toprak
+  tile(3,(x,y,r)=>{ const v=nz(128,26,r); return [v,v,v]; });                                               // taş
+  tile(4,(x,y,r)=>[nz(216,20,r), nz(202,20,r), nz(150,16,r)]);                                              // kum
+  tile(5,(x,y,r)=>[nz(50,24,r), nz(96,26,r), nz(200,30,r), 178]);                                           // su
+  tile(6,(x,y,r)=>{ const s=(x%4<1)?-26:0; return [nz(104+s,14,r), nz(78+s,12,r), nz(44+s,10,r)]; });       // kütük yan
+  tile(7,(x,y,r)=>{ const d=Math.max(Math.abs(x-8),Math.abs(y-8)); const s=(d%3<1)?-24:8;
+                    return [nz(160+s,12,r), nz(126+s,12,r), nz(78+s,10,r)]; });                             // kütük üst
+  tile(8,(x,y,r)=>{ if (r()<0.18) return [0,0,0,0]; const n=r()*40; return [30+n*0.5, 88+n, 26+n*0.4]; });  // yaprak
+  tile(9,(x,y,r)=>{ const s=(y%4===0)?-30:0; return [nz(178+s,16,r), nz(140+s,14,r), nz(84+s,10,r)]; });    // tahta
+  tile(10,(x,y,r)=>{ const cx2=(x/5|0)*331+(y/5|0)*17; const s=hash2(cx2,cx2*3)*60-30;
+                    const v=nz(120+s,20,r); return [v,v,v]; });                                             // kırıktaş
+  tile(11,(x,y,r)=>{ const e = x===0||y===0||x===15||y===15;
+                    if (e) return [200,225,235,190]; if (r()<0.06) return [225,240,250,120];
+                    return [0,0,0,0]; });                                                                   // cam
+  tile(12,(x,y,r)=>{ const m=(y%8<4)?((x+4)%8<7):(x%8<7); const line=(y%4===3)||!m;
+                    if (line) return [nz(178,10,r),nz(170,10,r),nz(160,10,r)];
+                    return [nz(150,18,r), nz(66,14,r), nz(48,10,r)]; });                                    // tuğla
+  tile(13,(x,y,r)=>{ const v=nz(238,14,r); return [v,v,Math.min(255,v+6)]; });                              // kar
+  tile(14,(x,y,r)=>{ const v=nz(70,50,r); return [v,v,v]; });                                               // anakaya
+  return cv;
+}
+const atlasCanvas = makeAtlas();
+
+/* ================= WEBGL ================= */
+const VS = `attribute vec3 aPos; attribute vec2 aUV; attribute float aShade;
+uniform mat4 uMVP; varying vec2 vUV; varying float vShade; varying float vDist;
+void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vShade=aShade; vDist=gl_Position.w; }`;
+const FS = `precision mediump float;
+uniform sampler2D uTex; uniform vec3 uFog; uniform float uFogFar; uniform float uLight; uniform float uAlpha;
+varying vec2 vUV; varying float vShade; varying float vDist;
+void main(){
+  vec4 c = texture2D(uTex, vUV);
+  if (c.a < 0.08) discard;
+  vec3 col = c.rgb * vShade * uLight;
+  float f = clamp((uFogFar - vDist) / (uFogFar*0.4), 0.0, 1.0);
+  col = mix(uFog, col, f);
+  gl_FragColor = vec4(col, c.a * uAlpha);
+}`;
+function mkShader(t, src) {
+  const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog); gl.useProgram(prog);
+const loc = {
+  aPos: gl.getAttribLocation(prog,'aPos'), aUV: gl.getAttribLocation(prog,'aUV'),
+  aShade: gl.getAttribLocation(prog,'aShade'), uMVP: gl.getUniformLocation(prog,'uMVP'),
+  uFog: gl.getUniformLocation(prog,'uFog'), uFogFar: gl.getUniformLocation(prog,'uFogFar'),
+  uLight: gl.getUniformLocation(prog,'uLight'), uAlpha: gl.getUniformLocation(prog,'uAlpha'),
+};
+gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV); gl.enableVertexAttribArray(loc.aShade);
+const tex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, tex);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+gl.enable(gl.DEPTH_TEST);
+
+/* mat4 (column-major) */
+function mmul(a, b) {
+  const o = new Float32Array(16);
+  for (let c=0;c<4;c++) for (let r=0;r<4;r++)
+    o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+  return o;
+}
+function mpersp(fov, asp, n, f) {
+  const t = 1/Math.tan(fov/2);
+  return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]);
+}
+function mrotX(a){ const c=Math.cos(a),s=Math.sin(a);
+  return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]); }
+function mrotY(a){ const c=Math.cos(a),s=Math.sin(a);
+  return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]); }
+function mtrans(x,y,z){ return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]); }
+
+/* ================= MESH ================= */
+const FACES = [
+  { d:[ 1,0,0], s:0.70, c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
+  { d:[-1,0,0], s:0.70, c:[[0,0,0],[0,1,0],[0,1,1],[0,0,1]] },
+  { d:[0, 1,0], s:1.00, c:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]] },
+  { d:[0,-1,0], s:0.55, c:[[0,0,0],[0,0,1],[1,0,1],[1,0,0]] },
+  { d:[0,0, 1], s:0.82, c:[[0,0,1],[0,1,1],[1,1,1],[1,0,1]] },
+  { d:[0,0,-1], s:0.82, c:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]] },
+];
+function faceUV(f, c) {
+  if (f.d[0] !== 0) return [c[2], 1-c[1]];
+  if (f.d[1] !== 0) return [c[0], c[2]];
+  return [c[0], 1-c[1]];
+}
+const meshQueue = [];
+const queued = new Set();
+function queueMesh(cx, cz) {
+  const k = ckey(cx,cz);
+  if (chunks.has(k) && !queued.has(k)) { queued.add(k); meshQueue.push([cx,cz]); }
+}
+function buildMesh(cx, cz) {
+  const c = chunks.get(ckey(cx,cz));
+  if (!c) return;
+  const opq = [], wat = [];
+  const x0 = cx*CH, z0 = cz*CH;
+  const EPS = 0.5/256, TS = 1/16;
+  for (let y=0;y<H;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
+    const b = c.data[bidx(x,y,z)];
+    if (!b) continue;
+    const def = BLOCKS[b], wx = x0+x, wz = z0+z;
+    for (const f of FACES) {
+      const nb = getBlock(wx+f.d[0], y+f.d[1], wz+f.d[2]);
+      if (!(nb === 0 || (isTransp(nb) && nb !== b))) continue;
+      const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
+      const tu = (tileI%16)*TS, tv = ((tileI/16)|0)*TS;
+      const arr = def.water ? wat : opq;
+      const topDrop = (def.water && f.d[1] === 0 && getBlock(wx, y+1, wz) !== 5) ? 0.12 : 0;
+      const yTop = def.water && getBlock(wx, y+1, wz) !== 5 ? 0.88 : 1;
+      for (const vi of [0,1,2,0,2,3]) {
+        const co = f.c[vi];
+        const cy = co[1] === 1 ? yTop : 0;
+        const uv = faceUV(f, co);
+        arr.push(wx+co[0], y+cy, wz+co[2],
+          tu + EPS + uv[0]*(TS-2*EPS), tv + EPS + uv[1]*(TS-2*EPS), f.s);
+      }
+    }
+  }
+  function upload(arr, oldVbo) {
+    if (oldVbo) gl.deleteBuffer(oldVbo);
+    if (!arr.length) return [null, 0];
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+    return [vbo, arr.length/6];
+  }
+  [c.vboO, c.cntO] = upload(opq, c.vboO);
+  [c.vboW, c.cntW] = upload(wat, c.vboW);
+  c.meshed = true;
+}
+
+/* ================= OYUNCU ================= */
+const P = {
+  x:8.5, y:40, z:8.5, vx:0, vy:0, vz:0,
+  yaw:0, pitch:0, w:0.3, hgt:1.8, eye:1.62,
+  onGround:false, fly:false, inWater:false,
+};
+
+function boxHitsSolid(x, y, z) {
+  const x1 = Math.floor(x-P.w), x2 = Math.floor(x+P.w);
+  const y1 = Math.floor(y),     y2 = Math.floor(y+P.hgt);
+  const z1 = Math.floor(z-P.w), z2 = Math.floor(z+P.w);
+  for (let bx=x1;bx<=x2;bx++) for (let by=y1;by<=y2;by++) for (let bz=z1;bz<=z2;bz++)
+    if (isSolid(getBlock(bx,by,bz))) return {bx,by,bz};
+  return null;
+}
+function physics(dt) {
+  const sp = P.fly ? 9.5 : (P.inWater ? 2.6 : 4.3);
+  const s = Math.sin(P.yaw), cs = Math.cos(P.yaw);
+  let mx = 0, mz = 0;
+  const iv = inputVec();
+  mx = (iv.f * s + iv.r * cs) * sp;
+  mz = (iv.f * -cs + iv.r * s) * sp;
+  const lerp = P.onGround || P.fly ? Math.min(1, dt*12) : Math.min(1, dt*3.5);
+  P.vx += (mx - P.vx) * lerp;
+  P.vz += (mz - P.vz) * lerp;
+
+  const head = getBlock(Math.floor(P.x), Math.floor(P.y+1.2), Math.floor(P.z));
+  P.inWater = head === 5 || getBlock(Math.floor(P.x), Math.floor(P.y+0.4), Math.floor(P.z)) === 5;
+
+  if (P.fly) {
+    const vt = (input.jump?1:0) - (input.down?1:0);
+    P.vy += (vt*8 - P.vy) * Math.min(1, dt*10);
+  } else if (P.inWater) {
+    P.vy -= 5*dt;
+    if (input.jump) P.vy = Math.min(P.vy + 20*dt, 3.4);
+    P.vy = Math.max(-4, Math.min(4, P.vy));
+  } else {
+    P.vy -= 26*dt;
+    if (input.jump && P.onGround) { P.vy = 8.4; sfx(300, 0.05); }
+    P.vy = Math.max(-42, P.vy);
+  }
+
+  // otomatik zıplama (mobil kolaylığı): önünde 1 bloklu basamak varsa zıpla
+  if (P.onGround && !P.fly && !P.inWater) {
+    const hsp = Math.hypot(P.vx, P.vz);
+    if (hsp > 1.2) {
+      const ax = P.x + (P.vx/hsp)*(P.w+0.4), az = P.z + (P.vz/hsp)*(P.w+0.4);
+      const bx = Math.floor(ax), bz = Math.floor(az), fy = Math.floor(P.y+0.1);
+      if (isSolid(getBlock(bx,fy,bz)) && !isSolid(getBlock(bx,fy+1,bz)) && !isSolid(getBlock(bx,fy+2,bz)))
+        P.vy = 8.4;
+    }
+  }
+  // sıkışma kurtarma: blok içinde kaldıysa yukarı çıkar
+  if (boxHitsSolid(P.x,P.y,P.z)) {
+    let esc = 0;
+    while (boxHitsSolid(P.x,P.y,P.z) && esc++ < H) P.y += 1;
+    P.vy = 0;
+  }
+  // eksen eksen çarpışma
+  let n;
+  P.x += P.vx*dt;
+  if ((n = boxHitsSolid(P.x,P.y,P.z))) {
+    if (P.vx > 0) P.x = n.bx-P.w-0.001; else if (P.vx < 0) P.x = n.bx+1+P.w+0.001;
+    P.vx = 0;
+  }
+  P.z += P.vz*dt;
+  if ((n = boxHitsSolid(P.x,P.y,P.z))) {
+    if (P.vz > 0) P.z = n.bz-P.w-0.001; else if (P.vz < 0) P.z = n.bz+1+P.w+0.001;
+    P.vz = 0;
+  }
+  P.onGround = false;
+  P.y += P.vy*dt;
+  if ((n = boxHitsSolid(P.x,P.y,P.z))) {
+    if (P.vy <= 0) { P.y = n.by+1; P.onGround = true; } else { P.y = n.by-P.hgt-0.001; }
+    P.vy = 0;
+  }
+  if (P.y < -10) { P.y = H; P.vy = 0; }
+}
+
+/* ================= IŞIN / BLOK İŞLEMLERİ ================= */
+function camDir() {
+  const cp = Math.cos(P.pitch);
+  return { x: Math.sin(P.yaw)*cp, y: -Math.sin(P.pitch), z: -Math.cos(P.yaw)*cp };
+}
+function raycast(maxD) {
+  const o = { x:P.x, y:P.y+P.eye, z:P.z }, d = camDir();
+  let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
+  const stx = d.x>0?1:-1, sty = d.y>0?1:-1, stz = d.z>0?1:-1;
+  const dx = Math.abs(1/(d.x||1e-9)), dy = Math.abs(1/(d.y||1e-9)), dz = Math.abs(1/(d.z||1e-9));
+  let tx = (stx>0 ? x+1-o.x : o.x-x)*dx, ty = (sty>0 ? y+1-o.y : o.y-y)*dy, tz = (stz>0 ? z+1-o.z : o.z-z)*dz;
+  let px = x, py = y, pz = z, t = 0;
+  while (t <= maxD) {
+    const b = getBlock(x,y,z);
+    if (b && b !== 5) return { x,y,z,px,py,pz,b };
+    px=x; py=y; pz=z;
+    if (tx < ty && tx < tz) { x+=stx; t=tx; tx+=dx; }
+    else if (ty < tz)       { y+=sty; t=ty; ty+=dy; }
+    else                    { z+=stz; t=tz; tz+=dz; }
+  }
+  return null;
+}
+function doBreak() {
+  const r = raycast(6.5);
+  if (!r || BLOCKS[r.b].unbreakable) return false;
+  setBlock(r.x, r.y, r.z, getBlock(r.x, r.y+1, r.z) === 5 ? 5 : 0);
+  sfx(95, 0.09, 'square');
+  return true;
+}
+function doPlace() {
+  const r = raycast(6.5);
+  if (!r) return;
+  const b = HOTBAR[hotSel];
+  const {px,py,pz} = r;
+  if (isSolid(getBlock(px,py,pz))) return;
+  // oyuncunun içine koyma
+  if (px+1 > P.x-P.w && px < P.x+P.w && py+1 > P.y && py < P.y+P.hgt && pz+1 > P.z-P.w && pz < P.z+P.w) return;
+  setBlock(px, py, pz, b);
+  sfx(210, 0.06, 'square');
+}
+
+/* ================= SES ================= */
+let audioCtx = null, sndOn = true;
+function sfx(freq, dur, type) {
+  if (!sndOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type||'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  } catch(e) {}
+}
+
+/* ================= GİRDİ ================= */
+const input = { f:0, r:0, jump:false, down:false };
+const keys = {};
+function inputVec() {
+  let f = input.f, r = input.r;
+  if (keys.KeyW) f += 1; if (keys.KeyS) f -= 1;
+  if (keys.KeyD) r += 1; if (keys.KeyA) r -= 1;
+  const l = Math.hypot(f,r);
+  return l > 1 ? { f:f/l, r:r/l } : { f, r };
+}
+let hotSel = 0;
+
+// --- dokunmatik ---
+const joyEl = document.getElementById('joy'), joyBase = document.getElementById('joybase'), joyKnob = document.getElementById('joyknob');
+let joyId = null, joyOX = 0, joyOY = 0;
+let lookId = null, lookLX = 0, lookLY = 0, lookMoved = 0, lookT0 = 0;
+let holdTimer = null, breaking = false, breakAcc = 0;
+const breakbar = document.getElementById('breakbar');
+
+function startBreaking() {
+  breaking = true; breakAcc = 0;
+  breakbar.style.display = 'block';
+}
+function stopBreaking() {
+  breaking = false;
+  breakbar.style.display = 'none';
+  breakbar.firstElementChild.style.width = '0%';
+}
+window.addEventListener('pointerdown', (e) => {
+  if (e.target && e.target.closest && e.target.closest('#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#splash')) return;
+  if (e.pointerType === 'mouse') {
+    if (document.pointerLockElement !== canvas) { canvas.requestPointerLock && canvas.requestPointerLock(); return; }
+    if (e.button === 0) doBreak();
+    if (e.button === 2) doPlace();
+    return;
+  }
+  const lx = e.clientX, ly = e.clientY;
+  if (joyId === null && lx < innerWidth*0.45 && ly > innerHeight*0.35) {
+    joyId = e.pointerId; joyOX = lx; joyOY = ly;
+    joyBase.style.display = joyKnob.style.display = 'block';
+    joyBase.style.left = (lx-55)+'px'; joyBase.style.top = (ly-55)+'px';
+    joyKnob.style.left = (lx-24)+'px'; joyKnob.style.top = (ly-24)+'px';
+  } else if (lookId === null) {
+    lookId = e.pointerId; lookLX = lx; lookLY = ly; lookMoved = 0; lookT0 = performance.now();
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => { if (lookId !== null && lookMoved < 14) startBreaking(); }, 260);
+  }
+});
+window.addEventListener('pointermove', (e) => {
+  if (e.pointerId === joyId) {
+    let dx = e.clientX-joyOX, dy = e.clientY-joyOY;
+    const l = Math.hypot(dx,dy), max = 52;
+    if (l > max) { dx = dx/l*max; dy = dy/l*max; }
+    joyKnob.style.left = (joyOX+dx-24)+'px'; joyKnob.style.top = (joyOY+dy-24)+'px';
+    input.f = -dy/max; input.r = dx/max;
+  } else if (e.pointerId === lookId) {
+    const dx = e.clientX-lookLX, dy = e.clientY-lookLY;
+    lookMoved += Math.abs(dx)+Math.abs(dy);
+    P.yaw += dx*0.0075; P.pitch += dy*0.0075;
+    P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch));
+    lookLX = e.clientX; lookLY = e.clientY;
+    if (breaking && lookMoved > 60) { stopBreaking(); }
+  }
+});
+function endPointer(e) {
+  if (e.pointerId === joyId) {
+    joyId = null; input.f = 0; input.r = 0;
+    joyBase.style.display = joyKnob.style.display = 'none';
+  } else if (e.pointerId === lookId) {
+    clearTimeout(holdTimer);
+    const dt = performance.now()-lookT0;
+    if (!breaking && dt < 250 && lookMoved < 14) doPlace();
+    stopBreaking();
+    lookId = null;
+  }
+}
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
+
+// fare bakışı
+window.addEventListener('mousemove', (e) => {
+  if (document.pointerLockElement === canvas) {
+    P.yaw += e.movementX*0.0028; P.pitch += e.movementY*0.0028;
+    P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch));
+  }
+});
+window.addEventListener('contextmenu', e => e.preventDefault());
+
+// klavye
+let lastSpace = 0;
+window.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    input.jump = true;
+    const now = performance.now();
+    if (now-lastSpace < 280) toggleFly();
+    lastSpace = now;
+  }
+  if (e.code === 'ShiftLeft') input.down = true;
+  if (e.code.startsWith('Digit')) {
+    const d = +e.code.slice(5)-1;
+    if (d >= 0 && d < HOTBAR.length) { hotSel = d; updateHotbar(); }
+  }
+});
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+  if (e.code === 'Space') input.jump = false;
+  if (e.code === 'ShiftLeft') input.down = false;
+});
+
+// zıplama / uçuş butonları
+const jumpbtn = document.getElementById('jumpbtn'), downbtn = document.getElementById('downbtn');
+let lastJumpTap = 0;
+function toggleFly() {
+  P.fly = !P.fly; P.vy = 0;
+  downbtn.style.display = P.fly ? 'flex' : 'none';
+  toast(P.fly ? '✈️ Uçuş modu AÇIK' : '🚶 Uçuş modu KAPALI');
+}
+jumpbtn.addEventListener('pointerdown', (e) => {
+  e.stopPropagation(); input.jump = true;
+  const now = performance.now();
+  if (now-lastJumpTap < 300) toggleFly();
+  lastJumpTap = now;
+});
+jumpbtn.addEventListener('pointerup', () => input.jump = false);
+jumpbtn.addEventListener('pointercancel', () => input.jump = false);
+downbtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.down = true; });
+downbtn.addEventListener('pointerup', () => input.down = false);
+downbtn.addEventListener('pointercancel', () => input.down = false);
+
+/* ================= HUD ================= */
+const hotbarEl = document.getElementById('hotbar');
+const atlasURL = atlasCanvas.toDataURL();
+function updateHotbar() {
+  hotbarEl.innerHTML = '';
+  HOTBAR.forEach((b, i) => {
+    const s = document.createElement('div');
+    s.className = 'slot' + (i === hotSel ? ' sel' : '');
+    const t = BLOCKS[b].t[1];
+    const scale = 40/16;
+    s.style.backgroundImage = `url(${atlasURL})`;
+    s.style.backgroundSize = (256*scale)+'px';
+    s.style.backgroundPosition = `-${(t%16)*16*scale}px -${((t/16)|0)*16*scale}px`;
+    s.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); hotSel = i; updateHotbar(); toast(BLOCKS[b].n);
+    });
+    hotbarEl.appendChild(s);
+  });
+}
+updateHotbar();
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.opacity = 0, 1400);
+}
+
+// menü
+const menu = document.getElementById('menu');
+document.getElementById('menubtn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+});
+document.getElementById('closemenu').addEventListener('click', () => menu.style.display = 'none');
+let RDIST = 3;
+document.getElementById('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; });
+document.getElementById('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; });
+document.getElementById('newworld').addEventListener('click', () => {
+  if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
+  localStorage.removeItem('ck_edits_'+seed);
+  localStorage.removeItem('ck_seed');
+  location.reload();
+});
+document.getElementById('playbtn').addEventListener('click', () => {
+  document.getElementById('splash').style.display = 'none';
+  sfx(440, 0.1);
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+});
+
+/* ================= CHUNK YÖNETİMİ ================= */
+function ensureChunks() {
+  const pcx = Math.floor(P.x/CH), pcz = Math.floor(P.z/CH);
+  const G = RDIST+1;
+  for (let r=0; r<=G; r++)
+    for (let dz=-r; dz<=r; dz++) for (let dx=-r; dx<=r; dx++) {
+      if (Math.max(Math.abs(dx),Math.abs(dz)) !== r) continue;
+      const k = ckey(pcx+dx, pcz+dz);
+      if (!chunks.has(k)) chunks.set(k, genChunk(pcx+dx, pcz+dz));
+    }
+  for (let dz=-RDIST; dz<=RDIST; dz++) for (let dx=-RDIST; dx<=RDIST; dx++) {
+    const cx = pcx+dx, cz = pcz+dz, c = chunks.get(ckey(cx,cz));
+    if (c && !c.meshed &&
+        chunks.has(ckey(cx+1,cz)) && chunks.has(ckey(cx-1,cz)) &&
+        chunks.has(ckey(cx,cz+1)) && chunks.has(ckey(cx,cz-1))) queueMesh(cx,cz);
+  }
+  for (const [k,c] of chunks) {
+    const [cx,cz] = k.split(',').map(Number);
+    if (Math.max(Math.abs(cx-pcx), Math.abs(cz-pcz)) > G+2) {
+      if (c.vboO) gl.deleteBuffer(c.vboO);
+      if (c.vboW) gl.deleteBuffer(c.vboW);
+      chunks.delete(k);
+    }
+  }
+}
+
+/* ================= ANA DÖNGÜ ================= */
+function resize() {
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  canvas.width = innerWidth*dpr; canvas.height = innerHeight*dpr;
+  gl.viewport(0,0,canvas.width,canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+ensureChunks();
+// güvenli doğma: sütundaki en üst katı bloğun üstü (ağaçlar dahil)
+(function spawn(){
+  for (let y=H-1; y>0; y--) {
+    if (isSolid(getBlock(8, y, 8))) { P.y = y+1.01; return; }
+  }
+  P.y = WATER_Y+2;
+})();
+
+const DAY_LEN = 480; // saniye
+let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0;
+const infoEl = document.getElementById('info');
+const waterOv = document.getElementById('wateroverlay');
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now-last)/1000);
+  last = now;
+
+  // fps
+  fpsN++; fpsT += dt;
+  if (fpsT >= 0.5) { fps = Math.round(fpsN/fpsT); fpsN = 0; fpsT = 0; }
+
+  ensureOnBoundary();
+  let meshBudget = 2;
+  while (meshBudget-- > 0 && meshQueue.length) {
+    const [cx,cz] = meshQueue.shift();
+    queued.delete(ckey(cx,cz));
+    buildMesh(cx,cz);
+  }
+
+  physics(dt);
+
+  if (breaking) {
+    breakAcc += dt;
+    const need = 0.34;
+    breakbar.firstElementChild.style.width = Math.min(100, breakAcc/need*100)+'%';
+    if (breakAcc >= need) { doBreak(); breakAcc = 0; }
+  }
+
+  // gündüz/gece
+  const dayT = (now/1000 % DAY_LEN)/DAY_LEN;
+  const sun = Math.max(0, Math.sin(dayT*Math.PI*2 - Math.PI/2)*0.5+0.62);
+  const light = 0.25 + 0.75*Math.min(1, sun);
+  const sky = [0.03+0.44*sun, 0.05+0.62*sun, 0.1+0.88*sun];
+
+  gl.clearColor(sky[0], sky[1], sky[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  const asp = canvas.width/canvas.height;
+  const proj = mpersp(1.22, asp, 0.08, 400);
+  const view = mmul(mrotX(P.pitch), mmul(mrotY(P.yaw), mtrans(-P.x, -(P.y+P.eye), -P.z)));
+  const mvp = mmul(proj, view);
+  gl.uniformMatrix4fv(loc.uMVP, false, mvp);
+  gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
+  gl.uniform1f(loc.uFogFar, RDIST*CH+14);
+  gl.uniform1f(loc.uLight, light);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+
+  function bindDraw(vbo, cnt) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 24, 12);
+    gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 24, 20);
+    gl.drawArrays(gl.TRIANGLES, 0, cnt);
+  }
+  // opak + delikli
+  gl.uniform1f(loc.uAlpha, 1);
+  gl.disable(gl.BLEND);
+  gl.depthMask(true);
+  const waterList = [];
+  for (const [k,c] of chunks) {
+    if (!c.meshed) continue;
+    if (c.vboO) bindDraw(c.vboO, c.cntO);
+    if (c.vboW) waterList.push(c);
+  }
+  // su (yarı saydam)
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);
+  gl.uniform1f(loc.uAlpha, 0.85);
+  for (const c of waterList) bindDraw(c.vboW, c.cntW);
+  gl.depthMask(true);
+
+  waterOv.style.display =
+    getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z)) === 5 ? 'block' : 'none';
+  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0);
+}
+let lastCX = null, lastCZ = null, boundaryT = 0;
+function ensureOnBoundary() {
+  const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
+  boundaryT++;
+  if (cx !== lastCX || cz !== lastCZ || boundaryT > 90) {
+    lastCX = cx; lastCZ = cz; boundaryT = 0;
+    ensureChunks();
+  }
+}
+requestAnimationFrame(frame);
+window.CK = { P, input, keys, raycast, getBlock, ver:'1.0' };
+</script>
+</body>
+</html>
