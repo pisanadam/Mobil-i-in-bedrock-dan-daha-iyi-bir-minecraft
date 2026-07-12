@@ -774,7 +774,7 @@ function frame(now) {
   }
 
   // gündüz/gece
-  const dayT = (now/1000 % DAY_LEN)/DAY_LEN;
+  const dayT = ((now/1000 + DAY_LEN*0.3) % DAY_LEN)/DAY_LEN; // sabah vakti başla
   const sun = Math.max(0, Math.sin(dayT*Math.PI*2 - Math.PI/2)*0.5+0.62);
   const light = 0.25 + 0.75*Math.min(1, sun);
   const sky = [0.03+0.44*sun, 0.05+0.62*sun, 0.1+0.88*sun];
