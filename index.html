@@ -37,6 +37,11 @@
     background-color:rgba(0,0,0,.35); background-repeat:no-repeat; image-rendering:pixelated; }
   .slot.sel { border-color:#fff; box-shadow:0 0 8px rgba(255,255,255,.8); transform:scale(1.1); }
   .slot .cnt { position:absolute; right:2px; bottom:0; color:#fff; font-size:12px; font-weight:700; text-shadow:1px 1px 0 #000; pointer-events:none; }
+  .slot .dur { position:absolute; left:3px; right:3px; bottom:2px; height:3px; background:rgba(0,0,0,.6); border-radius:2px; pointer-events:none; }
+  .slot .dur div { height:100%; border-radius:2px; }
+  #hand { right:5vw; bottom:-6px; width:128px; height:128px; background-repeat:no-repeat; background-size:contain;
+    image-rendering:pixelated; pointer-events:none; z-index:8; transform-origin:85% 105%; transition:transform .09s ease-out; }
+  #hand.swing { transform: rotate(-32deg) translate(-14px, 8px) scale(1.06); }
   .slot.pick { border-color:#ffd24a; box-shadow:0 0 8px rgba(255,210,74,.9); }
   #hearts { left:50%; bottom:58px; transform:translateX(-50%); display:flex; gap:1px; z-index:11; pointer-events:none; }
   #hearts span { font-size:16px; text-shadow:1px 1px 0 #000; }
@@ -104,6 +109,7 @@
 <button class="btn hud" id="chatbtn">💬</button>
 <button class="btn hud" id="menubtn">☰</button>
 <div class="hud" id="hearts"></div>
+<div class="hud" id="hand"></div>
 <div class="hud" id="hotbar"></div>
 <div class="hud" id="info"></div>
 <div class="hud" id="toast"></div>
@@ -422,16 +428,42 @@ const IC = { // ikon boyacıları (16x16)
   food:(c,c2)=>(x,y)=>{ const d=Math.hypot(x-8,y-9); if (d<5) return hex(d<2&&c2?c2:c); if (y<5&&Math.abs(x-8)<1&&c2) return hex('#5a3a1a'); return null; },
   pearl:c=>(x,y)=>{ const d=Math.hypot(x-8,y-8); if (d<5) return hex(d<2.5?mixHex(c,'#ffffff',0.35):c); return null; },
 };
-const TIERS = { wooden:['Tahta','#9a7040',2,4,1], stone:['Taş','#8a8a8a',4,5,2], iron:['Demir','#d6d6d6',6,6,3],
-  golden:['Altın','#f6d038',12,4,1], diamond:['Elmas','#66e8dc',8,7,4], netherite:['Netherite','#443e46',9,8,5] };
+/* dayanıklılık değerleri Minecraft ile aynı */
+const TIERS = { wooden:['Tahta','#9a7040',2,4,1,59], stone:['Taş','#8a8a8a',4,5,2,131], iron:['Demir','#d6d6d6',6,6,3,250],
+  golden:['Altın','#f6d038',12,4,1,32], diamond:['Elmas','#66e8dc',8,7,4,1561], netherite:['Netherite','#443e46',9,8,5,2031] };
 const TOOLTYPES = { pickaxe:['Kazma','pick'], axe:['Balta','axe'], shovel:['Kürek','shovel'], hoe:['Çapa',null], sword:['Kılıç',null] };
 for (const tr in TIERS) {
-  const [tnm, tc, spd, dmg, lvl] = TIERS[tr];
+  const [tnm, tc, spd, dmg, lvl, dur] = TIERS[tr];
   for (const tt in TOOLTYPES) {
     const [ttnm, cls] = TOOLTYPES[tt];
-    defItem(tr+'_'+tt, tnm+' '+ttnm, { icon:IC.tool(tt,tc), stack:1, tool:cls, tier:lvl, speed:spd, dmg: tt==='sword'?dmg:Math.max(1,dmg-2) });
+    defItem(tr+'_'+tt, tnm+' '+ttnm, { icon:IC.tool(tt,tc), stack:1, tool:cls, tier:lvl, speed:spd, dur, dmg: tt==='sword'?dmg:Math.max(1,dmg-2) });
   }
 }
+/* zırhlar (koruma puanı + dayanıklılık Minecraft ile aynı) */
+IC.armor = (p,c) => (x,y) => {
+  const C = hex(c), D = hex(mixHex(c,'#000000',0.3));
+  if (p===0) { const d=Math.hypot(x-8,y-9); if (d<6.5 && y<10) return (y<5?C:D); if (y>=10&&y<12&&Math.abs(x-8)<7) return C; return null; }
+  if (p===1) { if (y>2&&y<14&&x>3&&x<12) return (x>5&&x<10&&y<6)?D:C; if (y>2&&y<7&&(x===3||x===12)) return D; return null; }
+  if (p===2) { if (y>2&&y<7&&x>4&&x<11) return C; if (y>=7&&y<14&&((x>4&&x<7.5)||(x>8.5&&x<11))) return (y>11?D:C); return null; }
+  return (y>8&&y<13&&((x>2&&x<7)||(x>9&&x<14))) ? (y>11?D:C) : null;
+};
+const ARMOR_MATS = {
+  leather:  ['Deri','#a5713a',[1,3,2,1],[55,80,75,65],'leather'],
+  chainmail:['Zincir','#9aa4ac',[2,5,4,1],[165,240,225,195],null],
+  iron:     ['Demir','#d6d6d6',[2,6,5,2],[165,240,225,195],'iron_ingot'],
+  golden:   ['Altın','#f6d038',[2,5,3,1],[77,112,105,91],'gold_ingot'],
+  diamond:  ['Elmas','#66e8dc',[3,8,6,3],[363,528,495,429],'diamond'],
+  netherite:['Netherite','#443e46',[3,8,6,3],[407,592,555,481],null],
+};
+const ARMOR_PIECES = [['helmet','Kask',5],['chestplate','Göğüslük',8],['leggings','Pantolon',7],['boots','Bot',4]];
+for (const m in ARMOR_MATS) {
+  const [mnm, mc, pts, durs, mat] = ARMOR_MATS[m];
+  ARMOR_PIECES.forEach(([pid, pnm, cost], i) => {
+    defItem(m+'_'+pid, mnm+' '+pnm, { icon:IC.armor(i,mc), stack:1, armor:pts[i], aslot:i, dur:durs[i] });
+  });
+}
+defItem('turtle_helmet','Kaplumbağa Kabuğu', { icon:IC.armor(0,'#4f9a44'), stack:1, armor:2, aslot:0, dur:275 });
+defItem('totem_of_undying','Ölümsüzlük Totemi', { icon:IC.food('#f6d038','#2bc75c'), stack:1, totem:1 });
 defItem('stick','Çubuk',{icon:IC.stick()});
 defItem('coal','Kömür',{icon:IC.raw('#242424'), fuel:8});
 defItem('charcoal','Odun Kömürü',{icon:IC.raw('#3a3028'), fuel:8});
@@ -495,6 +527,15 @@ for (const tr in TOOLMATS) {
   defRecipe(tr+'_sword',1,[[m,2],['stick',1]],1);
 }
 for (const tt in TOOLTYPES) defRecipe('netherite_'+tt,1,[['diamond_'+tt,1],['netherite_ingot',1]],1);
+for (const m in ARMOR_MATS) {
+  const mat = ARMOR_MATS[m][4];
+  ARMOR_PIECES.forEach(([pid, pnm, cost]) => {
+    if (mat) defRecipe(m+'_'+pid, 1, [[mat, cost]], 1);
+    else if (m === 'netherite') defRecipe('netherite_'+pid, 1, [['diamond_'+pid,1],['netherite_ingot',1]], 1);
+  });
+}
+defRecipe('nether_portal', 1, [['obsidian',6]], 1);
+defRecipe('end_portal', 1, [['obsidian',6],['diamond',2]], 1);
 for (const [b,i] of [['coal_block','coal'],['iron_block','iron_ingot'],['gold_block','gold_ingot'],
   ['diamond_block','diamond'],['emerald_block','emerald'],['lapis_block','lapis_lazuli'],
   ['redstone_block','redstone'],['netherite_block','netherite_ingot'],
@@ -515,6 +556,12 @@ function tagMatch(tag, id) {
 }
 /* --- su bloğu --- */
 defBlock('water','Su', stone3(tile((x,y,r)=>[50+(r()-0.5)*24, 96+(r()-0.5)*26, 200+(r()-0.5)*30, 178])), {water:1, solid:0, noitem:1, unbreakable:1});
+defBlock('lava','Lav', stone3(tile((x,y,r)=>{ if (cell(x,y,21)<0.3) return nzc(hex('#f8d03a'),40,r); return nzc(hex('#e35c1e'),40,r); })), {water:1, lava:1, solid:0, noitem:1, unbreakable:1});
+defBlock('nether_portal','Nether Portalı', stone3(tile((x,y,r)=>{ const s=Math.sin((x+y)*0.8)*30; return [120+s, 30+(r()*30), 190+s, 215]; })), {cutout:1, solid:0, hard:1.5, tool:'pick', tier:1});
+defBlock('end_portal','End Portalı', stone3(tile((x,y,r)=>{ if (r()<0.08) return [180,255,200,255]; return [8+(r()*14), 14+(r()*16), 20+(r()*18), 235]; })), {cutout:1, solid:0, hard:1.5, tool:'pick', tier:1});
+// ışık yayan eşyalar (elde taşınınca çevreyi aydınlatır)
+for (const [lid, lv] of [['torch',0.85],['soul_torch',0.7],['lantern',0.95],['glowstone',1],['sea_lantern',1],['shroomlight',0.95],['magma_block',0.5],['crying_obsidian',0.5]])
+  if (ITEMS[lid]) ITEMS[lid].light = lv;
 const isTransp = b => { const d=BLOCKS[b]; return d && (d.water || d.cutout || d.cross); };
 const isSolid  = b => b>0 && BLOCKS[b].solid;
 
@@ -573,13 +620,24 @@ function oreAt(wx, y, wz, deep) {
   if (v < 0.0295 && y < 26) return deep ? BID.deepslate_lapis_ore : BID.lapis_ore;
   if (v < 0.0318 && y < 13) return deep ? BID.deepslate_diamond_ore : BID.diamond_ore;
   if (v < 0.0328 && y < 13) return deep ? BID.deepslate_emerald_ore : BID.emerald_ore;
+  if (v < 0.0345 && y < 10) return BID.obsidian;
   return 0;
 }
 
-/* ================= DÜNYA ================= */
-const chunks = new Map();
-let edits = {};
-try { edits = JSON.parse(localStorage.getItem('ck2_edits_'+seed) || '{}'); } catch(e) { edits = {}; }
+/* ================= DÜNYA & BOYUTLAR ================= */
+let dim = 'overworld'; // 'overworld' | 'nether' | 'end'
+const worlds = { overworld:{chunks:new Map(), edits:null}, nether:{chunks:new Map(), edits:null}, end:{chunks:new Map(), edits:null} };
+function editsKey(d) { return d==='overworld' ? 'ck2_edits_'+seed : 'ck2_edits_'+seed+'_'+d; }
+function loadEditsFor(d) { try { return JSON.parse(localStorage.getItem(editsKey(d)) || '{}'); } catch(e) { return {}; } }
+worlds.overworld.edits = loadEditsFor('overworld');
+let chunks = worlds.overworld.chunks;
+let edits = worlds.overworld.edits;
+function switchWorld(d) { // sadece konteynerleri değiştirir
+  worlds[dim].chunks = chunks; worlds[dim].edits = edits;
+  dim = d;
+  if (!worlds[d].edits) worlds[d].edits = loadEditsFor(d);
+  chunks = worlds[d].chunks; edits = worlds[d].edits;
+}
 const ckey = (cx,cz) => cx+','+cz;
 const bidx = (x,y,z) => (y*CH+z)*CH+x;
 
@@ -619,6 +677,83 @@ function genTree(data, x0, z0, wx, wz, g, type) {
 }
 const FLOWERS = ['poppy','dandelion','red_tulip','oxeye_daisy','cornflower','allium'];
 function genChunk(cx, cz) {
+  if (dim === 'nether') return genNether(cx, cz);
+  if (dim === 'end') return genEnd(cx, cz);
+  return genOverworld(cx, cz);
+}
+function genNether(cx, cz) {
+  const data = new Uint8Array(CH*H*CH);
+  const x0 = cx*CH, z0 = cz*CH;
+  for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
+    const wx = x0+x, wz = z0+z;
+    const reg = fbm(wx*0.015+70, wz*0.015-40);
+    for (let y=0; y<H; y++) {
+      let b;
+      if (y === 0 || y === H-1) b = BID.bedrock;
+      else if (y > 4 && y < 52 && vnoise3(wx*0.07, y*0.09, wz*0.07) > 0.52) b = y <= 11 ? BID.lava : 0;
+      else {
+        const v = hash3(wx*3+7, y*5+1, wz*7+3);
+        if (v < 0.02) b = BID.nether_quartz_ore;
+        else if (v < 0.031) b = BID.nether_gold_ore;
+        else if (v < 0.0335 && y < 24) b = BID.ancient_debris;
+        else if (y < 14 && reg < 0.38) b = BID.blackstone;
+        else if (reg > 0.78 && y % 9 < 3) b = BID.basalt;
+        else b = BID.netherrack;
+      }
+      data[bidx(x,y,z)] = b;
+    }
+    // yüzeyler: nylium + mantarlar, tavan: ışık taşı
+    for (let y=1; y<H-2; y++) {
+      const i = bidx(x,y,z);
+      if (data[i] === BID.netherrack && !data[bidx(x,y+1,z)]) {
+        const nyl = fbm(wx*0.02+11, wz*0.02+77);
+        const k = hash2(wx*13, wz*17+y);
+        if (nyl < 0.36) { data[i] = BID.crimson_nylium;
+          if (k < 0.06) data[bidx(x,y+1,z)] = BID.crimson_fungus;
+          else if (k < 0.075) data[bidx(x,y+1,z)] = BID.shroomlight; }
+        else if (nyl > 0.7) { data[i] = BID.warped_nylium;
+          if (k < 0.06) data[bidx(x,y+1,z)] = BID.warped_fungus; }
+        else if (k < 0.05 && y < 16) data[i] = BID.soul_sand;
+      }
+      if (data[i] && data[i] !== BID.lava && y > 36 && !data[bidx(x,y-1,z)] && hash2(wx*7+y, wz*11) < 0.025)
+        data[i] = BID.glowstone;
+    }
+  }
+  const e = edits[ckey(cx,cz)];
+  if (e) for (const i in e) data[i] = e[i];
+  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
+}
+function genEnd(cx, cz) {
+  const data = new Uint8Array(CH*H*CH);
+  const x0 = cx*CH, z0 = cz*CH;
+  for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
+    const wx = x0+x, wz = z0+z, d = Math.hypot(wx, wz);
+    const base = Math.max(0, 1 - d/95);
+    let top = -1, bot = 0;
+    if (base > 0.03) {
+      const n = fbm(wx*0.03+9, wz*0.03-6);
+      top = (33 + n*6*base) | 0;
+      bot = Math.max(1, (33 - 15*base - n*8) | 0);
+    } else if (d > 130) {
+      const n = fbm(wx*0.02+300, wz*0.02+120);
+      if (n > 0.68) { top = 33 + (((n-0.68)*30)|0); bot = 29 - (((n-0.68)*40)|0); }
+    }
+    if (top > 0) for (let y=Math.max(1,bot); y<=Math.min(H-2,top); y++) data[bidx(x,y,z)] = BID.end_stone;
+    // obsidyen sütunlar
+    if (base > 0.25) {
+      const gx = Math.floor(wx/24), gz = Math.floor(wz/24);
+      if (hash2(gx*911, gz*313) < 0.3) {
+        const px = gx*24+12, pz = gz*24+12;
+        if (Math.hypot(wx-px, wz-pz) < 2.5)
+          for (let y=Math.max(1,bot); y<=Math.min(H-2, 44+((hash2(gx,gz)*8)|0)); y++) data[bidx(x,y,z)] = BID.obsidian;
+      }
+    }
+  }
+  const e = edits[ckey(cx,cz)];
+  if (e) for (const i in e) data[i] = e[i];
+  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
+}
+function genOverworld(cx, cz) {
   const data = new Uint8Array(CH*H*CH);
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
@@ -674,8 +809,9 @@ function getBlock(wx, wy, wz) {
 let saveTimer = null;
 function saveEdits() {
   clearTimeout(saveTimer);
+  const k = editsKey(dim), e = edits;
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem('ck2_edits_'+seed, JSON.stringify(edits)); } catch(e) {}
+    try { localStorage.setItem(k, JSON.stringify(e)); } catch(err) {}
   }, 800);
 }
 function setBlock(wx, wy, wz, b) {
@@ -695,16 +831,17 @@ function setBlock(wx, wy, wz, b) {
 
 /* ================= WEBGL ================= */
 const VS = `attribute vec3 aPos; attribute vec2 aUV; attribute float aShade;
-uniform mat4 uMVP; varying vec2 vUV; varying float vShade; varying float vDist;
-void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vShade=aShade; vDist=gl_Position.w; }`;
+uniform mat4 uMVP; varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld;
+void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vShade=aShade; vDist=gl_Position.w; vWorld=aPos; }`;
 const FS = `precision mediump float;
 uniform sampler2D uTex; uniform vec3 uFog; uniform float uFogFar; uniform float uLight; uniform float uAlpha;
-uniform float uUseTex; uniform vec3 uColor;
-varying vec2 vUV; varying float vShade; varying float vDist;
+uniform float uUseTex; uniform vec3 uColor; uniform float uPLight; uniform vec3 uPPos;
+varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld;
 void main(){
   vec4 c = uUseTex > 0.5 ? texture2D(uTex, vUV) : vec4(uColor, 1.0);
   if (c.a < 0.08) discard;
-  vec3 col = c.rgb * vShade * uLight;
+  float pl = uPLight * clamp(1.0 - distance(vWorld, uPPos)/9.5, 0.0, 1.0);
+  vec3 col = c.rgb * vShade * min(1.15, uLight + pl);
   float f = clamp((uFogFar - vDist) / (uFogFar*0.4), 0.0, 1.0);
   col = mix(uFog, col, f);
   gl_FragColor = vec4(col, c.a * uAlpha);
@@ -720,7 +857,7 @@ gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, FS));
 gl.linkProgram(prog); gl.useProgram(prog);
 const loc = {};
 for (const a of ['aPos','aUV','aShade']) loc[a] = gl.getAttribLocation(prog, a);
-for (const u of ['uMVP','uFog','uFogFar','uLight','uAlpha','uUseTex','uColor','uTex']) loc[u] = gl.getUniformLocation(prog, u);
+for (const u of ['uMVP','uFog','uFogFar','uLight','uAlpha','uUseTex','uColor','uTex','uPLight','uPPos']) loc[u] = gl.getUniformLocation(prog, u);
 gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV); gl.enableVertexAttribArray(loc.aShade);
 const tex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -835,6 +972,8 @@ const RULES = { keepInventory:true, mobSpawning:true, daylightCycle:true };
 let timeOfDay = 0.3;
 const DAY_LEN = 480;
 let inv = Array(36).fill(null);
+let armorInv = [null, null, null, null]; // kask, göğüslük, pantolon, bot
+let offhand = null;                      // 2. el (meşale, totem...)
 let hotSel = 0;
 let chestData = {};
 let furnaceFuel = 0;
@@ -899,10 +1038,10 @@ function moveEnt(e, dt) { // e: x,y,z,vx,vy,vz,w,hgt + onGround
     e.vy = 0;
   }
 }
-let dmgTick = 0;
+let dmgTick = 0, stepT = 0;
 function physics(dt) {
   if (P.dead) return;
-  const sp = P.fly ? 9.5 : (P.inWater ? 2.6 : 4.3);
+  const sp = P.fly ? 9.5 : (P.inLava ? 1.7 : P.inWater ? 2.6 : 4.3);
   const s = Math.sin(P.yaw), cs = Math.cos(P.yaw);
   const iv = inputVec();
   const mx = (iv.f * s + iv.r * cs) * sp;
@@ -910,8 +1049,10 @@ function physics(dt) {
   const lerp = P.onGround || P.fly ? Math.min(1, dt*12) : Math.min(1, dt*3.5);
   P.vx += (mx - P.vx) * lerp;
   P.vz += (mz - P.vz) * lerp;
-  const head = getBlock(Math.floor(P.x), Math.floor(P.y+1.2), Math.floor(P.z));
-  P.inWater = head === BID.water || getBlock(Math.floor(P.x), Math.floor(P.y+0.4), Math.floor(P.z)) === BID.water;
+  const headB = getBlock(Math.floor(P.x), Math.floor(P.y+1.2), Math.floor(P.z));
+  const bodyB = getBlock(Math.floor(P.x), Math.floor(P.y+0.4), Math.floor(P.z));
+  P.inLava = headB === BID.lava || bodyB === BID.lava;
+  P.inWater = headB === BID.water || bodyB === BID.water || P.inLava;
   if (P.fly) {
     const vt = (input.jump?1:0) - (input.down?1:0);
     P.vy += (vt*8 - P.vy) * Math.min(1, dt*10);
@@ -943,22 +1084,46 @@ function physics(dt) {
     P.fallD = 0;
   }
   if (P.fly && P.onGround) P.fallD = 0;
-  // magma / kaktüs hasarı
+  // lav / magma / kaktüs hasarı
   dmgTick -= dt;
   if (!isCreative() && dmgTick <= 0) {
-    const below = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y-0.5), Math.floor(P.z))];
-    const at = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y+0.2), Math.floor(P.z))];
-    if ((below && below.damage) || (at && at.damage)) { damagePlayer(1, 'blok'); dmgTick = 0.8; }
+    if (P.inLava) { damagePlayer(3, 'lav'); dmgTick = 0.5; }
+    else {
+      const below = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y-0.5), Math.floor(P.z))];
+      const at = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y+0.2), Math.floor(P.z))];
+      if ((below && below.damage) || (at && at.damage)) { damagePlayer(1, 'blok'); dmgTick = 0.8; }
+    }
   }
+  // adım sesleri
+  const hsp2 = Math.hypot(P.vx, P.vz);
+  if (P.onGround && hsp2 > 2) { stepT -= dt*hsp2; if (stepT <= 0) { stepT = 1.7; sfx(65+Math.random()*45, 0.05, 'triangle', 0.05); } }
   if (P.y < -12) { if (isCreative()) { P.y = H; P.vy = 0; } else damagePlayer(100, 'boşluk'); }
 }
 function damagePlayer(d, src) {
   if (isCreative() || P.dead || d <= 0) return;
+  // zırh koruması + zırh yıpranması
+  const pts = armorInv.reduce((a,s)=>a+(s?(ITEMS[s.id].armor||0):0), 0);
+  if (pts > 0 && src !== 'boşluk') {
+    d = Math.max(1, Math.round(d * (1 - Math.min(0.8, pts*0.04))));
+    armorInv.forEach((s,i) => {
+      if (!s) return;
+      s.d = (s.d||0) + 1;
+      if (s.d >= ITEMS[s.id].dur) { toast('💔 '+ITEMS[s.id].name+' parçalandı!'); sfx(90,0.3,'sawtooth'); armorInv[i] = null; }
+    });
+  }
   P.hp -= d;
   $('hurtoverlay').style.display = 'block';
   setTimeout(()=>$('hurtoverlay').style.display='none', 180);
   sfx(120, 0.15, 'sawtooth');
-  if (P.hp <= 0) { P.hp = 0; die(); }
+  if (P.hp <= 0) {
+    if (offhand && ITEMS[offhand.id] && ITEMS[offhand.id].totem) { // Ölümsüzlük Totemi!
+      offhand.n--; if (offhand.n <= 0) offhand = null;
+      P.hp = 10;
+      toast('✨ Ölümsüzlük Totemi seni kurtardı!');
+      sfx(600, 0.6, 'sine', 0.15, 1400);
+      updateHand();
+    } else { P.hp = 0; die(); }
+  }
   updateHearts();
 }
 function die() {
@@ -968,6 +1133,7 @@ function die() {
 }
 function respawn() {
   P.dead = false; P.hp = 20; P.fallD = 0;
+  if (dim !== 'overworld') switchWorld('overworld');
   P.x = SPAWN.x; P.z = SPAWN.z; P.vx=P.vy=P.vz=0;
   ensureChunks();
   P.y = safeY(Math.floor(SPAWN.x), Math.floor(SPAWN.z));
@@ -977,6 +1143,38 @@ function respawn() {
 function safeY(bx, bz) {
   for (let y=H-1; y>0; y--) if (isSolid(getBlock(bx, y, bz))) return y+1.01;
   return WATER_Y+2;
+}
+function groundY(bx, bz) { // boyut geçişleri için: hava boşluklu zemin bul, yoksa oda aç
+  for (let y=H-4; y>1; y--)
+    if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) return y+1.01;
+  setBlock(bx, 30, bz, dim==='nether' ? BID.netherrack : dim==='end' ? BID.end_stone : BID.stone);
+  setBlock(bx, 31, bz, 0); setBlock(bx, 32, bz, 0);
+  return 31.01;
+}
+let portalT = 0, portalArmed = true;
+function setDim(d) {
+  saveState();
+  switchWorld(d);
+  ents.length = 0; tntFuses.length = 0;
+  const ax = d==='overworld' ? Math.floor(SPAWN.x) : d==='nether' ? 8 : 0;
+  const az = d==='overworld' ? Math.floor(SPAWN.z) : d==='nether' ? 8 : 0;
+  P.x = ax+0.5; P.z = az+0.5; P.vx=P.vy=P.vz=0; P.fallD = 0;
+  ensureChunks();
+  P.y = groundY(ax, az);
+  const pb = d==='end' ? BID.end_portal : BID.nether_portal;
+  if (getBlock(ax, Math.floor(P.y), az) === 0) setBlock(ax, Math.floor(P.y), az, pb);
+  portalArmed = false; portalT = 0;
+  sfx(180, 0.7, 'sine', 0.14, 40);
+  toast(d==='nether' ? '🔥 Nether\'e geçtin' : d==='end' ? '🌌 End\'e geçtin' : '🌍 Ana dünyaya döndün');
+  saveState();
+}
+function checkPortal(dt) {
+  const b = getBlock(Math.floor(P.x), Math.floor(P.y+0.1), Math.floor(P.z));
+  const np = b === BID.nether_portal, ep = b === BID.end_portal;
+  if (!np && !ep) { portalArmed = true; portalT = 0; return; }
+  if (!portalArmed) return;
+  portalT += dt;
+  if (portalT >= 0.9) setDim(np ? (dim==='nether'?'overworld':'nether') : (dim==='end'?'overworld':'end'));
 }
 
 /* ================= CANLILAR ================= */
@@ -1001,12 +1199,21 @@ function trySpawns(dt, light) {
   spawnT -= dt;
   if (spawnT > 0) return;
   spawnT = 1.5;
+  if (dim === 'end') return;
   const passive = ents.filter(e=>!e.def.hostile).length;
   const hostile = ents.filter(e=>e.def.hostile).length;
   const a = Math.random()*6.28, d = 18 + Math.random()*18;
   const bx = Math.floor(P.x + Math.sin(a)*d), bz = Math.floor(P.z + Math.cos(a)*d);
-  const gy = safeY(bx, bz);
-  if (gy > H-2 || gy < WATER_Y) return;
+  let gy = -1;
+  for (let y=H-4; y>1; y--)
+    if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) { gy = y+1; break; }
+  if (gy < 0) return;
+  if (dim === 'nether') {
+    if (hostile < 8 && RULES.mobSpawning && !isCreative())
+      spawnMob(Math.random()<0.85?'zombie':'creeper', bx+0.5, gy, bz+0.5);
+    return;
+  }
+  if (gy < WATER_Y) return;
   if (light > 0.6 && passive < 8) {
     if (getBlock(bx, gy-1, bz) === BID.grass_block)
       spawnMob(['pig','cow','sheep','chicken'][(Math.random()*4)|0], bx+0.5, gy, bz+0.5);
@@ -1035,7 +1242,7 @@ function updateMobs(dt, light) {
     if (dist > 80) { ents.splice(i,1); continue; }
     e.hurtT = Math.max(0, e.hurtT-dt);
     e.atkT = Math.max(0, e.atkT-dt);
-    if (e.def.hostile && light > 0.6 && e.type==='zombie') { e.hp -= 2*dt; if (e.hp<=0) { ents.splice(i,1); continue; } }
+    if (e.def.hostile && light > 0.6 && e.type==='zombie' && dim==='overworld') { e.hp -= 2*dt; if (e.hp<=0) { ents.splice(i,1); continue; } }
     // hedef seçimi
     if (e.hurtT > 0 && !e.def.hostile) { e.mYaw = Math.atan2(-dx, dz); e.mSp = e.def.sp*1.8; }
     else if (e.def.hostile && dist < 20 && !P.dead && !isCreative()) {
@@ -1147,7 +1354,7 @@ function raycast(maxD) {
   let px = x, py = y, pz = z, t = 0;
   while (t <= maxD) {
     const b = getBlock(x,y,z);
-    if (b && b !== BID.water) return { x,y,z,px,py,pz,b };
+    if (b && b !== BID.water && b !== BID.lava) return { x,y,z,px,py,pz,b };
     px=x; py=y; pz=z;
     if (tx < ty && tx < tz) { x+=stx; t=tx; tx+=dx; }
     else if (ty < tz)       { y+=sty; t=ty; ty+=dy; }
@@ -1179,6 +1386,7 @@ function stepBreaking(dt) {
     const bt = breakTimeOf(r.b);
     breakSt = { x:r.x, y:r.y, z:r.z, b:r.b, prog:0, need:bt.t, harvest:bt.harvest };
   }
+  if (Math.floor(breakSt.prog/0.3) !== Math.floor((breakSt.prog+dt)/0.3)) { swingHand(); sfx(150+Math.random()*60, 0.04, 'square', 0.05); }
   breakSt.prog += dt;
   breakbar.firstElementChild.style.width = Math.min(100, breakSt.prog/breakSt.need*100)+'%';
   if (breakSt.prog >= breakSt.need) {
@@ -1186,9 +1394,19 @@ function stepBreaking(dt) {
     breakSt = null;
   }
 }
+function wearHeld(n) {
+  if (isCreative()) return;
+  const s = inv[hotSel];
+  if (!s || !ITEMS[s.id].dur) return;
+  s.d = (s.d||0) + n;
+  if (s.d >= ITEMS[s.id].dur) { toast('💔 '+ITEMS[s.id].name+' kırıldı!'); sfx(90, 0.3, 'sawtooth'); inv[hotSel] = null; }
+  updateHotbar();
+}
 function finishBreak(st) {
   const def = BLOCKS[st.b];
-  setBlock(st.x, st.y, st.z, getBlock(st.x, st.y+1, st.z) === BID.water ? BID.water : 0);
+  const ab = getBlock(st.x, st.y+1, st.z);
+  setBlock(st.x, st.y, st.z, (ab === BID.water || ab === BID.lava) ? ab : 0);
+  if ((def.hard||0) >= 0.1) wearHeld(1);
   if (def.inter === 'chest') {
     const key = st.x+','+st.y+','+st.z;
     if (chestData[key]) { for (const s of chestData[key]) if (s) addItem(s.id, s.n); delete chestData[key]; }
@@ -1201,7 +1419,8 @@ function finishBreak(st) {
       addItem(dropId, mn + Math.round(Math.random()*(mx-mn)));
     }
   }
-  sfx(95, 0.09, 'square');
+  blockSound(def, false);
+  swingHand();
 }
 function instaBreak() { // yaratıcı masaüstü tek tık
   const r = raycast(6.5);
@@ -1236,7 +1455,8 @@ function doPlace() {
       px+1 > P.x-P.w && px < P.x+P.w && py+1 > P.y && py < P.y+P.hgt && pz+1 > P.z-P.w && pz < P.z+P.w) return;
   setBlock(px, py, pz, it.block);
   consumeHeld();
-  sfx(210, 0.06, 'square');
+  blockSound(BLOCKS[it.block], true);
+  swingHand();
 }
 function doTap() { // dokunma: önce canlıya vur, yoksa yerleştir/etkileşim
   const e = raycastEnt(4);
@@ -1244,6 +1464,8 @@ function doTap() { // dokunma: önce canlıya vur, yoksa yerleştir/etkileşim
     const held = heldItem() ? ITEMS[heldItem().id] : null;
     const d = camDir();
     hurtMob(e, held && held.dmg ? held.dmg : 1, d.x, d.z);
+    swingHand();
+    wearHeld(held && held.tool ? 2 : 1); // MC: alet 2, kılıç 1 yıpranır
     return;
   }
   doPlace();
@@ -1262,18 +1484,29 @@ function nearStation() {
 }
 /* ================= SES ================= */
 let audioCtx = null, sndOn = true;
-function sfx(freq, dur, type) {
+function sfx(freq, dur, type, vol, f2) {
   if (!sndOn) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = type||'triangle'; o.frequency.value = freq;
-    g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), audioCtx.currentTime+dur);
+    g.gain.setValueAtTime(vol||0.12, audioCtx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
     o.connect(g); g.connect(audioCtx.destination);
     o.start(); o.stop(audioCtx.currentTime+dur);
   } catch(e) {}
 }
+function blockSound(def, place) {
+  const base = (def.cutout && !def.cross) ? 850 : def.cross ? 500 :
+    def.tool==='axe' ? 240 : def.tool==='shovel' ? 130 : def.tool==='pick' ? 190 : 300;
+  sfx(base*(place?1.3:1)*(0.9+Math.random()*0.2), 0.07, def.tool==='shovel'?'triangle':'square', 0.09);
+}
+// menü / buton tık sesi
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target;
+  if (t && t.closest && t.closest('button,.slot,.tabs')) sfx(620+Math.random()*80, 0.035, 'square', 0.05);
+}, true);
 
 /* ================= İKONLAR & HUD ================= */
 const iconCache = {};
@@ -1304,6 +1537,15 @@ function slotBg(el, id) {
   el.style.backgroundPosition = 'center';
 }
 const hotbarEl = $('hotbar');
+function addDurBar(s, it) {
+  if (!it || !ITEMS[it.id] || !ITEMS[it.id].dur || !it.d) return;
+  const ratio = Math.max(0, 1 - it.d/ITEMS[it.id].dur);
+  const db = document.createElement('div'); db.className = 'dur';
+  const f = document.createElement('div');
+  f.style.width = (ratio*100)+'%';
+  f.style.background = `hsl(${(ratio*110)|0},85%,45%)`;
+  db.appendChild(f); s.appendChild(db);
+}
 function updateHotbar() {
   hotbarEl.innerHTML = '';
   for (let i=0;i<9;i++) {
@@ -1313,6 +1555,7 @@ function updateHotbar() {
     if (it) {
       slotBg(s, it.id);
       if (!isCreative() && it.n > 1) { const c = document.createElement('span'); c.className='cnt'; c.textContent = it.n; s.appendChild(c); }
+      addDurBar(s, it);
     }
     s.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); hotSel = i; updateHotbar();
@@ -1320,6 +1563,18 @@ function updateHotbar() {
     });
     hotbarEl.appendChild(s);
   }
+  updateHand();
+}
+const handEl = $('hand');
+function updateHand() {
+  const it = inv[hotSel];
+  handEl.style.backgroundImage = it ? `url(${uiIcon(it.id)})` : offhand ? `url(${uiIcon(offhand.id)})` : 'none';
+}
+let swingTimer = null;
+function swingHand() {
+  handEl.classList.add('swing');
+  clearTimeout(swingTimer);
+  swingTimer = setTimeout(() => handEl.classList.remove('swing'), 110);
 }
 function updateHearts() {
   const h = $('hearts');
@@ -1370,6 +1625,44 @@ function renderInv() {
   const body = $('invbody');
   body.innerHTML = '';
   if (invTab === 'bag') {
+    // zırh + 2. el satırı
+    const pts = armorInv.reduce((a,s)=>a+(s?(ITEMS[s.id].armor||0):0), 0);
+    const at = document.createElement('div');
+    at.style.cssText = 'font-size:12px;opacity:.8;margin-bottom:4px';
+    at.textContent = `🛡 Zırh puanı: ${pts}  |  2. eldeki meşale çevreni aydınlatır`;
+    body.appendChild(at);
+    const ar = document.createElement('div'); ar.className = 'grid'; ar.style.marginBottom = '8px';
+    const AEMOJI = ['🪖','🦺','👖','🥾'];
+    armorInv.forEach((s2, i) => {
+      const s = document.createElement('div'); s.className = 'slot';
+      s.style.borderColor = 'rgba(240,200,90,.6)';
+      if (s2) { slotBg(s, s2.id); addDurBar(s, s2); }
+      else { s.textContent = AEMOJI[i]; s.style.cssText += 'display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.6'; }
+      s.onclick = () => {
+        if (pickSlot >= 0 && inv[pickSlot] && ITEMS[inv[pickSlot].id].aslot === i) {
+          const t = armorInv[i]; armorInv[i] = inv[pickSlot]; inv[pickSlot] = t; pickSlot = -1;
+          sfx(350, 0.12, 'triangle'); toast(ITEMS[armorInv[i].id].name + ' giyildi');
+        } else if (pickSlot >= 0) { toast('Bu göze yalnız ' + ['kask','göğüslük','pantolon','bot'][i] + ' girer'); }
+        else if (armorInv[i]) {
+          for (let j=0;j<36;j++) if (!inv[j]) { inv[j] = armorInv[i]; armorInv[i] = null; break; }
+        }
+        updateHotbar(); renderInv(); saveState();
+      };
+      ar.appendChild(s);
+    });
+    // 2. el yuvası
+    const os = document.createElement('div'); os.className = 'slot';
+    os.style.borderColor = 'rgba(120,240,160,.6)';
+    if (offhand) { slotBg(os, offhand.id); addDurBar(os, offhand);
+      if (offhand.n > 1) { const c=document.createElement('span'); c.className='cnt'; c.textContent=offhand.n; os.appendChild(c); } }
+    else { os.textContent = '🤚'; os.style.cssText += 'display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.6'; }
+    os.onclick = () => {
+      if (pickSlot >= 0 && inv[pickSlot]) { const t = offhand; offhand = inv[pickSlot]; inv[pickSlot] = t; pickSlot = -1; sfx(350,0.12,'triangle'); }
+      else if (offhand) { for (let j=0;j<36;j++) if (!inv[j]) { inv[j] = offhand; offhand = null; break; } }
+      updateHotbar(); renderInv(); saveState();
+    };
+    ar.appendChild(os);
+    body.appendChild(ar);
     const g = document.createElement('div'); g.className = 'grid';
     for (let i=0;i<36;i++) {
       const s = document.createElement('div');
@@ -1377,7 +1670,8 @@ function renderInv() {
       if (i < 9) s.style.borderColor = 'rgba(120,190,255,.55)';
       const it = inv[i];
       if (it) { slotBg(s, it.id);
-        if (!isCreative() && it.n>1) { const c=document.createElement('span'); c.className='cnt'; c.textContent=it.n; s.appendChild(c); } }
+        if (!isCreative() && it.n>1) { const c=document.createElement('span'); c.className='cnt'; c.textContent=it.n; s.appendChild(c); }
+        addDurBar(s, it); }
       s.onclick = () => {
         if (pickSlot < 0) { if (inv[i]) pickSlot = i; }
         else { const t = inv[i]; inv[i] = inv[pickSlot]; inv[pickSlot] = t; pickSlot = -1; updateHotbar(); }
@@ -1387,7 +1681,7 @@ function renderInv() {
     }
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:11px;opacity:.6;margin-bottom:6px';
-    hint.textContent = 'Mavi çerçeveli ilk 9 göz = eşya çubuğun. Taşımak için iki göze sırayla dokun.';
+    hint.textContent = 'Mavi çerçeve = eşya çubuğu, sarı = zırh, yeşil = 2. el. Taşımak için iki göze sırayla dokun.';
     body.appendChild(hint); body.appendChild(g);
   } else if (invTab === 'blocks' || invTab === 'items') {
     const g = document.createElement('div'); g.className = 'grid';
@@ -1522,7 +1816,7 @@ function runCmd(line) {
   const [c, ...a] = line.slice(1).split(/\s+/);
   const cmd = c.toLowerCase();
   if (cmd === 'help' || cmd === 'yardım') {
-    chatMsg('Komutlar: /give <eşya> [adet], /gamemode <c|s>, /summon <canlı> [adet], /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
+    chatMsg('Komutlar: /give <eşya> [adet], /gamemode <c|s>, /summon <canlı> [adet], /dim <overworld|nether|end>, /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
     chatMsg('Canlılar: ' + Object.keys(MOBS).join(', '));
   } else if (cmd === 'give') {
     const r = fuzzyItem(a[0]);
@@ -1573,6 +1867,13 @@ function runCmd(line) {
     if (!key) return chatMsg('✖ Kural yok: ' + r);
     RULES[key] = v === 'true' || v === '1';
     chatMsg(`✔ ${key} = ${RULES[key]}`);
+  } else if (cmd === 'dim' || cmd === 'boyut') {
+    const v = (a[0]||'').toLowerCase();
+    if (['overworld','ana','anadünya','o'].includes(v)) setDim('overworld');
+    else if (['nether','n'].includes(v)) setDim('nether');
+    else if (['end','e'].includes(v)) setDim('end');
+    else return chatMsg('Kullanım: /dim <overworld|nether|end> (portal blokları da var!)');
+    chatMsg('✔ Boyut: ' + dim);
   } else if (cmd === 'seed') chatMsg('Tohum: ' + seed);
   else if (cmd === 'kill') { P.hp = 0; if (!isCreative()) die(); else chatMsg('Yaratıcı modda ölemezsin 😎'); }
   else if (cmd === 'heal') { P.hp = 20; updateHearts(); chatMsg('✔ Can dolduruldu'); }
@@ -1623,8 +1924,9 @@ window.addEventListener('pointerdown', (e) => {
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock && canvas.requestPointerLock(); return; }
     if (e.button === 0) {
       const ent = raycastEnt(4);
-      if (ent) { const held = heldItem() ? ITEMS[heldItem().id] : null; const d = camDir(); hurtMob(ent, held && held.dmg ? held.dmg : 1, d.x, d.z); }
-      else if (isCreative()) instaBreak();
+      if (ent) { const held = heldItem() ? ITEMS[heldItem().id] : null; const d = camDir();
+        hurtMob(ent, held && held.dmg ? held.dmg : 1, d.x, d.z); swingHand(); wearHeld(held && held.tool ? 2 : 1); }
+      else if (isCreative()) { instaBreak(); swingHand(); }
       else startBreaking();
     }
     if (e.button === 2) doTap();
@@ -1751,7 +2053,8 @@ function saveState() {
   try {
     localStorage.setItem('ck2_state_'+seed, JSON.stringify({
       p:[P.x,P.y,P.z,P.yaw,P.pitch], hp:P.hp, gm:gamemode, inv, hot:hotSel,
-      tod:timeOfDay, rules:RULES, chest:chestData, fuel:furnaceFuel, fly:P.fly }));
+      tod:timeOfDay, rules:RULES, chest:chestData, fuel:furnaceFuel, fly:P.fly,
+      dim, armor:armorInv, off:offhand }));
   } catch(e) {}
 }
 function loadState() {
@@ -1762,6 +2065,8 @@ function loadState() {
     P.hp = s.hp; gamemode = s.gm; inv = s.inv; hotSel = s.hot;
     timeOfDay = s.tod; Object.assign(RULES, s.rules);
     chestData = s.chest || {}; furnaceFuel = s.fuel || 0; P.fly = s.fly && gamemode==='creative';
+    armorInv = s.armor || [null,null,null,null]; offhand = s.off || null;
+    if (s.dim && s.dim !== dim) switchWorld(s.dim);
     return true;
   } catch(e) { return false; }
 }
@@ -1853,17 +2158,19 @@ function frame(now) {
     queued.delete(ckey(mx,mz));
     buildMesh(mx,mz);
   }
-  if (RULES.daylightCycle) timeOfDay = (timeOfDay + dt/DAY_LEN) % 1;
+  if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + dt/DAY_LEN) % 1;
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
-  const light = 0.25 + 0.75*Math.min(1, sun);
+  const light = dim==='nether' ? 0.55 : dim==='end' ? 0.5 : 0.25 + 0.75*Math.min(1, sun);
   physics(dt);
+  checkPortal(dt);
   stepBreaking(dt);
   updateMobs(dt, light);
   updateTnt(dt);
   stateT += dt;
   if (stateT > 4) { stateT = 0; saveState(); }
 
-  const sky = [0.03+0.44*sun, 0.05+0.62*sun, 0.1+0.88*sun];
+  const sky = dim==='nether' ? [0.22,0.05,0.05] : dim==='end' ? [0.05,0.03,0.1] :
+    [0.03+0.44*sun, 0.05+0.62*sun, 0.1+0.88*sun];
   gl.clearColor(sky[0], sky[1], sky[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   const asp = canvas.width/canvas.height;
@@ -1874,6 +2181,10 @@ function frame(now) {
   gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
   gl.uniform1f(loc.uFogFar, RDIST*CH+14);
   gl.uniform1f(loc.uLight, light);
+  const heldIt = heldItem() ? ITEMS[heldItem().id] : null;
+  const lightSrc = Math.max(offhand && ITEMS[offhand.id] && ITEMS[offhand.id].light || 0, heldIt && heldIt.light || 0);
+  gl.uniform1f(loc.uPLight, lightSrc*0.9);
+  gl.uniform3f(loc.uPPos, P.x, P.y+1, P.z);
   gl.uniform1f(loc.uUseTex, 1);
   gl.uniform3f(loc.uColor, 1, 1, 1);
   gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -1901,13 +2212,19 @@ function frame(now) {
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   for (const c of waterList) bindDraw(c.vboW, c.cntW);
   gl.depthMask(true);
-  waterOv.style.display =
-    getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z)) === BID.water ? 'block' : 'none';
-  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0)+'  '+(isCreative()?'Yaratıcı':'Hayatta Kalma');
+  const hb = getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z));
+  waterOv.style.display = (hb === BID.water || hb === BID.lava) ? 'block' : 'none';
+  waterOv.style.background = hb === BID.lava ? 'rgba(220,80,10,.5)' : 'rgba(20,60,160,.3)';
+  if (!handEl.classList.contains('swing'))
+    handEl.style.bottom = (-6 + Math.sin(now/210)*(Math.hypot(P.vx,P.vz)>1.5?4:1)) + 'px';
+  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0)+'  '+
+    (isCreative()?'Yaratıcı':'Hayatta Kalma')+(dim!=='overworld'?(dim==='nether'?'  🔥Nether':'  🌌End'):'');
 }
 requestAnimationFrame(frame);
-window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, MOBS, ents,
-  cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, ver:'2.0' };
+window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, MOBS, ents, armor:()=>armorInv,
+  cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, dim:()=>dim, setDim,
+  offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
+  hurt:(d)=>damagePlayer(d,'test'), ver:'3.0' };
 </script>
 </body>
 </html>

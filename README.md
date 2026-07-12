@@ -40,6 +40,21 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 🏗️ **Yaratıcı**: sınırsız blok, uçuş, anında kırma
 - ⚔️ **Hayatta Kalma**: can, düşme hasarı, blok sertliği ve **kazma kademeleri** (tahta → taş → demir → elmas → netherite), kırılan bloklar envantere düşer
 
+### Boyutlar 🌋
+- 🔥 **Nether**: dev mağara ağları, lav denizleri, ışık taşı kümeleri, kuvars/altın cevheri, antik enkaz, nylium bölgeleri — **Nether Portalı** ile geç (6 obsidyen, üretimden)
+- 🌌 **End**: boşlukta süzülen end taşı adaları, obsidyen sütunlar — **End Portalı** ile geç (6 obsidyen + 2 elmas)
+- Portalın üstünde ~1 saniye dur, geçiş olur; varış noktasına dönüş portalı otomatik kurulur. `/dim` komutu da var.
+
+### Ekipman 🛡
+- ⚒️ **Dayanıklılık**: aletler ve zırhlar gerçek Minecraft değerleriyle yıpranır (tahta 59, taş 131, demir 250, altın 32, elmas 1561, netherite 2031; zırhlar da kendi değerleriyle) — gözlerde renkli dayanıklılık çubuğu
+- 🦺 **Zırh giyme**: deri/zincir/demir/altın/elmas/netherite kask-göğüslük-pantolon-bot; koruma puanı hasarı azaltır (en fazla %80)
+- 🤚 **2. el (off-hand)**: envanterden eşya koy — **meşale/fener 2. eldeyken çevreni aydınlatır** (mağarada gerçekten işe yarar!)
+- ✨ **Ölümsüzlük Totemi**: 2. eldeyken ölümcül hasardan kurtarır
+
+### Ses & Animasyon 🔊
+- Malzemeye göre kırma/koyma sesleri, adım sesleri, menü tık sesleri, portal/patlama/alet kırılma efektleri
+- Eldeki eşya görünür ve vururken sallanır, yürürken hafifçe salınır; canlılarda yürüme animasyonu
+
 ### Sistemler
 - 🎒 **36 gözlü envanter**, eşya taşıma, yığınlama
 - 🛠️ **Üretim (craft)**: tahta, çubuk, aletler, kılıçlar, fırın, sandık, meşale, netherite yükseltmeleri… (gelişmiş tarifler çalışma masası ister)
@@ -50,10 +65,10 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 💾 Dünya + envanter + sandıklar otomatik kaydedilir
 
 ### 💬 Komut sistemi
-`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/gamemode <c|s>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
+`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
 ## 🚫 Henüz olmayanlar
-Büyüler/iksirler, kızıltaş devreleri, vagon/tekne, zırh giyme, Nether/End boyutlarına geçiş, basamak/merdiven/çit gibi kısmi bloklar. (Blokların çoğu dekoratif olarak mevcut, mekanikleri yok.)
+Büyüler/iksirler, kızıltaş devreleri, vagon/tekne, yay/ok, basamak/merdiven/çit gibi kısmi bloklar, Ender Ejderhası. (Blokların çoğu dekoratif olarak mevcut.)
 
 ## 🛠️ Teknik
 Saf JavaScript + WebGL. Dokular çalışma anında prosedürel üretilir. Chunk tabanlı dünya (16×64×16), yüz ayıklamalı mesh, `localStorage` kaydı.
