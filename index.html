@@ -43,8 +43,16 @@
     image-rendering:pixelated; pointer-events:none; z-index:8; transform-origin:85% 105%; transition:transform .09s ease-out; }
   #hand.swing { transform: rotate(-32deg) translate(-14px, 8px) scale(1.06); }
   .slot.pick { border-color:#ffd24a; box-shadow:0 0 8px rgba(255,210,74,.9); }
-  #hearts { left:50%; bottom:58px; transform:translateX(-50%); display:flex; gap:1px; z-index:11; pointer-events:none; }
-  #hearts span { font-size:16px; text-shadow:1px 1px 0 #000; }
+  #hearts { left:50%; bottom:58px; transform:translateX(-103%); display:flex; gap:1px; z-index:11; pointer-events:none; }
+  #hearts span { font-size:15px; text-shadow:1px 1px 0 #000; }
+  #hunger { left:50%; bottom:58px; transform:translateX(3%); display:flex; gap:1px; z-index:11; pointer-events:none; }
+  #hunger span { font-size:15px; text-shadow:1px 1px 0 #000; }
+  #fx { left:10px; top:30px; z-index:11; pointer-events:none; font-size:11px; color:#cfe;
+    text-shadow:1px 1px 0 #000; line-height:1.5; }
+  #mppanel textarea { user-select:text; -webkit-user-select:text; width:100%; height:56px; margin:4px 0 8px;
+    background:#0d1420; color:#9fc; border:1px solid #345; border-radius:8px; font-size:10px; padding:6px; }
+  #mppanel button.act { border:none; border-radius:8px; padding:10px; background:#4a6ea9; color:#fff; font-size:14px; width:100%; margin-top:4px; }
+  #mppanel button.act.green { background:#57a832; }
   #info { left:10px; top:10px; color:rgba(255,255,255,.85); font-size:11px; text-shadow:0 1px 2px #000; pointer-events:none; white-space:pre; }
   .panel { display:none; position:fixed; z-index:30; left:50%; top:50%; transform:translate(-50%,-50%);
     width:min(94vw,560px); max-height:84vh; background:rgba(18,22,32,.96); color:#eee;
@@ -109,6 +117,8 @@
 <button class="btn hud" id="chatbtn">💬</button>
 <button class="btn hud" id="menubtn">☰</button>
 <div class="hud" id="hearts"></div>
+<div class="hud" id="hunger"></div>
+<div class="hud" id="fx"></div>
 <div class="hud" id="hand"></div>
 <div class="hud" id="hotbar"></div>
 <div class="hud" id="info"></div>
@@ -122,6 +132,24 @@
   <h3><span>🔥 Fırın</span><button class="x" data-close="furnpanel">✕</button></h3>
   <div id="fuelinfo" style="font-size:12px;opacity:.8;margin-bottom:6px"></div>
   <div class="scroll" id="furnbody"></div>
+</div>
+<div class="panel" id="mppanel">
+  <h3><span>🎮 Çok Oyunculu (P2P Co-op)</span><button class="x" data-close="mppanel">✕</button></h3>
+  <div class="scroll">
+  <div style="font-size:12px;opacity:.78;margin-bottom:8px;line-height:1.5">
+    1) Biri <b>Oda Kur</b>'a basar, üstte çıkan kodu arkadaşına gönderir (WhatsApp vb.).<br>
+    2) Arkadaş o kodu aşağıdaki kutuya yapıştırıp <b>İşle</b>'ye basar; üstte çıkan <b>cevap kodunu</b> geri gönderir.<br>
+    3) Oda kuran, cevabı aşağı yapıştırıp <b>İşle</b>'ye basar. Bağlanınca dünya paylaşılır! (Aynı Wi-Fi'da en iyi sonuç)
+  </div>
+  <button id="mphost" class="act green">🏠 Oda Kur</button>
+  <div id="mpstatus" style="font-size:12px;color:#8fd;margin:8px 0">Hazır.</div>
+  <label style="font-size:11px;opacity:.7">Senin kodun (kopyala &amp; gönder):</label>
+  <textarea id="mpcode" readonly></textarea>
+  <button id="mpcopy" class="act" style="padding:6px">📋 Kodu Kopyala</button>
+  <label style="font-size:11px;opacity:.7;display:block;margin-top:8px">Arkadaşının kodu (yapıştır):</label>
+  <textarea id="mpin"></textarea>
+  <button id="mpgo" class="act green">✅ İşle</button>
+  </div>
 </div>
 <div class="panel" id="chestpanel">
   <h3><span>📦 Sandık</span><button class="x" data-close="chestpanel">✕</button></h3>
@@ -149,7 +177,8 @@
   </select>
   <label>Ses</label>
   <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
-  <button id="newworld" class="danger" style="margin-top:14px">🌍 Yeni Dünya (siler!)</button>
+  <button id="mpbtn" style="margin-top:14px">🎮 Çok Oyunculu</button>
+  <button id="newworld" class="danger" style="margin-top:8px">🌍 Yeni Dünya (siler!)</button>
   <button id="closemenu" style="margin-top:8px">Kapat</button>
 </div>
 <div class="hud" id="splash">
@@ -484,6 +513,10 @@ defItem('netherite_ingot','Netherite Külçesi',{icon:IC.ingot('#443e46')});
 defItem('leather','Deri',{icon:IC.raw('#a5713a')});
 defItem('feather','Tüy',{icon:IC.raw('#e8e8e8')});
 defItem('gunpowder','Barut',{icon:IC.dust('#5a5a5a')});
+defItem('bone','Kemik',{icon:IC.ingot('#e8e4d8')});
+defItem('string','İp',{icon:IC.dust('#e0e0e0')});
+defItem('slimeball','Balçık Topu',{icon:IC.raw('#6ac05a')});
+defItem('arrow','Ok',{icon:IC.stick()});
 defItem('ender_pearl','Ender İncisi',{icon:IC.pearl('#1a7a6a'), stack:16, pearl:1});
 const FOODS = { apple:['Elma',4,'#c83030','#e8e0c8'], golden_apple:['Altın Elma',20,'#f6d038','#fff0a0'],
   bread:['Ekmek',5,'#b8863e',null], carrot:['Havuç',3,'#e87e2a',null], potato:['Patates',1,'#d8b878',null],
@@ -535,7 +568,9 @@ for (const m in ARMOR_MATS) {
   });
 }
 defRecipe('nether_portal', 1, [['obsidian',6]], 1);
-defRecipe('end_portal', 1, [['obsidian',6],['diamond',2]], 1);
+defRecipe('end_portal', 1, [['obsidian',6],['ender_pearl',1]], 1);
+defRecipe('white_wool', 1, [['string',4]]);
+defRecipe('arrow', 4, [['stick',1],['string',1],['gravel',1]]);
 for (const [b,i] of [['coal_block','coal'],['iron_block','iron_ingot'],['gold_block','gold_ingot'],
   ['diamond_block','diamond'],['emerald_block','emerald'],['lapis_block','lapis_lazuli'],
   ['redstone_block','redstone'],['netherite_block','netherite_ingot'],
@@ -824,6 +859,7 @@ function setBlock(wx, wy, wz, b) {
   const k = ckey(cx,cz);
   (edits[k] = edits[k] || {})[bidx(lx,wy,lz)] = b;
   saveEdits();
+  if (typeof MP !== 'undefined' && MP.peer && !MP.applying) mpSend({ t:'set', d:dim, x:wx, y:wy, z:wz, b });
   queueMesh(cx,cz);
   if (lx===0) queueMesh(cx-1,cz); if (lx===CH-1) queueMesh(cx+1,cz);
   if (lz===0) queueMesh(cx,cz-1); if (lz===CH-1) queueMesh(cx,cz+1);
@@ -966,7 +1002,7 @@ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeArr), gl.STATIC_DRAW);
 /* ================= OYUNCU & DURUM ================= */
 const P = { x:8.5, y:40, z:8.5, vx:0, vy:0, vz:0, yaw:0, pitch:0,
   w:0.3, hgt:1.8, eye:1.62, onGround:false, fly:false, inWater:false,
-  hp:20, dead:false, fallD:0 };
+  hp:20, maxhp:20, absorb:0, hunger:20, air:10, dead:false, fallD:0 };
 let gamemode = 'creative';
 const RULES = { keepInventory:true, mobSpawning:true, daylightCycle:true };
 let timeOfDay = 0.3;
@@ -1011,6 +1047,83 @@ function consumeHeld() {
   if (s) { s.n--; if (s.n<=0) inv[hotSel]=null; updateHotbar(); }
 }
 
+/* ================= EFEKTLER (/effect) ================= */
+const EFFECTS = {
+  speed:{n:'Hız'}, slowness:{n:'Yavaşlık'}, haste:{n:'Acele'}, mining_fatigue:{n:'Kazma Yorgunluğu'},
+  strength:{n:'Güç'}, weakness:{n:'Zayıflık'}, instant_health:{n:'Anında Can', instant:1},
+  instant_damage:{n:'Anında Hasar', instant:1}, jump_boost:{n:'Zıplama Desteği'}, nausea:{n:'Bulantı'},
+  regeneration:{n:'Yenilenme'}, resistance:{n:'Direnç'}, fire_resistance:{n:'Ateş Direnci'},
+  water_breathing:{n:'Su Soluma'}, invisibility:{n:'Görünmezlik'}, blindness:{n:'Körlük'},
+  night_vision:{n:'Gece Görüşü'}, hunger:{n:'Açlık'}, poison:{n:'Zehir'}, wither:{n:'Soldurma'},
+  health_boost:{n:'Can Artışı'}, absorption:{n:'Emme'}, saturation:{n:'Doygunluk'},
+  glowing:{n:'Parıltı'}, levitation:{n:'Havalanma'}, luck:{n:'Şans'}, unluck:{n:'Şanssızlık'},
+  slow_falling:{n:'Yavaş Düşme'}, darkness:{n:'Karanlık'}, bad_omen:{n:'Kötü Alamet'},
+  hero_of_the_village:{n:'Köyün Kahramanı'}, conduit_power:{n:'Kanal Gücü'}, dolphins_grace:{n:'Yunusun Zarafeti'},
+};
+let effects = {};
+function hasEff(id) { return !!effects[id]; }
+function effLvl(id) { return effects[id] ? effects[id].amp : 0; }
+function addEffect(id, sec, amp) {
+  const def = EFFECTS[id];
+  if (!def) return false;
+  amp = clamp(amp||1, 1, 10); sec = clamp(sec||30, 1, 3600);
+  if (def.instant) {
+    if (id === 'instant_health') { P.hp = Math.min(P.maxhp, P.hp + 4*amp); updateHearts(); }
+    else damagePlayer(3*amp, 'efekt');
+    return true;
+  }
+  effects[id] = { t: sec, amp };
+  if (id === 'health_boost') P.maxhp = 20 + 4*amp;
+  if (id === 'absorption') P.absorb = 4*amp;
+  updateHearts(); renderFx();
+  return true;
+}
+function clearEffects() {
+  effects = {}; P.maxhp = 20; P.absorb = 0;
+  P.hp = Math.min(P.hp, P.maxhp);
+  updateHearts(); renderFx();
+}
+let fxTick = 0, hungerTick = 0;
+function tickEffects(dt) {
+  for (const id in effects) {
+    effects[id].t -= dt;
+    if (effects[id].t <= 0) {
+      if (id === 'health_boost') { P.maxhp = 20; P.hp = Math.min(P.hp, 20); }
+      if (id === 'absorption') P.absorb = 0;
+      delete effects[id];
+      updateHearts();
+    }
+  }
+  fxTick -= dt;
+  if (fxTick <= 0) {
+    fxTick = 1;
+    if (hasEff('regeneration') && P.hp < P.maxhp) { P.hp = Math.min(P.maxhp, P.hp + effLvl('regeneration')); updateHearts(); }
+    if (hasEff('poison') && P.hp > 1) { P.hp = Math.max(1, P.hp - effLvl('poison')); updateHearts(); sfx(140,0.1,'sawtooth',0.06); }
+    if (hasEff('wither')) damagePlayer(effLvl('wither'), 'soldurma');
+    if (hasEff('saturation')) P.hunger = Math.min(20, P.hunger + effLvl('saturation'));
+    if (hasEff('hunger')) P.hunger = Math.max(0, P.hunger - 0.5*effLvl('hunger'));
+    renderFx();
+  }
+  // açlık sistemi
+  if (!isCreative() && !P.dead) {
+    hungerTick -= dt;
+    if (hungerTick <= 0) {
+      hungerTick = 1;
+      const active = Math.hypot(P.vx,P.vz) > 1 ? 0.045 : 0.012;
+      P.hunger = Math.max(0, P.hunger - active);
+      if (P.hunger >= 18 && P.hp < P.maxhp) { P.hp = Math.min(P.maxhp, P.hp + 0.5); P.hunger -= 0.1; updateHearts(); }
+      if (P.hunger <= 0 && P.hp > 10) { P.hp -= 1; updateHearts(); sfx(110,0.1,'sawtooth',0.06); }
+      updateHunger();
+    }
+    // nefes (su altı)
+    const headIn = getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z)) === BID.water;
+    if (headIn && !hasEff('water_breathing')) {
+      P.air -= dt;
+      if (P.air <= 0) { P.air = 0.8; damagePlayer(2, 'boğulma'); }
+      updateHunger();
+    } else if (P.air < 10) { P.air = 10; updateHunger(); }
+  }
+}
 /* --- fizik --- */
 function aabbHit(x, y, z, w, h) {
   const x1=Math.floor(x-w), x2=Math.floor(x+w), y1=Math.floor(y), y2=Math.floor(y+h), z1=Math.floor(z-w), z2=Math.floor(z+w);
@@ -1041,7 +1154,8 @@ function moveEnt(e, dt) { // e: x,y,z,vx,vy,vz,w,hgt + onGround
 let dmgTick = 0, stepT = 0;
 function physics(dt) {
   if (P.dead) return;
-  const sp = P.fly ? 9.5 : (P.inLava ? 1.7 : P.inWater ? 2.6 : 4.3);
+  let sp = P.fly ? 9.5 : (P.inLava ? 1.7 : P.inWater ? 2.6 : 4.3);
+  sp *= (1 + 0.22*effLvl('speed')) * Math.max(0.3, 1 - 0.15*effLvl('slowness'));
   const s = Math.sin(P.yaw), cs = Math.cos(P.yaw);
   const iv = inputVec();
   const mx = (iv.f * s + iv.r * cs) * sp;
@@ -1061,10 +1175,14 @@ function physics(dt) {
     if (input.jump) P.vy = Math.min(P.vy + 20*dt, 3.4);
     P.vy = Math.max(-4, Math.min(4, P.vy));
     P.fallD = 0;
+  } else if (hasEff('levitation')) {
+    P.vy += (1.2*effLvl('levitation') - P.vy) * Math.min(1, dt*6);
+    P.fallD = 0;
   } else {
     P.vy -= 26*dt;
-    if (input.jump && P.onGround) { P.vy = 8.4; sfx(300, 0.05); }
-    P.vy = Math.max(-42, P.vy);
+    if (input.jump && P.onGround) { P.vy = 8.4 + 1.1*effLvl('jump_boost'); sfx(300, 0.05); }
+    P.vy = Math.max(hasEff('slow_falling') ? -3 : -42, P.vy);
+    if (hasEff('slow_falling')) P.fallD = 0;
   }
   // otomatik zıplama
   if (P.onGround && !P.fly && !P.inWater) {
@@ -1080,18 +1198,18 @@ function physics(dt) {
   if (!P.onGround && P.vy < 0 && !P.fly) P.fallD -= P.vy*dt;
   moveEnt(P, dt);
   if (P.onGround && wasVy < -1) {
-    if (!isCreative() && P.fallD > 3.5) damagePlayer(Math.floor(P.fallD-3), 'düşme');
+    if (!isCreative() && P.fallD > 3.5 && !hasEff('slow_falling')) damagePlayer(Math.floor(P.fallD-3), 'düşme');
     P.fallD = 0;
   }
   if (P.fly && P.onGround) P.fallD = 0;
   // lav / magma / kaktüs hasarı
   dmgTick -= dt;
   if (!isCreative() && dmgTick <= 0) {
-    if (P.inLava) { damagePlayer(3, 'lav'); dmgTick = 0.5; }
+    if (P.inLava && !hasEff('fire_resistance')) { damagePlayer(3, 'lav'); dmgTick = 0.5; }
     else {
       const below = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y-0.5), Math.floor(P.z))];
       const at = BLOCKS[getBlock(Math.floor(P.x), Math.floor(P.y+0.2), Math.floor(P.z))];
-      if ((below && below.damage) || (at && at.damage)) { damagePlayer(1, 'blok'); dmgTick = 0.8; }
+      if (((below && below.damage) || (at && at.damage)) && !hasEff('fire_resistance')) { damagePlayer(1, 'blok'); dmgTick = 0.8; }
     }
   }
   // adım sesleri
@@ -1111,6 +1229,9 @@ function damagePlayer(d, src) {
       if (s.d >= ITEMS[s.id].dur) { toast('💔 '+ITEMS[s.id].name+' parçalandı!'); sfx(90,0.3,'sawtooth'); armorInv[i] = null; }
     });
   }
+  if (hasEff('resistance')) d = Math.round(d * Math.max(0.2, 1 - 0.2*effLvl('resistance')));
+  if (P.absorb > 0) { const t = Math.min(P.absorb, d); P.absorb -= t; d -= t; }
+  if (d <= 0) { updateHearts(); return; }
   P.hp -= d;
   $('hurtoverlay').style.display = 'block';
   setTimeout(()=>$('hurtoverlay').style.display='none', 180);
@@ -1132,7 +1253,8 @@ function die() {
   $('deathscreen').style.display = 'flex';
 }
 function respawn() {
-  P.dead = false; P.hp = 20; P.fallD = 0;
+  P.dead = false; P.hp = P.maxhp; P.hunger = 20; P.air = 10; P.fallD = 0;
+  clearEffects();
   if (dim !== 'overworld') switchWorld('overworld');
   P.x = SPAWN.x; P.z = SPAWN.z; P.vx=P.vy=P.vz=0;
   ensureChunks();
@@ -1179,12 +1301,18 @@ function checkPortal(dt) {
 
 /* ================= CANLILAR ================= */
 const MOBS = {
-  pig:    {name:'Domuz', w:0.45, hgt:0.9, hp:10, sp:1.2, body:'#eda3a0', head:'#f0b5b2', drops:[['porkchop',1,2]]},
-  cow:    {name:'İnek', w:0.45, hgt:1.3, hp:10, sp:1.0, body:'#5d4531', head:'#6d5442', drops:[['beef',1,2],['leather',0,2]]},
-  sheep:  {name:'Koyun', w:0.45, hgt:1.2, hp:8, sp:1.0, body:'#ded9d3', head:'#b79b8a', drops:[['mutton',1,2],['white_wool',1,1]]},
-  chicken:{name:'Tavuk', w:0.3, hgt:0.7, hp:4, sp:1.0, body:'#f1f1ec', head:'#e9e6e0', drops:[['chicken',1,1],['feather',0,2]]},
-  zombie: {name:'Zombi', w:0.3, hgt:1.9, hp:20, sp:1.7, body:'#4a7a43', head:'#3f6b39', hostile:1, dmg:3, drops:[['rotten_flesh',0,2]]},
-  creeper:{name:'Creeper', w:0.3, hgt:1.7, hp:20, sp:1.6, body:'#5dae52', head:'#4d9a44', hostile:1, boom:1, drops:[['gunpowder',0,2]]},
+  pig:    {name:'Domuz', w:0.45, hgt:0.9, hp:10, sp:1.2, body:'#eda3a0', head:'#f0b5b2', model:'quad', drops:[['porkchop',1,2]]},
+  cow:    {name:'İnek', w:0.45, hgt:1.3, hp:10, sp:1.0, body:'#5d4531', head:'#6d5442', model:'quad', drops:[['beef',1,2],['leather',0,2]]},
+  sheep:  {name:'Koyun', w:0.45, hgt:1.2, hp:8, sp:1.0, body:'#ded9d3', head:'#b79b8a', model:'quad', drops:[['mutton',1,2],['white_wool',1,1]]},
+  chicken:{name:'Tavuk', w:0.3, hgt:0.7, hp:4, sp:1.0, body:'#f1f1ec', head:'#e9e6e0', model:'quad', drops:[['chicken',1,1],['feather',0,2]]},
+  wolf:   {name:'Kurt', w:0.35, hgt:0.9, hp:8, sp:2.0, body:'#c8c4bc', head:'#d8d4cc', model:'quad', neutral:1, dmg:3, drops:[]},
+  villager:{name:'Köylü', w:0.3, hgt:1.9, hp:20, sp:1.0, body:'#8a6a4a', head:'#c8a080', model:'human', drops:[['emerald',0,1]]},
+  zombie: {name:'Zombi', w:0.3, hgt:1.9, hp:20, sp:1.7, body:'#4a7a43', head:'#3f6b39', model:'human', arms:'fwd', hostile:1, burns:1, dmg:3, drops:[['rotten_flesh',0,2]]},
+  skeleton:{name:'İskelet', w:0.3, hgt:1.9, hp:20, sp:1.5, body:'#c8c8c8', head:'#dcdcdc', model:'human', hostile:1, burns:1, ranged:1, drops:[['bone',0,2]]},
+  spider: {name:'Örümcek', w:0.6, hgt:0.9, hp:16, sp:2.2, body:'#2a2126', head:'#3a2a30', model:'spider', eye:'#a03030', hostile:1, dmg:2, drops:[['string',0,2]]},
+  enderman:{name:'Enderman', w:0.3, hgt:2.6, hp:40, sp:2.4, body:'#101014', head:'#141418', model:'human', eye:'#c07ae8', neutral:1, dmg:4, tports:1, drops:[['ender_pearl',0,1]]},
+  slime:  {name:'Balçık', w:0.5, hgt:1.0, hp:8, sp:1.3, body:'#6ac05a', head:'#6ac05a', model:'slime', hostile:1, dmg:2, drops:[['slimeball',1,2]]},
+  creeper:{name:'Creeper', w:0.3, hgt:1.7, hp:20, sp:1.6, body:'#5dae52', head:'#4d9a44', model:'creeper', hostile:1, boom:1, drops:[['gunpowder',0,2]]},
 };
 let ents = [];
 function spawnMob(type, x, y, z) {
@@ -1208,30 +1336,50 @@ function trySpawns(dt, light) {
   for (let y=H-4; y>1; y--)
     if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) { gy = y+1; break; }
   if (gy < 0) return;
+  const pick = (list) => { const r = Math.random(); let acc = 0;
+    for (const [t,w] of list) { acc += w; if (r < acc) return t; } return list[0][0]; };
   if (dim === 'nether') {
     if (hostile < 8 && RULES.mobSpawning && !isCreative())
-      spawnMob(Math.random()<0.85?'zombie':'creeper', bx+0.5, gy, bz+0.5);
+      spawnMob(pick([['zombie',0.5],['skeleton',0.3],['creeper',0.2]]), bx+0.5, gy, bz+0.5);
     return;
   }
   if (gy < WATER_Y) return;
   if (light > 0.6 && passive < 8) {
     if (getBlock(bx, gy-1, bz) === BID.grass_block)
-      spawnMob(['pig','cow','sheep','chicken'][(Math.random()*4)|0], bx+0.5, gy, bz+0.5);
+      spawnMob(pick([['pig',0.22],['cow',0.22],['sheep',0.22],['chicken',0.18],['wolf',0.08],['villager',0.08]]), bx+0.5, gy, bz+0.5);
   } else if (light <= 0.5 && hostile < 8 && RULES.mobSpawning && !isCreative()) {
-    spawnMob(Math.random()<0.7?'zombie':'creeper', bx+0.5, gy, bz+0.5);
+    spawnMob(pick([['zombie',0.3],['skeleton',0.25],['spider',0.2],['creeper',0.12],['slime',0.08],['enderman',0.05]]), bx+0.5, gy, bz+0.5);
   }
 }
 function hurtMob(e, d, kx, kz) {
   e.hp -= d; e.hurtT = 0.3;
+  if (e.def.neutral) e.aggro = true;
+  if (e.def.tports) tpMob(e); // enderman vurulunca ışınlanır
   e.vx += kx*6; e.vz += kz*6; e.vy = 4;
   sfx(160, 0.1, 'square');
+  emitParts(e.x, e.y+e.hgt*0.6, e.z, hex(e.def.body), 6, 2.5, 0.4);
   if (e.hp <= 0) {
     for (const [id, mn, mx] of e.def.drops) {
       const n = mn + Math.round(Math.random()*(mx-mn));
       if (n > 0) addItem(id, n);
     }
+    emitParts(e.x, e.y+e.hgt*0.5, e.z, [240,240,240], 14, 3, 0.6);
+    sfx(200, 0.3, 'triangle', 0.12, 60);
     ents.splice(ents.indexOf(e), 1);
     toast(e.def.name + ' öldürüldü');
+  }
+}
+function tpMob(e) {
+  for (let t=0; t<8; t++) {
+    const bx = Math.floor(e.x + (Math.random()-0.5)*16), bz = Math.floor(e.z + (Math.random()-0.5)*16);
+    for (let y=H-4; y>1; y--)
+      if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) {
+        emitParts(e.x, e.y+1, e.z, [180,80,220], 10, 2, 0.5);
+        e.x = bx+0.5; e.y = y+1.01; e.z = bz+0.5; e.vx=e.vy=e.vz=0;
+        emitParts(e.x, e.y+1, e.z, [180,80,220], 10, 2, 0.5);
+        sfx(900, 0.15, 'sine', 0.1, 300);
+        return;
+      }
   }
 }
 function updateMobs(dt, light) {
@@ -1242,16 +1390,28 @@ function updateMobs(dt, light) {
     if (dist > 80) { ents.splice(i,1); continue; }
     e.hurtT = Math.max(0, e.hurtT-dt);
     e.atkT = Math.max(0, e.atkT-dt);
-    if (e.def.hostile && light > 0.6 && e.type==='zombie' && dim==='overworld') { e.hp -= 2*dt; if (e.hp<=0) { ents.splice(i,1); continue; } }
+    if (e.def.burns && light > 0.6 && dim==='overworld') { e.hp -= 2*dt;
+      if (Math.random() < dt*4) emitParts(e.x, e.y+e.hgt, e.z, [230,120,30], 1, 1, 0.4);
+      if (e.hp<=0) { ents.splice(i,1); continue; } }
     // hedef seçimi
-    if (e.hurtT > 0 && !e.def.hostile) { e.mYaw = Math.atan2(-dx, dz); e.mSp = e.def.sp*1.8; }
-    else if (e.def.hostile && dist < 20 && !P.dead && !isCreative()) {
+    const angry = e.def.hostile || (e.def.neutral && e.aggro);
+    const detect = 20 * (hasEff('invisibility') ? 0.15 : 1);
+    if (e.hurtT > 0 && !angry) { e.mYaw = Math.atan2(-dx, dz); e.mSp = e.def.sp*1.8; }
+    else if (angry && dist < detect && !P.dead && !isCreative()) {
       e.mYaw = Math.atan2(dx, -dz); e.mSp = e.def.sp;
       if (e.def.boom) {
         if (dist < 2.6 && e.fuse < 0) { e.fuse = 1.5; sfx(700, 0.3); }
         if (e.fuse >= 0) { e.mSp = 0; e.fuse -= dt;
           if (dist > 5) e.fuse = -1;
           else if (e.fuse <= 0) { explosion(e.x, e.y+0.8, e.z, 2.6); ents.splice(i,1); continue; } }
+      } else if (e.def.ranged) { // iskelet: ok atar
+        if (dist < 10) e.mSp = 0;
+        if (dist < 15 && e.atkT <= 0) {
+          e.atkT = 2;
+          const ay = P.y+1.2 - (e.y+1.4), al = Math.max(1, dist);
+          arrows.push({ x:e.x, y:e.y+1.4, z:e.z, vx:dx/al*14, vy:ay/al*14 + al*0.35, vz:dz/al*14, t:4 });
+          sfx(400, 0.1, 'square', 0.08, 900);
+        }
       } else if (dist < 1.5 && e.atkT <= 0) { damagePlayer(e.def.dmg, e.def.name); e.atkT = 1; }
     } else {
       e.wanderT -= dt;
@@ -1265,10 +1425,24 @@ function updateMobs(dt, light) {
     const inW = getBlock(Math.floor(e.x), Math.floor(e.y+0.3), Math.floor(e.z)) === BID.water;
     if (inW) e.vy = Math.min(e.vy + 14*dt, 2);
     else e.vy -= 26*dt;
+    if (e.def.model === 'slime' && e.onGround && sp > 0.1) e.vy = 6.5; // zıplayarak ilerler
+    if (e.def.tports && !e.aggro && Math.random() < dt*0.02) tpMob(e);
     moveEnt(e, dt);
     if (e.blocked && e.onGround && sp > 0.1) e.vy = 7.5;
   }
+  // oklar
+  for (let i=arrows.length-1; i>=0; i--) {
+    const a = arrows[i];
+    a.t -= dt;
+    a.vy -= 14*dt;
+    a.x += a.vx*dt; a.y += a.vy*dt; a.z += a.vz*dt;
+    if (a.t <= 0 || isSolid(getBlock(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { arrows.splice(i,1); continue; }
+    if (Math.abs(a.x-P.x) < 0.5 && Math.abs(a.z-P.z) < 0.5 && a.y > P.y && a.y < P.y+P.hgt) {
+      damagePlayer(3, 'ok'); arrows.splice(i,1);
+    }
+  }
 }
+let arrows = [];
 function explosion(x, y, z, rad) {
   const r = Math.ceil(rad);
   for (let bx=-r; bx<=r; bx++) for (let by=-r; by<=r; by++) for (let bz=-r; bz<=r; bz++) {
@@ -1279,6 +1453,8 @@ function explosion(x, y, z, rad) {
   }
   const d = Math.hypot(P.x-x, P.y+1-y, P.z-z);
   if (d < rad*2.2) damagePlayer(Math.round(13*(1-d/(rad*2.2))), 'patlama');
+  emitParts(x, y, z, [90,90,90], 25, 8, 1.0);
+  emitParts(x, y, z, [230,140,40], 15, 6, 0.6);
   sfx(50, 0.5, 'sawtooth'); sfx(85, 0.4, 'square');
   toast('💥 BUMM!');
 }
@@ -1295,36 +1471,124 @@ function updateTnt(dt) {
     if (f.t <= 0) { setBlock(f.x, f.y, f.z, 0); explosion(f.x+0.5, f.y+0.5, f.z+0.5, 3.2); tntFuses.splice(i,1); }
   }
 }
-/* canlı çizimi */
-function drawMobs(proj, view, light) {
+/* ================= PARTİKÜLLER ================= */
+let parts = [];
+function emitParts(x, y, z, rgb, n, spd, life) {
+  for (let i=0; i<n && parts.length<300; i++)
+    parts.push({ x, y, z, vx:(Math.random()-0.5)*spd, vy:Math.random()*spd*0.9, vz:(Math.random()-0.5)*spd,
+      t: life*(0.6+Math.random()*0.8), c:[rgb[0]/255, rgb[1]/255, rgb[2]/255], s: 0.06+Math.random()*0.08 });
+}
+function updateParts(dt) {
+  for (let i=parts.length-1; i>=0; i--) {
+    const p = parts[i];
+    p.t -= dt; if (p.t <= 0) { parts.splice(i,1); continue; }
+    p.vy -= 10*dt;
+    p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt;
+    if (isSolid(getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)))) { p.vy = 0; p.vx *= 0.6; p.vz *= 0.6; p.y = Math.ceil(p.y); }
+  }
+}
+const tileAvgCache = {};
+function tileAvg(t) { // karo ortalama rengi (kırılma partikülleri için)
+  if (tileAvgCache[t]) return tileAvgCache[t];
+  const d = actx.getImageData((t%ATLAS_N)*16, ((t/ATLAS_N)|0)*16, 16, 16).data;
+  let r=0,g=0,b=0,n=0;
+  for (let i=0;i<d.length;i+=16) if (d[i+3]>100) { r+=d[i]; g+=d[i+1]; b+=d[i+2]; n++; }
+  n = n||1;
+  return tileAvgCache[t] = [r/n, g/n, b/n];
+}
+/* ================= CANLI / MODEL ÇİZİMİ ================= */
+function drawEnts(proj, view, now) {
   gl.uniform1f(loc.uUseTex, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
   gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 24, 0);
   gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 24, 12);
   gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 24, 20);
   const pv = mmul(proj, view);
-  for (const e of ents) {
-    const flash = e.hurtT > 0 || (e.fuse >= 0 && (e.fuse*8|0)%2===0);
+  function drawModel(e, def, flash) {
     const col = b => { const c = hex(b); return flash ? [1, 0.4, 0.4] : [c[0]/255, c[1]/255, c[2]/255]; };
     const base = mmul(mtrans(e.x, e.y, e.z), mrotY(-e.yaw));
-    const part = (ox, oy, oz, sx, sy, sz, cl) => {
+    const cube = (m, sx, sy, sz, cl) => {
       gl.uniform3f(loc.uColor, cl[0], cl[1], cl[2]);
-      gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(base, mmul(mtrans(ox, oy, oz), mscale(sx, sy, sz)))));
+      gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(base, mmul(m, mscale(sx, sy, sz)))));
       gl.drawArrays(gl.TRIANGLES, 0, 36);
     };
-    const bc = col(e.def.body), hc = col(e.def.head), lc = bc.map(v=>v*0.7);
-    const w = e.def.w*2, hh = e.def.hgt;
-    const legH = hh*0.3, bodyH = hh*0.42, headS = Math.min(0.52, w*0.9);
-    const walk = Math.sin(performance.now()/130) * Math.min(1, Math.hypot(e.vx,e.vz)) * 0.1;
-    part(-w*0.22, 0, walk, w*0.28, legH, w*0.28, lc);
-    part(w*0.22, 0, -walk, w*0.28, legH, w*0.28, lc);
-    part(0, legH, 0, w, bodyH, w*(e.def.hostile?0.6:1.3), bc);
-    part(0, legH+bodyH, e.def.hostile?0:-w*0.4, headS, headS, headS, hc);
-    // gözler
-    const ec = flash ? [1,1,1] : [0.05,0.05,0.08];
-    const eyeY = legH+bodyH+headS*0.55, eyeZ = (e.def.hostile?0:-w*0.4)-headS/2;
-    part(-headS*0.22, eyeY, eyeZ, headS*0.16, headS*0.16, 0.03, ec);
-    part(headS*0.22, eyeY, eyeZ, headS*0.16, headS*0.16, 0.03, ec);
+    const still = (ox,oy,oz,sx,sy,sz,cl) => cube(mtrans(ox,oy,oz), sx,sy,sz, cl);
+    // pivotdan sarkan uzuv: pivotta döner
+    const limb = (px,py,pz, sx,len,sz, ang, cl) =>
+      cube(mmul(mtrans(px,py,pz), mmul(mrotX(ang), mtrans(0,-len,0))), sx,len,sz, cl);
+    const bc = col(def.body), hc = col(def.head), lc = bc.map(v=>v*0.65);
+    const ec = flash ? [1,1,1] : (def.eye ? col(def.eye) : [0.06,0.06,0.09]);
+    const speed = Math.min(1, Math.hypot(e.vx||0, e.vz||0)/2);
+    const sw = Math.sin(now/140) * speed * 0.8;
+    const hh = def.hgt, w = def.w*2;
+    const eyes = (hy, hz, hs) => {
+      still(-hs*0.22, hy, hz, hs*0.16, hs*0.16, 0.03, ec);
+      still( hs*0.22, hy, hz, hs*0.16, hs*0.16, 0.03, ec);
+    };
+    if (def.model === 'human') {
+      const legL = hh*0.42, bodyH = hh*0.36, headS = Math.min(0.5, hh*0.26);
+      limb(-w*0.22, legL, 0, w*0.4, legL, w*0.45, sw, lc);
+      limb( w*0.22, legL, 0, w*0.4, legL, w*0.45, -sw, lc);
+      still(0, legL, 0, w, bodyH, w*0.55, bc);
+      const armA = def.arms==='fwd' ? -1.45 : sw;
+      limb(-w*0.68, legL+bodyH-0.05, 0, w*0.32, bodyH*0.9, w*0.4, armA, bc);
+      limb( w*0.68, legL+bodyH-0.05, 0, w*0.32, bodyH*0.9, w*0.4, def.arms==='fwd'?-1.45:-sw, bc);
+      still(0, legL+bodyH, 0, headS, headS, headS, hc);
+      eyes(legL+bodyH+headS*0.55, -headS/2, headS);
+    } else if (def.model === 'quad') {
+      const legL = hh*0.4, bodyH = hh*0.4, bl = w*1.5;
+      limb(-w*0.3, legL, -bl*0.32, w*0.28, legL, w*0.28, sw, lc);
+      limb( w*0.3, legL, -bl*0.32, w*0.28, legL, w*0.28, -sw, lc);
+      limb(-w*0.3, legL,  bl*0.32, w*0.28, legL, w*0.28, -sw, lc);
+      limb( w*0.3, legL,  bl*0.32, w*0.28, legL, w*0.28, sw, lc);
+      still(0, legL, 0, w, bodyH, bl, bc);
+      const headS = Math.min(0.5, w*0.8);
+      still(0, legL+bodyH*0.55, -bl*0.55, headS, headS, headS, hc);
+      eyes(legL+bodyH*0.55+headS*0.55, -bl*0.55-headS/2, headS);
+    } else if (def.model === 'creeper') {
+      const legL = hh*0.2, bodyH = hh*0.55, headS = 0.48;
+      limb(-w*0.25, legL, -w*0.3, w*0.35, legL, w*0.35, sw, lc);
+      limb( w*0.25, legL,  w*0.3, w*0.35, legL, w*0.35, -sw, lc);
+      limb( w*0.25, legL, -w*0.3, w*0.35, legL, w*0.35, -sw, lc);
+      limb(-w*0.25, legL,  w*0.3, w*0.35, legL, w*0.35, sw, lc);
+      still(0, legL, 0, w*0.8, bodyH, w*0.7, bc);
+      still(0, legL+bodyH, 0, headS, headS, headS, hc);
+      eyes(legL+bodyH+headS*0.55, -headS/2, headS);
+    } else if (def.model === 'spider') {
+      const bodyH = hh*0.5;
+      still(0, hh*0.2, 0.15, w*0.9, bodyH, w*1.1, bc);
+      still(0, hh*0.25, -w*0.62, w*0.5, bodyH*0.7, w*0.5, hc);
+      for (let s=-1; s<=1; s+=2) for (let li=0; li<3; li++)
+        cube(mmul(mtrans(s*w*0.45, hh*0.45, -0.25+li*0.28), mmul(mrotY(s*0.5), mrotX(Math.sin(now/100+li)*speed*0.3+0.5))), 0.07, hh*0.5, 0.07, lc);
+      eyes(hh*0.35, -w*0.62-w*0.25, 0.5);
+    } else if (def.model === 'slime') {
+      const squash = e.onGround ? 1 - Math.abs(Math.sin(now/200))*0.15 : 1.1;
+      still(0, 0, 0, w*1.2, hh*squash, w*1.2, bc);
+      still(0, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
+      still(0.18, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
+    }
+  }
+  for (const e of ents) {
+    const flash = e.hurtT > 0 || (e.fuse >= 0 && (e.fuse*8|0)%2===0);
+    drawModel(e, e.def, flash);
+  }
+  // uzak oyuncu (co-op)
+  if (MP.peer && MP.remote && MP.remote.dim === dim) {
+    const r = MP.remote;
+    drawModel({ x:r.x, y:r.y, z:r.z, yaw:r.yaw, vx:r.vx||0, vz:r.vz||0, onGround:true },
+      { model:'human', w:0.3, hgt:1.8, body:'#3a6ea8', head:'#d8a878' }, false);
+  }
+  // oklar
+  for (const a of arrows) {
+    gl.uniform3f(loc.uColor, 0.55, 0.45, 0.3);
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(mtrans(a.x, a.y, a.z), mscale(0.08, 0.08, 0.3))));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+  }
+  // partiküller
+  for (const p of parts) {
+    gl.uniform3f(loc.uColor, p.c[0], p.c[1], p.c[2]);
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(mtrans(p.x, p.y, p.z), mscale(p.s, p.s, p.s))));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
   }
   gl.uniform1f(loc.uUseTex, 1);
 }
@@ -1370,6 +1634,8 @@ function breakTimeOf(b) {
   let t = (def.hard||0.5) * 1.35;
   const right = held && held.tool && held.tool === def.tool;
   if (right) t /= held.speed;
+  t /= Math.pow(1.2, effLvl('haste'));
+  t *= Math.pow(3, Math.min(3, effLvl('mining_fatigue')));
   let harvest = true;
   if (def.tier) {
     const lvl = right ? held.tier : 0;
@@ -1420,6 +1686,7 @@ function finishBreak(st) {
     }
   }
   blockSound(def, false);
+  emitParts(st.x+0.5, st.y+0.5, st.z+0.5, tileAvg(def.t[1]), 10, 3, 0.5);
   swingHand();
 }
 function instaBreak() { // yaratıcı masaüstü tek tık
@@ -1427,20 +1694,29 @@ function instaBreak() { // yaratıcı masaüstü tek tık
   if (!r || BLOCKS[r.b].unbreakable) return;
   finishBreak({ ...r, harvest:false });
 }
+function eatHeld(held, it) {
+  if (isCreative() || P.hunger >= 20) return;
+  P.hunger = Math.min(20, P.hunger + it.food);
+  if (held.id === 'golden_apple') { P.absorb = Math.max(P.absorb, 4); P.hp = Math.min(P.maxhp, P.hp+4); }
+  consumeHeld(); updateHearts(); updateHunger();
+  const d = camDir();
+  emitParts(P.x + d.x, P.y+1.4, P.z + d.z, hex(FOODS[held.id] ? FOODS[held.id][2] : '#c8a05a'), 6, 1.5, 0.4);
+  sfx(500, 0.08); setTimeout(()=>sfx(420,0.08), 120); setTimeout(()=>sfx(340,0.1), 260);
+  toast('😋 ' + it.name);
+  swingHand();
+}
 function doPlace() {
+  const held = heldItem();
+  const it = held ? ITEMS[held.id] : null;
+  // yemek her yerde yenebilir (nişan gerekmez)
+  if (it && it.food) { eatHeld(held, it); return; }
   const r = raycast(6.5);
   if (!r) return;
   const hitDef = BLOCKS[r.b];
   // etkileşimli blok?
   if (hitDef.inter) { openInter(hitDef.inter, r); return; }
   if (hitDef.ignite) { igniteTnt(r.x, r.y, r.z); return; }
-  const held = heldItem();
   if (!held) return;
-  const it = ITEMS[held.id];
-  if (it.food) { // ye
-    if (P.hp < 20 && !isCreative()) { P.hp = Math.min(20, P.hp + it.food); consumeHeld(); updateHearts(); sfx(500,0.1); toast('😋 '+it.name); }
-    return;
-  }
   if (it.pearl) { // ender incisi: ışınlan
     const tgt = raycast(24);
     if (tgt) { P.x = tgt.px+0.5; P.y = tgt.py+0.01; P.z = tgt.pz+0.5; P.vy=0; P.fallD=0; consumeHeld(); sfx(900,0.2); }
@@ -1458,12 +1734,15 @@ function doPlace() {
   blockSound(BLOCKS[it.block], true);
   swingHand();
 }
+function attackDmg(held) {
+  return Math.max(1, (held && held.dmg ? held.dmg : 1) + 3*effLvl('strength') - 2*effLvl('weakness'));
+}
 function doTap() { // dokunma: önce canlıya vur, yoksa yerleştir/etkileşim
   const e = raycastEnt(4);
   if (e) {
     const held = heldItem() ? ITEMS[heldItem().id] : null;
     const d = camDir();
-    hurtMob(e, held && held.dmg ? held.dmg : 1, d.x, d.z);
+    hurtMob(e, attackDmg(held), d.x, d.z);
     swingHand();
     wearHeld(held && held.tool ? 2 : 1); // MC: alet 2, kılıç 1 yıpranır
     return;
@@ -1578,13 +1857,35 @@ function swingHand() {
 }
 function updateHearts() {
   const h = $('hearts');
-  if (isCreative()) { h.innerHTML=''; return; }
+  if (isCreative()) { h.innerHTML=''; $('hunger').innerHTML=''; return; }
   let s = '';
-  for (let i=0;i<10;i++) {
+  const hearts = Math.ceil(P.maxhp/2);
+  for (let i=0;i<hearts;i++) {
     const v = P.hp - i*2;
     s += `<span>${v>=2?'❤️':v>=1?'🧡':'🖤'}</span>`;
   }
+  for (let i=0;i<Math.ceil(P.absorb/2);i++) s += '<span>💛</span>';
   h.innerHTML = s;
+  updateHunger();
+}
+function updateHunger() {
+  const h = $('hunger');
+  if (isCreative()) { h.innerHTML=''; return; }
+  let s = '';
+  for (let i=0;i<10;i++) {
+    const v = P.hunger - i*2;
+    s += `<span style="${v>=2?'':v>=1?'opacity:.55':'filter:grayscale(1);opacity:.35'}">🍗</span>`;
+  }
+  if (P.air < 10) s += ` <span style="font-size:12px">🫧${Math.ceil(P.air)}</span>`;
+  h.innerHTML = s;
+}
+function renderFx() {
+  const el = $('fx');
+  const roman = n => ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n] || n;
+  el.innerHTML = Object.entries(effects).map(([id,e]) => {
+    const m = Math.floor(e.t/60), sec = Math.floor(e.t%60);
+    return `✨ ${EFFECTS[id].n} ${roman(e.amp)} <span style="opacity:.6">${m}:${(''+sec).padStart(2,'0')}</span>`;
+  }).join('<br>');
 }
 let toastTimer = null;
 function toast(msg) {
@@ -1596,11 +1897,11 @@ function toast(msg) {
 
 /* ================= PANELLER ================= */
 function uiOpen() {
-  return ['invpanel','furnpanel','chestpanel'].some(id => $(id).style.display === 'flex') ||
+  return ['invpanel','furnpanel','chestpanel','mppanel'].some(id => $(id).style.display === 'flex') ||
     $('chatpanel').style.display === 'block';
 }
 function closePanels() {
-  for (const id of ['invpanel','furnpanel','chestpanel']) $(id).style.display = 'none';
+  for (const id of ['invpanel','furnpanel','chestpanel','mppanel']) $(id).style.display = 'none';
   $('chatpanel').style.display = 'none';
 }
 document.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => $(b.dataset.close).style.display='none'));
@@ -1812,11 +2113,12 @@ function fuzzyItem(q) {
 function runCmd(line) {
   line = line.trim();
   if (!line) return;
-  if (!line.startsWith('/')) { chatMsg('<Sen> ' + line); return; }
+  if (!line.startsWith('/')) { chatMsg('<Sen> ' + line); if (MP.peer) mpSend({t:'chat', msg:line}); return; }
   const [c, ...a] = line.slice(1).split(/\s+/);
   const cmd = c.toLowerCase();
   if (cmd === 'help' || cmd === 'yardım') {
-    chatMsg('Komutlar: /give <eşya> [adet], /gamemode <c|s>, /summon <canlı> [adet], /dim <overworld|nether|end>, /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
+    chatMsg('Komutlar: /give <eşya> [adet], /effect <efekt> [sn] [seviye], /effect clear, /gamemode <c|s>, /summon <canlı> [adet], /dim <overworld|nether|end>, /time set <day|night|0-24000>, /tp <x y z>, /gamerule <kural> <true|false>, /seed, /kill, /heal, /clear');
+    chatMsg('Efektler: ' + Object.keys(EFFECTS).slice(0,14).join(', ') + '…');
     chatMsg('Canlılar: ' + Object.keys(MOBS).join(', '));
   } else if (cmd === 'give') {
     const r = fuzzyItem(a[0]);
@@ -1867,6 +2169,18 @@ function runCmd(line) {
     if (!key) return chatMsg('✖ Kural yok: ' + r);
     RULES[key] = v === 'true' || v === '1';
     chatMsg(`✔ ${key} = ${RULES[key]}`);
+  } else if (cmd === 'effect' || cmd === 'efekt') {
+    const v = (a[0]||'').toLowerCase();
+    if (v === 'clear' || v === 'temizle') { clearEffects(); return chatMsg('✔ Tüm efektler temizlendi'); }
+    let key = EFFECTS[v] ? v : Object.keys(EFFECTS).find(k => EFFECTS[k].n.toLowerCase() === v || k.replace(/_/g,'') === v.replace(/_/g,''));
+    if (!key) {
+      const m = Object.keys(EFFECTS).filter(k => k.includes(v) || EFFECTS[k].n.toLowerCase().includes(v));
+      if (m.length === 1) key = m[0];
+      else return chatMsg(m.length ? 'Birden çok eşleşme: '+m.join(', ') : 'Efektler: ' + Object.keys(EFFECTS).join(', '));
+    }
+    const sec = parseInt(a[1]) || 30, amp = parseInt(a[2]) || 1;
+    addEffect(key, sec, amp);
+    chatMsg(`✔ ${EFFECTS[key].n} ${amp}. seviye, ${sec} sn verildi`);
   } else if (cmd === 'dim' || cmd === 'boyut') {
     const v = (a[0]||'').toLowerCase();
     if (['overworld','ana','anadünya','o'].includes(v)) setDim('overworld');
@@ -1925,7 +2239,7 @@ window.addEventListener('pointerdown', (e) => {
     if (e.button === 0) {
       const ent = raycastEnt(4);
       if (ent) { const held = heldItem() ? ITEMS[heldItem().id] : null; const d = camDir();
-        hurtMob(ent, held && held.dmg ? held.dmg : 1, d.x, d.z); swingHand(); wearHeld(held && held.tool ? 2 : 1); }
+        hurtMob(ent, attackDmg(held), d.x, d.z); swingHand(); wearHeld(held && held.tool ? 2 : 1); }
       else if (isCreative()) { instaBreak(); swingHand(); }
       else startBreaking();
     }
@@ -2034,6 +2348,83 @@ downbtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.down
 downbtn.addEventListener('pointerup', () => input.down = false);
 downbtn.addEventListener('pointercancel', () => input.down = false);
 
+/* ================= ÇOK OYUNCULU (WebRTC P2P) ================= */
+const MP = { pc:null, ch:null, peer:false, remote:null, isHost:false, applying:false, posT:0 };
+function mpSetup(host) {
+  try { if (MP.pc) MP.pc.close(); } catch(e) {}
+  MP.pc = new RTCPeerConnection({ iceServers:[{urls:'stun:stun.l.google.com:19302'}] });
+  MP.isHost = host; MP.peer = false; MP.remote = null;
+  if (host) { MP.ch = MP.pc.createDataChannel('ck'); mpBind(); }
+  else MP.pc.ondatachannel = e => { MP.ch = e.channel; mpBind(); };
+  MP.pc.onicegatheringstatechange = () => { if (MP.pc.iceGatheringState === 'complete') mpEmitCode(); };
+  MP.pc.onicecandidate = (ev) => { if (!ev.candidate) mpEmitCode(); };
+  clearTimeout(MP.codeTimer);
+  MP.codeTimer = setTimeout(mpEmitCode, 3500); // ağ yavaşsa eldeki adaylarla kodu ver
+}
+function mpEmitCode() {
+  if (!MP.pc || !MP.pc.localDescription || MP.peer) return;
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(MP.pc.localDescription))));
+  if ($('mpcode').value !== code) {
+    $('mpcode').value = code;
+    $('mpstatus').textContent = '⬆ Üstteki kodu arkadaşına gönder.';
+  }
+}
+function mpBind() {
+  MP.ch.onopen = () => {
+    MP.peer = true; toast('🎮 Arkadaşın bağlandı!'); sfx(600,0.15,'sine',0.12,900);
+    $('mpstatus').textContent = '✅ Bağlı!';
+    if (MP.isHost) mpSend({ t:'hello', seed, tod:timeOfDay,
+      edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
+  };
+  MP.ch.onclose = () => { MP.peer = false; MP.remote = null; toast('🔌 Bağlantı koptu'); };
+  MP.ch.onmessage = ev => { try { mpRecv(JSON.parse(ev.data)); } catch(e) {} };
+}
+function mpSend(o) { if (MP.ch && MP.ch.readyState === 'open') { try { MP.ch.send(JSON.stringify(o)); } catch(e) {} } }
+function mpRecv(m) {
+  if (m.t === 'hello') { // ev sahibinin dünyasını devral
+    seed = m.seed;
+    try { localStorage.setItem('ck_seed', seed); } catch(e) {}
+    timeOfDay = m.tod;
+    worlds.overworld = { chunks:new Map(), edits:m.edits.o };
+    worlds.nether = { chunks:new Map(), edits:m.edits.n };
+    worlds.end = { chunks:new Map(), edits:m.edits.e };
+    chunks = worlds[dim].chunks; edits = worlds[dim].edits;
+    ents.length = 0;
+    ensureChunks();
+    P.y = safeY(Math.floor(P.x), Math.floor(P.z));
+    saveEdits();
+    toast('🌍 Ev sahibinin dünyası yüklendi');
+  } else if (m.t === 'pos') MP.remote = m;
+  else if (m.t === 'set') {
+    if (m.d === dim) { MP.applying = true; setBlock(m.x, m.y, m.z, m.b); MP.applying = false; }
+    else { const w = worlds[m.d];
+      if (w) { if (!w.edits) w.edits = loadEditsFor(m.d);
+        const k = Math.floor(m.x/CH)+','+Math.floor(m.z/CH);
+        (w.edits[k] = w.edits[k] || {})[bidx(((m.x%CH)+CH)%CH, m.y, ((m.z%CH)+CH)%CH)] = m.b;
+        w.chunks.clear(); } }
+  } else if (m.t === 'chat') chatMsg('<Arkadaş> ' + m.msg);
+}
+$('mpbtn').addEventListener('click', () => { menu.style.display='none'; closePanels(); $('mppanel').style.display='flex'; });
+$('mphost').addEventListener('click', () => {
+  mpSetup(true);
+  MP.pc.createOffer().then(o => MP.pc.setLocalDescription(o));
+  $('mpstatus').textContent = '⏳ Kod oluşturuluyor…';
+});
+$('mpcopy').addEventListener('click', () => {
+  $('mpcode').select();
+  try { navigator.clipboard.writeText($('mpcode').value); toast('📋 Kopyalandı'); } catch(e) { document.execCommand('copy'); }
+});
+$('mpgo').addEventListener('click', () => {
+  try {
+    const d = JSON.parse(decodeURIComponent(escape(atob($('mpin').value.trim()))));
+    if (!MP.pc || (d.type === 'offer' && MP.isHost && !MP.peer)) mpSetup(false);
+    MP.pc.setRemoteDescription(d).then(() => {
+      if (d.type === 'offer') return MP.pc.createAnswer().then(a => MP.pc.setLocalDescription(a));
+    }).catch(e => $('mpstatus').textContent = 'Hata: ' + e.message);
+    $('mpstatus').textContent = d.type === 'offer' ? '⏳ Cevap kodu üretiliyor…' : '⏳ Bağlanıyor…';
+  } catch(e) { $('mpstatus').textContent = '✖ Kod çözülemedi. Tamamını yapıştırdığından emin ol.'; }
+});
+
 /* ================= MENÜ & KAYIT ================= */
 const menu = $('menu');
 $('menubtn').addEventListener('pointerdown', (e) => {
@@ -2054,7 +2445,7 @@ function saveState() {
     localStorage.setItem('ck2_state_'+seed, JSON.stringify({
       p:[P.x,P.y,P.z,P.yaw,P.pitch], hp:P.hp, gm:gamemode, inv, hot:hotSel,
       tod:timeOfDay, rules:RULES, chest:chestData, fuel:furnaceFuel, fly:P.fly,
-      dim, armor:armorInv, off:offhand }));
+      dim, armor:armorInv, off:offhand, hun:P.hunger }));
   } catch(e) {}
 }
 function loadState() {
@@ -2066,6 +2457,7 @@ function loadState() {
     timeOfDay = s.tod; Object.assign(RULES, s.rules);
     chestData = s.chest || {}; furnaceFuel = s.fuel || 0; P.fly = s.fly && gamemode==='creative';
     armorInv = s.armor || [null,null,null,null]; offhand = s.off || null;
+    P.hunger = s.hun === undefined ? 20 : s.hun;
     if (s.dim && s.dim !== dim) switchWorld(s.dim);
     return true;
   } catch(e) { return false; }
@@ -2166,6 +2558,10 @@ function frame(now) {
   stepBreaking(dt);
   updateMobs(dt, light);
   updateTnt(dt);
+  tickEffects(dt);
+  updateParts(dt);
+  if (MP.peer) { MP.posT -= dt;
+    if (MP.posT <= 0) { MP.posT = 0.1; mpSend({t:'pos', x:P.x, y:P.y, z:P.z, yaw:P.yaw, vx:P.vx, vz:P.vz, dim}); } }
   stateT += dt;
   if (stateT > 4) { stateT = 0; saveState(); }
 
@@ -2175,12 +2571,14 @@ function frame(now) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   const asp = canvas.width/canvas.height;
   const proj = mpersp(1.22, asp, 0.08, 400);
-  const view = mmul(mrotX(P.pitch), mmul(mrotY(P.yaw), mtrans(-P.x, -(P.y+P.eye), -P.z)));
+  let vyaw = P.yaw, vpitch = P.pitch;
+  if (hasEff('nausea')) { vyaw += Math.sin(now/300)*0.06*effLvl('nausea'); vpitch += Math.sin(now/230)*0.04*effLvl('nausea'); }
+  const view = mmul(mrotX(vpitch), mmul(mrotY(vyaw), mtrans(-P.x, -(P.y+P.eye), -P.z)));
   const mvp = mmul(proj, view);
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
-  gl.uniform1f(loc.uFogFar, RDIST*CH+14);
-  gl.uniform1f(loc.uLight, light);
+  gl.uniform1f(loc.uFogFar, (RDIST*CH+14) * ((hasEff('blindness')||hasEff('darkness')) ? 0.22 : 1));
+  gl.uniform1f(loc.uLight, hasEff('night_vision') ? Math.max(light, 0.95) : light);
   const heldIt = heldItem() ? ITEMS[heldItem().id] : null;
   const lightSrc = Math.max(offhand && ITEMS[offhand.id] && ITEMS[offhand.id].light || 0, heldIt && heldIt.light || 0);
   gl.uniform1f(loc.uPLight, lightSrc*0.9);
@@ -2204,7 +2602,7 @@ function frame(now) {
     if (c.vboO) bindDraw(c.vboO, c.cntO);
     if (c.vboW) waterList.push(c);
   }
-  drawMobs(proj, view, light);
+  drawEnts(proj, view, now);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.depthMask(false);
@@ -2224,7 +2622,8 @@ requestAnimationFrame(frame);
 window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, MOBS, ents, armor:()=>armorInv,
   cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, dim:()=>dim, setDim,
   offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
-  hurt:(d)=>damagePlayer(d,'test'), ver:'3.0' };
+  hurt:(d)=>damagePlayer(d,'test'), effects:()=>effects, addEffect, EFFECTS,
+  parts:()=>parts, arrows:()=>arrows, MP, ver:'4.0' };
 </script>
 </body>
 </html>

@@ -60,15 +60,21 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 🛠️ **Üretim (craft)**: tahta, çubuk, aletler, kılıçlar, fırın, sandık, meşale, netherite yükseltmeleri… (gelişmiş tarifler çalışma masası ister)
 - 🔥 **Fırın**: cevher eritme, yemek pişirme, yakıt sistemi
 - 📦 **Sandık**: yere koy, içine eşya depola (kaydedilir)
-- 🐷 **Canlılar**: domuz, inek, koyun, tavuk (et/deri/yün düşürür) — gece **zombiler** ve **creeper'lar** çıkar!
-- 🍖 Yemek yeme (can yeniler), ender incisiyle ışınlanma
+- 🐷 **12 canlı türü, eklemli 3D modeller ve yürüme animasyonlarıyla**: domuz, inek, koyun, tavuk, kurt, köylü — gece: zombi, **ok atan iskelet**, örümcek, **ışınlanan enderman** (inci düşürür!), zıplayan balçık, creeper
+- 🍗 **Açlık sistemi**: yemek açlığı doldurur, tokken can yenilenir, açken zayıflarsın; su altında nefes (🫧) biter, boğulursun
+- ✨ **Partikül efektleri**: blok kırılması, patlamalar, mob ölümü, enderman ışınlanması, yemek kırıntıları
+- 🎮 **Çok Oyunculu (P2P Co-op)**: menüden oda kur, çıkan kodu arkadaşına gönder; sunucu gerektirmez, dünya/bloklar/sohbet/konum senkronize (aynı Wi-Fi'da en iyi)
+- 🧪 Ender incisiyle ışınlanma
 - 💾 Dünya + envanter + sandıklar otomatik kaydedilir
 
+### 🌟 Efektler (/effect)
+30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
+
 ### 💬 Komut sistemi
-`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
+`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
 ## 🚫 Henüz olmayanlar
-Büyüler/iksirler, kızıltaş devreleri, vagon/tekne, yay/ok, basamak/merdiven/çit gibi kısmi bloklar, Ender Ejderhası. (Blokların çoğu dekoratif olarak mevcut.)
+Büyüler/iksir demleme, kızıltaş devreleri, vagon/tekne, oyuncunun yay kullanması, kısmi bloklar (basamak/çit), Ender Ejderhası. Çok oyunculuda moblar senkronize edilmez (her oyuncu kendi canavarlarını görür).
 
 ## 🛠️ Teknik
 Saf JavaScript + WebGL. Dokular çalışma anında prosedürel üretilir. Chunk tabanlı dünya (16×64×16), yüz ayıklamalı mesh, `localStorage` kaydı.
