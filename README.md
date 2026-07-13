@@ -87,8 +87,25 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### 💬 Komut sistemi
 `/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
+### 🧪 İksir & Demleme
+- **Demleme standı** (paneli) → Su şişesi + Nether siğili = Tuhaf İksir, üzerine malzeme = iksir. **12 iksir**: Şifa, Yenilenme, Hız, Zıplama, Güç, Ateş Direnci, Gece Görüşü, Su Soluma, Zehir, Zayıflık, Yavaşlık, Görünmezlik
+- İçince efekt uygular + cam şişe iade; **sıçrayan iksir** (barut ekle) crosshair yönüne atılır, çarpınca alan etkisi
+
+### 🔴 Kızıltaş (Redstone)
+- **Şalter, kızıltaş teli, kızıltaş meşalesi, kızıltaş lambası, elektrikli ray** — gerçek güç yayılımı (15 blok BFS). Şalter aç → tel yanar → lamba yanar; elektrikli ray vagonu hızlandırır
+
+### 🛒 Ulaşım
+- **Vagon** (rayda hızlanır) ve **tekne** (suda yüzer) — yerleştir, dokunarak bin, joystickle sür, zıpla ile in. Ray ve elektrikli ray blokları
+
+### 🐉 Ender Ejderhası
+- End boyutuna girince **boss savaşı**: ada merkezinde uçan, dalış saldırıları yapan kanatlı ejderha, üstte **boss sağlık çubuğu**, ölünce patlama + Ejderha Yumurtası ganimeti. `/summon ender_dragon` ile de çağrılır
+
+### 🎮 Çok oyunculu — mob senkronu
+- Artık **canlılar da senkronize**: ev sahibi otoriter (mob yapay zekasını çalıştırır ve durumlarını yayınlar), misafirler aynı mobları görür; misafir bir mob'a vurunca ev sahibine iletilir. Araçlar da senkron
+- **Oda kodu dayanıklılığı**: birden çok ücretsiz sinyal aynası (biri engellenirse diğeri), teklif yeniden yayını; ağ tamamen engelliyse manuel kod yedeği
+
 ## 🚫 Henüz olmayanlar
-Büyüler/iksir demleme, kızıltaş devreleri, vagon/tekne, oyuncunun yay kullanması, kısmi bloklar (basamak/çit), Ender Ejderhası. Çok oyunculuda moblar senkronize edilmez (her oyuncu kendi canavarlarını görür).
+Zırh süsleme şablonları, deneyim/büyü masası, gelişmiş köylü ticareti, tam gökkubbe (güneş/ay sprite'ı), sesli sohbet. Temel mekaniklerin çoğu artık mevcut.
 
 > ⚖️ **Telif:** Oyun hiçbir Minecraft dokusu, sesi, logosu, ismi veya telifli dosyası içermez — tüm görseller çalışma anında prosedürel üretilir. İstersen **kendi** skin ve doku paketini yükleyebilirsin.
 
