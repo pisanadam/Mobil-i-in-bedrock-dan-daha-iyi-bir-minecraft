@@ -52,33 +52,45 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - ✨ **Ölümsüzlük Totemi**: 2. eldeyken ölümcül hasardan kurtarır
 
 ### Ses & Animasyon 🔊
-- Malzemeye göre kırma/koyma sesleri, adım sesleri, menü tık sesleri, portal/patlama/alet kırılma efektleri
-- Eldeki eşya görünür ve vururken sallanır, yürürken hafifçe salınır; canlılarda yürüme animasyonu
+- **Malzeme-bazlı sesler**: toprak/kum (kürek), taş, ahşap (balta), **cam kırılması** (gürültü), yaprak, maden/metal, yün — her biri ayrı. Adım, item toplama/atma, yemek, portal, ateş, patlama, alet kırılma sesleri; üst üste binmeyi sınırlayan ses havuzu; **ses seviyesi kaydırıcısı**
+- Eldeki blok **3D** görünür ve vururken sallanır; kırarken el titrer; yürürken salınım; canlılarda eklemli yürüyüş
+
+### Işık & Cam 💡
+- 🔦 **Gerçek nokta ışığı**: yere/duvara konan **meşale, ışıktaşı, fener, deniz feneri, portal** çevresini gerçekten aydınlatır (7 blok yarıçap, mesh'e gömülü). Elde meşale taşıyınca da yakın çevre parlar. Mağara ve gece artık karanlık
+- 🪟 **Saydam cam**: cam ve 16 renkli cam arkasındaki dünyayı gösterir; ayrı yarı-saydam çizim geçişi (doğru derinlik sırası), siyah/pembe/bozuk görünmez
 
 ### Sistemler
-- 🎒 **36 gözlü envanter**, eşya taşıma, yığınlama
-- 🛠️ **Üretim (craft)**: tahta, çubuk, aletler, kılıçlar, fırın, sandık, meşale, netherite yükseltmeleri… (gelişmiş tarifler çalışma masası ister)
-- 🔥 **Fırın**: cevher eritme, yemek pişirme, yakıt sistemi
-- 📦 **Sandık**: yere koy, içine eşya depola (kaydedilir)
-- 🐷 **12 canlı türü, eklemli 3D modeller ve yürüme animasyonlarıyla**: domuz, inek, koyun, tavuk, kurt, köylü — gece: zombi, **ok atan iskelet**, örümcek, **ışınlanan enderman** (inci düşürür!), zıplayan balçık, creeper
-- 🍗 **Açlık sistemi**: yemek açlığı doldurur, tokken can yenilenir, açken zayıflarsın; su altında nefes (🫧) biter, boğulursun
-- ✨ **Partikül efektleri**: blok kırılması, patlamalar, mob ölümü, enderman ışınlanması, yemek kırıntıları
-- 🎮 **Çok Oyunculu (P2P Co-op)**: menüden oda kur, çıkan kodu arkadaşına gönder; sunucu gerektirmez, dünya/bloklar/sohbet/konum senkronize (aynı Wi-Fi'da en iyi)
-- 🧪 Ender incisiyle ışınlanma
-- 💾 Dünya + envanter + sandıklar otomatik kaydedilir
+- 🎒 **36 gözlü envanter**, eşya taşıma, yığınlama; **envanterden dışarı sürükleyip yere atma** (veya `Q`); atılan/kırılan eşyalar **dünyada dönen 3D obje** olur, yaklaşınca otomatik toplanır (envanter doluysa yerde kalır)
+- 🛠️ **Üretim (craft)**: aletler, kılıçlar, zırhlar, fırın, sandık, meşale, çakmak taşı+çelik, ateş topu, Kadim Göz, kebap, mercimek çorbası… (gelişmiş tarifler çalışma masası ister)
+- 🔥 **Fırın**: cevher eritme, yemek pişirme, yakıt sistemi · 📦 **Sandık**: yere koy/depola; dünya sandıkları ganimet içerir
+- 🌾 **Tarım**: **çapa** ile toprağı sür, suya yakınsa nemlenir, **mercimek tohumu** ek → filiz → bitki → hasat; mercimek çorbası & **kebap** (açlık + az can)
+- ⚔️ **Kritik vuruş**: düşerken vur → +%50 hasar, altın parçacık + özel ses · 🔥 **Ateş topu** (crosshair yönüne uçar, çarpınca patlar) · 🔥 **Çakmak taşı ve çelik** (yanabilir blokları tutuşturur, kontrollü ateş yayılımı, obsidyen çerçevede Nether portalı açar)
+- 🏰 **Yapılar** (chunk-uyumlu, deterministik): yeraltı **stronghold + portal odası**, köyler, zindanlar (kafesli), maden galerileri, kuleler; **Kadim Göz** havaya atılınca portal odasının yönünü gösterir
+- 🐷 **12 canlı**: domuz, inek, koyun, tavuk, kurt, köylü, zombi, **ok atan iskelet**, örümcek, **ışınlanan enderman**, zıplayan balçık, creeper (hepsi eklemli 3D + yapay zeka)
+- 🍗 **Açlık sistemi**, su altında nefes/boğulma · 🔥 **Yanma**: ekranın **sadece alt kısmında** alev animasyonu (görüşü kapatmaz), suya girince söner
+- ✨ **Partiküller**: blok kırma (blok renginde), patlama, mob ölümü, enderman/portal, yeme, kritik vuruş
+- 🎮 **Çok Oyunculu Co-op (6 haneli oda kodu)**: "Oda Kur" → 6 haneli kod → arkadaş kodu girip **aynı dünyaya katılır**; hareket, blok kır/koy, item düşür/al, sohbet ve **skin** senkronize; oyuncu çıkıp girse de oda bozulmaz; aracı sunucu engellenirse manuel kod yedeği
+- 🧍 **Skin yükleme**: kendi PNG skinini yükle (Java 64×64 / eski 64×32 uyumlu), doğru bölgelere maplenir, **ince/kalın kol** seçeneği; hatalıysa özgün varsayılan skin
+- 🎨 **Doku paketi**: kendi PNG'lerini veya **ZIP**'ini yükle (stone.png, oak_planks.png…); eksik doku varsa varsayılan kalır, çökmez, oyun içinden sıfırlanır
+- 💾 Dünya + envanter + sandıklar + ayarlar otomatik kaydedilir
 
 ### 🌟 Efektler (/effect)
 30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
 
 ### ⚙️ Ayarlar
-- Görüş mesafesi **2–6 chunk**, gölgelendirici aç/kapa (sis + dinamik ışık + partiküller; kapatınca hızlanır), ses
-- 🎛 **Tuşları Taşı**: zıplama/envanter/sohbet/menü düğmelerini ve eşya çubuğunu sürükleyip istediğin yere koy — kaydedilir
+- Görüş mesafesi **2–6 chunk + Uzak+ (8) + Ultra (10)**; FPS düşerse otomatik azaltma + uyarı; parça parça chunk üretimi (takılmaz)
+- Gölgelendirici aç/kapa (sis + dinamik ışık + partiküller), **ses seviyesi**, **tam ekran** butonu (mobil + PC)
+- 🎛 **Tuşları Taşı**: kontrolleri ve eşya çubuğunu sürükleyip istediğin yere koy — kaydedilir
+- 🧍 Skin yükle (ince/kalın kol) · 🎨 Doku paketi (PNG/ZIP) yükle & sıfırla · 🎮 Çok oyunculu paneli
+- 📱 Klavye/fare kullanınca mobil tuşlar gizlenir, dokununca geri gelir
 
 ### 💬 Komut sistemi
-`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` (oyun hızı!) · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
+`/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
 ## 🚫 Henüz olmayanlar
 Büyüler/iksir demleme, kızıltaş devreleri, vagon/tekne, oyuncunun yay kullanması, kısmi bloklar (basamak/çit), Ender Ejderhası. Çok oyunculuda moblar senkronize edilmez (her oyuncu kendi canavarlarını görür).
+
+> ⚖️ **Telif:** Oyun hiçbir Minecraft dokusu, sesi, logosu, ismi veya telifli dosyası içermez — tüm görseller çalışma anında prosedürel üretilir. İstersen **kendi** skin ve doku paketini yükleyebilirsin.
 
 ## 🛠️ Teknik
 Saf JavaScript + WebGL. Dokular çalışma anında prosedürel üretilir. Chunk tabanlı dünya (16×64×16), yüz ayıklamalı mesh, `localStorage` kaydı.

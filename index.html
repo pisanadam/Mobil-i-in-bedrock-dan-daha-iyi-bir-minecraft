@@ -53,6 +53,15 @@
     background:#0d1420; color:#9fc; border:1px solid #345; border-radius:8px; font-size:10px; padding:6px; }
   #mppanel button.act { border:none; border-radius:8px; padding:10px; background:#4a6ea9; color:#fff; font-size:14px; width:100%; margin-top:4px; }
   #mppanel button.act.green { background:#57a832; }
+  body.kbmode #jumpbtn, body.kbmode #downbtn, body.kbmode #invbtn, body.kbmode #joy { display:none !important; }
+  #burnoverlay { display:none; position:fixed; left:0; right:0; bottom:0; height:34%; z-index:7; pointer-events:none;
+    background:linear-gradient(to top, rgba(230,90,10,.55), rgba(230,120,20,.25) 55%, transparent);
+    animation:burnflicker .35s infinite alternate; }
+  @keyframes burnflicker { from { opacity:.8; } to { opacity:1; } }
+  #portalfx { display:none; position:fixed; inset:0; z-index:26; pointer-events:none; transition:opacity .45s;
+    background:radial-gradient(ellipse at center, transparent 42%, rgba(130,40,200,.55) 100%); }
+  #dragghost { display:none; position:fixed; z-index:60; width:40px; height:40px; pointer-events:none;
+    background-size:100%; image-rendering:pixelated; opacity:.85; }
   #info { left:10px; top:10px; color:rgba(255,255,255,.85); font-size:11px; text-shadow:0 1px 2px #000; pointer-events:none; white-space:pre; }
   .panel { display:none; position:fixed; z-index:30; left:50%; top:50%; transform:translate(-50%,-50%);
     width:min(94vw,560px); max-height:84vh; background:rgba(18,22,32,.96); color:#eee;
@@ -108,6 +117,9 @@
 <canvas id="c"></canvas>
 <div class="hud" id="wateroverlay"></div>
 <div class="hud" id="hurtoverlay"></div>
+<div id="burnoverlay"></div>
+<div id="portalfx"></div>
+<div id="dragghost"></div>
 <div class="hud" id="crosshair"></div>
 <div class="hud" id="breakbar"><div></div></div>
 <div class="hud" id="joy"><div id="joybase"></div><div id="joyknob"></div></div>
@@ -136,19 +148,25 @@
 <div class="panel" id="mppanel">
   <h3><span>🎮 Çok Oyunculu (P2P Co-op)</span><button class="x" data-close="mppanel">✕</button></h3>
   <div class="scroll">
-  <div style="font-size:12px;opacity:.78;margin-bottom:8px;line-height:1.5">
-    1) Biri <b>Oda Kur</b>'a basar, üstte çıkan kodu arkadaşına gönderir (WhatsApp vb.).<br>
-    2) Arkadaş o kodu aşağıdaki kutuya yapıştırıp <b>İşle</b>'ye basar; üstte çıkan <b>cevap kodunu</b> geri gönderir.<br>
-    3) Oda kuran, cevabı aşağı yapıştırıp <b>İşle</b>'ye basar. Bağlanınca dünya paylaşılır! (Aynı Wi-Fi'da en iyi sonuç)
+  <button id="mphost" class="act green">🏠 Oda Kur (6 haneli kod al)</button>
+  <div style="text-align:center;margin:8px 0">Oda kodu: <b id="mproom" style="font-size:26px;letter-spacing:4px;color:#ffd24a">——</b></div>
+  <div style="display:flex;gap:6px;margin-bottom:6px">
+    <input id="mpjoincode" inputmode="numeric" maxlength="6" placeholder="6 haneli kod"
+      style="flex:1;padding:10px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:18px;letter-spacing:3px;text-align:center">
+    <button id="mpjoin" class="act" style="width:auto;padding:0 18px;margin:0">Katıl</button>
   </div>
-  <button id="mphost" class="act green">🏠 Oda Kur</button>
-  <div id="mpstatus" style="font-size:12px;color:#8fd;margin:8px 0">Hazır.</div>
-  <label style="font-size:11px;opacity:.7">Senin kodun (kopyala &amp; gönder):</label>
-  <textarea id="mpcode" readonly></textarea>
-  <button id="mpcopy" class="act" style="padding:6px">📋 Kodu Kopyala</button>
-  <label style="font-size:11px;opacity:.7;display:block;margin-top:8px">Arkadaşının kodu (yapıştır):</label>
-  <textarea id="mpin"></textarea>
-  <button id="mpgo" class="act green">✅ İşle</button>
+  <div id="mpstatus" style="font-size:12px;color:#8fd;margin:8px 0">Hazır. Oda kur veya koda katıl. Oyuncu çıkıp girse de oda açık kalır.</div>
+  <details style="font-size:12px;opacity:.85">
+    <summary>🔧 Manuel bağlantı (aracı sunucu çalışmazsa)</summary>
+    <div style="font-size:11px;opacity:.8;margin:6px 0">Katılan: <b>Manuel Kod Üret</b> → kodu ev sahibine gönder. Ev sahibi kodu aşağı yapıştırıp <b>İşle</b> → çıkan cevabı geri gönderir. Katılan cevabı yapıştırıp <b>İşle</b>.</div>
+    <button id="mpmanual" class="act" style="padding:8px">🔑 Manuel Kod Üret (katılan)</button>
+    <label style="font-size:11px;opacity:.7">Senin kodun:</label>
+    <textarea id="mpcode" readonly></textarea>
+    <button id="mpcopy" class="act" style="padding:6px">📋 Kopyala</button>
+    <label style="font-size:11px;opacity:.7;display:block;margin-top:6px">Gelen kod:</label>
+    <textarea id="mpin"></textarea>
+    <button id="mpgo" class="act green">✅ İşle</button>
+  </details>
   </div>
 </div>
 <div class="panel" id="chestpanel">
@@ -176,12 +194,23 @@
     <option value="3" selected>3 — Normal</option>
     <option value="4">4 — Uzak</option>
     <option value="5">5 — Çok Uzak</option>
-    <option value="6">6 — Maksimum (yavaş!)</option>
+    <option value="6">6 — Maksimum</option>
+    <option value="8">8 — Uzak+ (güçlü cihaz)</option>
+    <option value="10">10 — Ultra (çok güçlü cihaz!)</option>
   </select>
   <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
   <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
   <label>Ses</label>
   <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
+  <label>Ses seviyesi: <span id="vollabel">100</span>%</label>
+  <input id="volslider" type="range" min="0" max="100" value="100" style="width:100%">
+  <button id="fsbtn" style="margin-top:10px">⛶ Tam Ekran Aç/Kapat</button>
+  <label>Karakter görünümü (PNG skin, 64×64)</label>
+  <input type="file" id="skinfile" accept="image/png" style="width:100%;font-size:11px;color:#ccc">
+  <select id="skinarms"><option value="classic">Kalın kol (klasik)</option><option value="slim">İnce kol (slim)</option></select>
+  <label>Doku paketi (ZIP veya klasör: stone.png, oak_planks.png…)</label>
+  <input type="file" id="tpfile" accept=".zip,image/png" multiple style="width:100%;font-size:11px;color:#ccc">
+  <button id="tpreset" style="margin-top:4px">🎨 Varsayılan Dokulara Dön</button>
   <button id="uibtn" style="margin-top:10px">🎛 Tuşları Taşı</button>
   <button id="uireset">↩ Tuş Yerlerini Sıfırla</button>
   <button id="mpbtn" style="margin-top:10px">🎮 Çok Oyunculu</button>
@@ -225,8 +254,9 @@ const actx = atlasCanvas.getContext('2d');
 let tileN = 0, paintSalt = 0;
 let rs = seed || 12345;
 const rnd = () => { rs = Math.imul(rs^(rs>>>15), rs|1); rs ^= rs + Math.imul(rs^(rs>>>7), rs|61); return ((rs^(rs>>>14))>>>0)/4294967296; };
-function tile(fn) {
-  const ti = tileN++; paintSalt = ti*977;
+const tilePainters = []; // doku paketi sıfırlama için varsayılan boyacılar
+function paintTile(ti, fn) {
+  paintSalt = ti*977;
   const ox = (ti%ATLAS_N)*16, oy = ((ti/ATLAS_N)|0)*16;
   const img = actx.createImageData(16,16);
   for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
@@ -236,6 +266,11 @@ function tile(fn) {
     img.data[i+2]=clamp(p[2],0,255); img.data[i+3]=p[3]===undefined?255:p[3];
   }
   actx.putImageData(img, ox, oy);
+}
+function tile(fn) {
+  const ti = tileN++;
+  tilePainters[ti] = fn;
+  paintTile(ti, fn);
   return ti;
 }
 const nzc = (c,n,r) => { const d=(r()-0.5)*n; return [c[0]+d, c[1]+d*0.95, c[2]+d*0.9]; };
@@ -332,7 +367,7 @@ defBlock('mud_bricks','Çamur Tuğlası', stone3(tile(T.brick('#8a6a4e','#79593f
 defBlock('clay','Kil', stone3(tile(T.flat('#9aa2b0',16))), {hard:0.6, tool:'shovel'});
 defBlock('dirt_path','Çim Yolu', [tile(T.flat('#977e46',24)),tGrassSide,tDirt], {hard:0.6, tool:'shovel', drop:'dirt'});
 defBlock('snow_block','Kar Bloku', stone3(tile(T.flat('#f0f4f6',12))), {hard:0.2, tool:'shovel'});
-defBlock('ice','Buz', stone3(tile(T.glassy('#7fa8e8',170))), {hard:0.5, tool:'pick', cutout:1, drop:null});
+defBlock('ice','Buz', stone3(tile(T.glassy('#7fa8e8',170))), {hard:0.5, tool:'pick', trans:1, drop:null});
 /* --- ağaç aileleri: kütük, soyulmuş kütük, tahta, yaprak --- */
 const WOODS = {
   oak:['Meşe','#6b522f','#b8945f','#4a8f28'], spruce:['Ladin','#3b2711','#7a5a33','#4b7d4b'],
@@ -409,10 +444,10 @@ for (const c in COLORS) {
   defBlock(c+'_wool', nm+' Yün', stone3(tile(T.wool(col))), {hard:0.5});
   defBlock(c+'_concrete', nm+' Beton', stone3(tile(T.flat(col,8))), {hard:1.5, tool:'pick', tier:1});
   defBlock(c+'_terracotta', nm+' Terakota', stone3(tile(T.flat(mixHex(col,'#8a5a3c',0.55),14))), {hard:1.2, tool:'pick', tier:1});
-  defBlock(c+'_stained_glass', nm+' Cam', stone3(tile(T.glassy(col,80))), {hard:0.3, cutout:1, drop:null});
+  defBlock(c+'_stained_glass', nm+' Cam', stone3(tile(T.glassy(col,135))), {hard:0.3, trans:1, drop:null});
 }
 defBlock('terracotta','Terakota', stone3(tile(T.flat('#985e43',14))), {hard:1.2, tool:'pick', tier:1});
-defBlock('glass','Cam', stone3(tile(T.glassy('#e8f2f4',36))), {hard:0.3, cutout:1, drop:null});
+defBlock('glass','Cam', stone3(tile(T.glassy('#e8f2f4',0))), {hard:0.3, cutout:1, drop:null});
 /* --- işlevsel & süs blokları --- */
 const tPlankOak = BLOCKS[BID.oak_planks].t[0];
 defBlock('crafting_table','Çalışma Masası', [tile((x,y,r)=>{ if ((x<3||x>12)&&(y<3||y>12)) return nzc(hex('#7a5a30'),16,r); return T.plank('#b8945f')(x,y,r); }), tile((x,y,r)=>{ if (y<4) return nzc(hex('#8a6a3e'),16,r); if (cell(x,y,7)<0.3&&y>5&&y<12) return nzc(hex('#6a4a26'),16,r); return T.plank('#a88450')(x,y,r); }), tPlankOak], {hard:1.2, tool:'axe', inter:'craft'});
@@ -420,6 +455,9 @@ defBlock('furnace','Fırın', [tile(T.stone('#8a8a8a')), tile((x,y,r)=>{ if (y>6
 defBlock('chest','Sandık', [tile(T.plank('#a8763e')), tile((x,y,r)=>{ if (y>6&&y<10&&x>6&&x<10) return nzc(hex('#8a8a8a'),20,r); if (y===8) return nzc(hex('#6a4a1e'),14,r); return T.plank('#a8763e')(x,y,r); }), tile(T.plank('#a8763e'))], {hard:1.5, tool:'axe', inter:'chest'});
 defBlock('bookshelf','Kitaplık', [tPlankOak, tile((x,y,r)=>{ if (y<2||y>13||(y>6&&y<9)) return T.plank('#b8945f')(x,y,r); const bc=['#7a2a2a','#2a5a7a','#5a7a2a','#7a5a2a','#4a2a6a'][Math.floor(cell(x,y,11)*5)]; return nzc(hex(bc),20,r); }), tPlankOak], {hard:1.2, tool:'axe'});
 defBlock('sea_lantern','Deniz Feneri', stone3(tile(T.glow('#cfe8e0','#8ab8ac'))), {hard:0.3});
+defBlock('spawner','Yaratıcı Kafesi', stone3(tile((x,y,r)=>{ if (x%3===0||y%3===0) return nzc(hex('#1a2028'),12,r); return [0,0,0,60]; })), {hard:5, tool:'pick', tier:1, drop:null, cutout:1});
+defBlock('portal_frame','Kadim Çerçeve', [tile((x,y,r)=>{ if (x>4&&x<11&&y>4&&y<11) return nzc(hex('#274038'),16,r); return nzc(hex('#c8c89a'),18,r); }), tile(T.brick('#b8b88a','#8a8a6a')), tile(T.stone('#b8b88a'))], {hard:8, tool:'pick', tier:3, frame:1});
+defBlock('portal_frame_eye','Gözlü Kadim Çerçeve', [tile((x,y,r)=>{ const d=Math.hypot(x-8,y-8); if (d<2.5) return nzc(hex('#4ec89a'),40,r); if (x>4&&x<11&&y>4&&y<11) return nzc(hex('#183028'),16,r); return nzc(hex('#c8c89a'),18,r); }), tile(T.brick('#b8b88a','#8a8a6a')), tile(T.stone('#b8b88a'))], {hard:8, tool:'pick', tier:3, light:0.45});
 defBlock('tnt','TNT', [tile(T.flat('#8a2a1a',20)), tile((x,y,r)=>{ if (y<3||y>12) return nzc(hex('#8a2a1a'),20,r); if (y>6&&y<10) return (x>5&&x<10)?nzc(hex('#1a1a1a'),10,r):nzc(hex('#e8e0d0'),12,r); return nzc(hex('#c8402a'),20,r); }), tile(T.flat('#6a1a0e',20))], {hard:0.2, ignite:1});
 const tMelS = tile((x,y,r)=>{ const s=(x%4<1)?-30:0; return nzc([90+s,140+s,60+s],20,r); });
 defBlock('melon','Karpuz', [tile(T.flat('#6a9a3a',24)), tMelS, tile(T.flat('#6a9a3a',24))], {hard:0.8, tool:'axe', drop:'melon_slice', dropN:[3,6]});
@@ -427,9 +465,21 @@ defBlock('pumpkin','Balkabağı', [tile(T.flat('#c67618',20)), tile(T.log('#c676
 defBlock('hay_block','Saman Balyası', [tile(T.logtop('#b8952e','#d8b542')), tile(T.log('#c8a538')), tile(T.logtop('#b8952e','#d8b542'))], {hard:0.5});
 defBlock('sponge','Sünger', stone3(tile((x,y,r)=>{ if (cell(x,y,13)<0.2) return nzc(hex('#a89a3e'),16,r); return nzc(hex('#c2b854'),18,r); })), {hard:0.5});
 defBlock('cactus','Kaktüs', [tile(T.flat('#5a8a2e',18)), tile((x,y,r)=>{ if (x%4===0&&r()<0.5) return nzc(hex('#2a4a12'),14,r); return nzc(hex('#588a2c'),16,r); }), tile(T.flat('#5a8a2e',18))], {hard:0.4, damage:1});
+/* --- tarım --- */
+const tFarmDry = tile((x,y,r)=>{ if (x%4===1) return nzc(hex('#4a3520'),18,r); return nzc(hex('#6b4a2e'),22,r); });
+const tFarmWet = tile((x,y,r)=>{ if (x%4===1) return nzc(hex('#2a1d10'),14,r); return nzc(hex('#463019'),18,r); });
+defBlock('farmland','Tarım Toprağı', [tFarmDry, tDirt, tDirt], {hard:0.5, tool:'shovel', drop:'dirt'});
+defBlock('farmland_wet','Nemli Tarım Toprağı', [tFarmWet, tDirt, tDirt], {hard:0.5, tool:'shovel', drop:'dirt'});
+/* --- ateş --- */
+defBlock('fire','Ateş', stone3(tile((x,y,r)=>{ const h2 = 15 - Math.abs(x-8)*1.2 - hash2(x*7+1,3)*4;
+  if (y > h2 && r() < 0.85) return y > h2+4 ? nzc(hex('#e8442a'),40,r) : nzc(hex('#f8c838'),40,r);
+  return [0,0,0,0]; })), {cross:1, cutout:1, hard:0.01, drop:null, light:0.9, fireB:1, noitem:1});
 /* --- çapraz (bitki) bloklar --- */
 function defCross(id, name, painter, opts={}) { defBlock(id, name, stone3(tile(painter)), Object.assign({cross:1, cutout:1, hard:0.05}, opts)); }
-defCross('short_grass','Kısa Çim', T.cross_grass('#5a9a30'), {drop:null});
+defCross('short_grass','Kısa Çim', T.cross_grass('#5a9a30'), {drop:'lentil_seeds', dropP:0.3});
+defCross('lentil_crop_0','Mercimek Filizi', T.cross_grass('#7ec850'), {drop:'lentil_seeds', noitem:1});
+defCross('lentil_crop_1','Mercimek Bitkisi', (x,y,r)=>{ if (y>5 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#4e9a34'),30,r); return [0,0,0,0]; }, {drop:'lentil_seeds', noitem:1});
+defCross('lentil_crop_2','Olgun Mercimek', (x,y,r)=>{ if (y>3 && Math.abs((x%5)-2)<1.5 && r()<0.9) { if (r()<0.25 && y<10) return nzc(hex('#c8862a'),24,r); return nzc(hex('#3e8a2c'),26,r); } return [0,0,0,0]; }, {drops:[['lentil',2,4],['lentil_seeds',1,2]], noitem:1});
 defCross('dead_bush','Kuru Çalı', T.cross_grass('#8a6a3a'), {drop:null});
 defCross('poppy','Gelincik', T.cross_flower('#3a6a2a','#c22020'));
 defCross('dandelion','Karahindiba', T.cross_flower('#3a6a2a','#e8d838'));
@@ -524,6 +574,14 @@ defItem('bone','Kemik',{icon:IC.ingot('#e8e4d8')});
 defItem('string','İp',{icon:IC.dust('#e0e0e0')});
 defItem('slimeball','Balçık Topu',{icon:IC.raw('#6ac05a')});
 defItem('arrow','Ok',{icon:IC.stick()});
+defItem('flint','Çakmak Taşı',{icon:IC.raw('#3a3a40')});
+defItem('flint_and_steel','Çakmak Taşı ve Çelik',{icon:IC.tool('hoe','#8a8a92'), stack:1, dur:64, igniter:1});
+defItem('fire_charge','Ateş Topu',{icon:IC.pearl('#e8642a'), stack:16, fireball:1});
+defItem('kadim_goz','Kadim Göz',{icon:IC.pearl('#4ec89a'), stack:16, eye:1});
+defItem('lentil_seeds','Mercimek Tohumu',{icon:IC.dust('#9ac83e'), plant:'lentil_crop_0'});
+defItem('lentil','Mercimek',{icon:IC.raw('#b8963a'), food:2});
+defItem('lentil_soup','Mercimek Çorbası',{icon:IC.food('#c89a3a','#e8c86a'), food:6});
+defItem('kebap','Kebap',{icon:IC.food('#a05028','#6a3418'), food:8, hpBonus:2});
 defItem('ender_pearl','Ender İncisi',{icon:IC.pearl('#1a7a6a'), stack:16, pearl:1});
 const FOODS = { apple:['Elma',4,'#c83030','#e8e0c8'], golden_apple:['Altın Elma',20,'#f6d038','#fff0a0'],
   bread:['Ekmek',5,'#b8863e',null], carrot:['Havuç',3,'#e87e2a',null], potato:['Patates',1,'#d8b878',null],
@@ -574,10 +632,23 @@ for (const m in ARMOR_MATS) {
     else if (m === 'netherite') defRecipe('netherite_'+pid, 1, [['diamond_'+pid,1],['netherite_ingot',1]], 1);
   });
 }
-defRecipe('nether_portal', 1, [['obsidian',6]], 1);
-defRecipe('end_portal', 1, [['obsidian',6],['ender_pearl',1]], 1);
+// portallar artık tarifle değil, gerçek çerçeve mekaniğiyle açılıyor:
+// Nether: obsidyen çerçeve (iç 2x3+) + Çakmak Taşı ve Çelik
+// End: stronghold'daki Kadim Çerçeve halkasına 12 Kadim Göz tak
 defRecipe('white_wool', 1, [['string',4]]);
 defRecipe('arrow', 4, [['stick',1],['string',1],['gravel',1]]);
+defRecipe('flint', 1, [['gravel',3]]);
+defRecipe('flint_and_steel', 1, [['iron_ingot',1],['flint',1]], 1);
+defRecipe('fire_charge', 2, [['coal',1],['gunpowder',1]], 1);
+defRecipe('kadim_goz', 1, [['ender_pearl',1],['gunpowder',1]], 1);
+defRecipe('lentil_soup', 1, [['lentil',3]]);
+defRecipe('kebap', 1, [['cooked_mutton',1],['stick',1],['lentil',1]]);
+// yanabilen bloklar
+for (const bid2 in BLOCKS) {
+  const d = BLOCKS[bid2];
+  if (d.id && (d.id.endsWith('_planks') || d.id.endsWith('_log') || d.id.endsWith('_leaves') ||
+      d.id.endsWith('_wool') || d.id === 'bookshelf' || d.id === 'hay_block')) d.flammable = 1;
+}
 for (const [b,i] of [['coal_block','coal'],['iron_block','iron_ingot'],['gold_block','gold_ingot'],
   ['diamond_block','diamond'],['emerald_block','emerald'],['lapis_block','lapis_lazuli'],
   ['redstone_block','redstone'],['netherite_block','netherite_ingot'],
@@ -599,12 +670,15 @@ function tagMatch(tag, id) {
 /* --- su bloğu --- */
 defBlock('water','Su', stone3(tile((x,y,r)=>[50+(r()-0.5)*24, 96+(r()-0.5)*26, 200+(r()-0.5)*30, 178])), {water:1, solid:0, noitem:1, unbreakable:1});
 defBlock('lava','Lav', stone3(tile((x,y,r)=>{ if (cell(x,y,21)<0.3) return nzc(hex('#f8d03a'),40,r); return nzc(hex('#e35c1e'),40,r); })), {water:1, lava:1, solid:0, noitem:1, unbreakable:1});
-defBlock('nether_portal','Nether Portalı', stone3(tile((x,y,r)=>{ const s=Math.sin((x+y)*0.8)*30; return [120+s, 30+(r()*30), 190+s, 215]; })), {cutout:1, solid:0, hard:1.5, tool:'pick', tier:1});
-defBlock('end_portal','End Portalı', stone3(tile((x,y,r)=>{ if (r()<0.08) return [180,255,200,255]; return [8+(r()*14), 14+(r()*16), 20+(r()*18), 235]; })), {cutout:1, solid:0, hard:1.5, tool:'pick', tier:1});
-// ışık yayan eşyalar (elde taşınınca çevreyi aydınlatır)
-for (const [lid, lv] of [['torch',0.85],['soul_torch',0.7],['lantern',0.95],['glowstone',1],['sea_lantern',1],['shroomlight',0.95],['magma_block',0.5],['crying_obsidian',0.5]])
+defBlock('nether_portal','Nether Portalı', stone3(tile((x,y,r)=>{ const s=Math.sin((x+y)*0.8)*30; return [120+s, 30+(r()*30), 190+s, 200]; })), {trans:1, solid:0, hard:1.5, tool:'pick', tier:1});
+defBlock('end_portal','End Portalı', stone3(tile((x,y,r)=>{ if (r()<0.08) return [180,255,200,255]; return [8+(r()*14), 14+(r()*16), 20+(r()*18), 225]; })), {trans:1, solid:0, hard:1.5, tool:'pick', tier:1});
+// ışık yayan bloklar/eşyalar: yere konunca VE elde taşınınca aydınlatır
+for (const [lid, lv] of [['torch',0.95],['soul_torch',0.8],['lantern',1],['glowstone',1],['sea_lantern',1],
+  ['shroomlight',0.95],['magma_block',0.55],['crying_obsidian',0.55],['nether_portal',0.8],['end_portal',0.7],['lava',0.9]]) {
   if (ITEMS[lid]) ITEMS[lid].light = lv;
-const isTransp = b => { const d=BLOCKS[b]; return d && (d.water || d.cutout || d.cross); };
+  if (BID[lid] && lid !== 'lava') BLOCKS[BID[lid]].light = lv; // lav hariç (denizde binlerce kaynak olurdu)
+}
+const isTransp = b => { const d=BLOCKS[b]; return d && (d.water || d.cutout || d.cross || d.trans); };
 const isSolid  = b => b>0 && BLOCKS[b].solid;
 
 /* ================= GÜRÜLTÜ / ARAZİ ================= */
@@ -923,9 +997,133 @@ function genOverworld(cx, cz) {
     if (g <= WATER_Y || g > 52) continue;
     genTree(data, x0, z0, wx, wz, g, t);
   }
+  const st = genStructures(data, cx, cz);
   const e = edits[ckey(cx,cz)];
-  if (e) for (const i in e) data[i] = e[i];
-  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
+  if (e) for (const i in e) {
+    data[i] = e[i];
+    if (e[i] >= BID.lentil_crop_0 && e[i] <= BID.lentil_crop_2) { // ekinleri büyüme listesine geri al
+      const li = +i, lx2 = li%CH, lz2 = ((li/CH)|0)%CH, ly2 = (li/(CH*CH))|0;
+      cropSet.add((cx*CH+lx2)+','+ly2+','+(cz*CH+lz2));
+    }
+  }
+  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false, spawners:st.spawners, vsp:st.vsp };
+}
+/* ================= YAPILAR (deterministik, chunk uyumlu) ================= */
+function strongholdAt(rx, rz) { // her 40x40 chunk bölgesinde bir kale
+  return { x: rx*640 + 96 + ((hash2(rx*911+5, rz*313+9)*448)|0),
+           z: rz*640 + 96 + ((hash2(rx*137+55, rz*731+99)*448)|0), y: 10 };
+}
+function nearestStronghold() {
+  const rx = Math.floor(P.x/640), rz = Math.floor(P.z/640);
+  let best = null, bd = 1e9;
+  for (let dx=-1; dx<=1; dx++) for (let dz=-1; dz<=1; dz++) {
+    const s = strongholdAt(rx+dx, rz+dz);
+    const d = Math.hypot(s.x-P.x, s.z-P.z);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+function genStructures(data, cx, cz) {
+  const x0 = cx*CH, z0 = cz*CH;
+  const spawners = [], vsp = [];
+  const pb = (wx,wy,wz,b) => {
+    if (wx>=x0 && wx<x0+CH && wz>=z0 && wz<z0+CH && wy>0 && wy<H) {
+      data[bidx(wx-x0, wy, wz-z0)] = b;
+      if (b === BID.spawner) spawners.push([wx,wy,wz]);
+    }
+  };
+  const box = (x1,y1,z1,x2,y2,z2,b,hollow) => {
+    for (let x=Math.max(x1,x0); x<=Math.min(x2,x0+CH-1); x++)
+      for (let z=Math.max(z1,z0); z<=Math.min(z2,z0+CH-1); z++)
+        for (let y=Math.max(1,y1); y<=Math.min(H-2,y2); y++)
+          pb(x,y,z, hollow && x>x1&&x<x2&&y>y1&&y<y2&&z>z1&&z<z2 ? 0 : b);
+  };
+  // --- STRONGHOLD (kale + portal odası) ---
+  const s = strongholdAt(Math.floor(cx/40), Math.floor(cz/40));
+  if (Math.abs(s.x-x0) < 64 && Math.abs(s.z-z0) < 64) {
+    const {x:sx, z:sz, y:sy} = s;
+    // dört koridor + yan odalar
+    box(sx+6, sy, sz-2, sx+34, sy+4, sz+2, BID.stone_bricks, true);
+    box(sx-34, sy, sz-2, sx-6, sy+4, sz+2, BID.stone_bricks, true);
+    box(sx-2, sy, sz+6, sx+2, sy+4, sz+34, BID.stone_bricks, true);
+    box(sx-2, sy, sz-34, sx+2, sy+4, sz-6, BID.stone_bricks, true);
+    for (const [ox2, oz2] of [[34,0],[-34,0],[0,34],[0,-34]]) {
+      box(sx+ox2-4, sy, sz+oz2-4, sx+ox2+4, sy+5, sz+oz2+4, BID.stone_bricks, true);
+      pb(sx+ox2+2, sy+1, sz+oz2+2, BID.chest);
+      pb(sx+ox2-2, sy+1, sz+oz2-2, BID.bookshelf);
+      pb(sx+ox2, sy+3, sz+oz2, BID.lantern);
+    }
+    // portal odası (Kadim Çerçeve halkası burada)
+    box(sx-6, sy, sz-6, sx+6, sy+7, sz+6, BID.stone_bricks, true);
+    for (let o=-1; o<=1; o++) {
+      pb(sx-2, sy+1, sz+o, BID.portal_frame); pb(sx+2, sy+1, sz+o, BID.portal_frame);
+      pb(sx+o, sy+1, sz-2, BID.portal_frame); pb(sx+o, sy+1, sz+2, BID.portal_frame);
+    }
+    pb(sx, sy+1, sz-4, BID.spawner);
+    for (const [tx2,tz2] of [[-5,-5],[5,-5],[-5,5],[5,5]]) pb(sx+tx2, sy+2, sz+tz2, BID.torch);
+    // koridor girişleri odaya açılır
+    for (let o=-1; o<=1; o++) { pb(sx+6,sy+1,sz+o,0); pb(sx+6,sy+2,sz+o,0); pb(sx-6,sy+1,sz+o,0); pb(sx-6,sy+2,sz+o,0);
+      pb(sx+o,sy+1,sz+6,0); pb(sx+o,sy+2,sz+6,0); pb(sx+o,sy+1,sz-6,0); pb(sx+o,sy+2,sz-6,0); }
+  }
+  // --- KÖY (yüzeyde kulübeler) ---
+  const vrx = Math.floor(cx/12), vrz = Math.floor(cz/12);
+  if (hash2(vrx*77+3, vrz*191+8) < 0.5) {
+    const vx = vrx*192 + 40 + ((hash2(vrx*13,vrz*17)*110)|0);
+    const vz = vrz*192 + 40 + ((hash2(vrx*29,vrz*31)*110)|0);
+    if (Math.abs(vx-x0) < 48 && Math.abs(vz-z0) < 48) {
+      for (let hI=0; hI<5; hI++) {
+        const hx = vx + (((hash2(vx+hI*7, vz+1)*36)|0) - 18);
+        const hz = vz + (((hash2(vx+3, vz+hI*11)*36)|0) - 18);
+        const hg = heightAt(hx, hz);
+        if (hg <= WATER_Y || hg > 45) continue;
+        box(hx-2, hg-2, hz-2, hx+2, hg, hz+2, BID.cobblestone, false);   // temel
+        box(hx-2, hg+1, hz-2, hx+2, hg+4, hz+2, BID.oak_planks, true);   // oda
+        pb(hx, hg+1, hz-2, 0); pb(hx, hg+2, hz-2, 0);                    // kapı
+        pb(hx+1, hg+3, hz+1, BID.torch);
+        if (hI < 2) vsp.push([hx+0.5, hg+1, hz+0.5]);                    // köylüler
+      }
+    }
+  }
+  // --- ZİNDAN (yeraltı odası: kafes + sandık) ---
+  if (hash2(cx*419+7, cz*263+2) < 0.05) {
+    const dx0 = x0+4, dy0 = 7 + ((hash2(cx,cz*3)*14)|0), dz0 = z0+4;
+    box(dx0, dy0, dz0, dx0+6, dy0+4, dz0+6, BID.mossy_cobblestone, true);
+    pb(dx0+3, dy0+1, dz0+3, BID.spawner);
+    pb(dx0+1, dy0+1, dz0+1, BID.chest);
+  }
+  // --- MADEN GALERİSİ ---
+  const mrx = Math.floor(cx/16), mrz = Math.floor(cz/16);
+  if (hash2(mrx*571+1, mrz*683+4) < 0.4) {
+    const my = 14 + ((hash2(mrx,mrz)*8)|0);
+    const mz2 = mrz*256 + 40 + ((hash2(mrx*3,mrz*7)*170)|0);
+    if (mz2 >= z0-2 && mz2 < z0+CH+2) {
+      for (let x=x0; x<x0+CH; x++) {
+        for (let zz=mz2-1; zz<=mz2+1; zz++) { pb(x, my, zz, BID.oak_planks); pb(x, my+1, zz, 0); pb(x, my+2, zz, 0); pb(x, my+3, zz, 0); }
+        if (x % 6 === 0) { pb(x, my+1, mz2-1, BID.oak_log); pb(x, my+2, mz2-1, BID.oak_log);
+          pb(x, my+1, mz2+1, BID.oak_log); pb(x, my+2, mz2+1, BID.oak_log); pb(x, my+3, mz2, BID.torch); }
+        if (hash2(x*7, mz2) < 0.04) pb(x, my+1, mz2, BID.chest);
+      }
+    }
+  }
+  // --- KULE (yüzey) ---
+  const trx = Math.floor(cx/10), trz = Math.floor(cz/10);
+  if (hash2(trx*347+9, trz*827+6) < 0.3) {
+    const tx = trx*160 + 30 + ((hash2(trx*5,trz*3)*100)|0);
+    const tz = trz*160 + 30 + ((hash2(trx*11,trz*13)*100)|0);
+    if (Math.abs(tx-x0) < 24 && Math.abs(tz-z0) < 24) {
+      const tg = heightAt(tx, tz);
+      if (tg > WATER_Y && tg < 44) {
+        box(tx-2, tg-2, tz-2, tx+2, tg, tz+2, BID.cobblestone, false);
+        box(tx-2, tg+1, tz-2, tx+2, tg+9, tz+2, BID.stone_bricks, true);
+        pb(tx, tg+1, tz-2, 0); pb(tx, tg+2, tz-2, 0);
+        pb(tx-1, tg+10, tz-1, BID.stone_bricks); pb(tx+1, tg+10, tz+1, BID.stone_bricks);
+        pb(tx+1, tg+10, tz-1, BID.stone_bricks); pb(tx-1, tg+10, tz+1, BID.stone_bricks);
+        pb(tx, tg+1, tz+1, BID.chest);
+        pb(tx, tg+8, tz, BID.lantern);
+      }
+    }
+  }
+  return { spawners, vsp };
 }
 function getBlock(wx, wy, wz) {
   if (wy < 0) return BID.bedrock;
@@ -949,29 +1147,37 @@ function setBlock(wx, wy, wz, b) {
   const c = chunks.get(ckey(cx,cz));
   if (!c) return;
   const lx = wx-cx*CH, lz = wz-cz*CH;
+  const old = c.data[bidx(lx,wy,lz)];
   c.data[bidx(lx,wy,lz)] = b;
+  c.lights = null;
   const k = ckey(cx,cz);
   (edits[k] = edits[k] || {})[bidx(lx,wy,lz)] = b;
   saveEdits();
   if (typeof MP !== 'undefined' && MP.peer && !MP.applying) mpSend({ t:'set', d:dim, x:wx, y:wy, z:wz, b });
-  queueMesh(cx,cz);
-  if (lx===0) queueMesh(cx-1,cz); if (lx===CH-1) queueMesh(cx+1,cz);
-  if (lz===0) queueMesh(cx,cz-1); if (lz===CH-1) queueMesh(cx,cz+1);
+  if (b === BID.fire) fireList.push({x:wx, y:wy, z:wz});
+  if (b >= BID.lentil_crop_0 && b <= BID.lentil_crop_2) cropSet.add(wx+','+wy+','+wz);
+  if (BLOCKS[old].light || BLOCKS[b].light) { // ışık 7 blok yayılır: komşular da yeniden ışıklansın
+    for (let dx=-1;dx<=1;dx++) for (let dz=-1;dz<=1;dz++) queueMesh(cx+dx, cz+dz);
+  } else {
+    queueMesh(cx,cz);
+    if (lx===0) queueMesh(cx-1,cz); if (lx===CH-1) queueMesh(cx+1,cz);
+    if (lz===0) queueMesh(cx,cz-1); if (lz===CH-1) queueMesh(cx,cz+1);
+  }
 }
 
 /* ================= WEBGL ================= */
-const VS = `attribute vec3 aPos; attribute vec2 aUV; attribute float aShade;
-uniform mat4 uMVP; varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld;
-void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vShade=aShade; vDist=gl_Position.w; vWorld=aPos; }`;
+const VS = `attribute vec3 aPos; attribute vec2 aUV; attribute float aShade; attribute float aLight;
+uniform mat4 uMVP; varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld; varying float vLight;
+void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vShade=aShade; vDist=gl_Position.w; vWorld=aPos; vLight=aLight; }`;
 const FS = `precision mediump float;
 uniform sampler2D uTex; uniform vec3 uFog; uniform float uFogFar; uniform float uLight; uniform float uAlpha;
 uniform float uUseTex; uniform vec3 uColor; uniform float uPLight; uniform vec3 uPPos;
-varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld;
+varying vec2 vUV; varying float vShade; varying float vDist; varying vec3 vWorld; varying float vLight;
 void main(){
   vec4 c = uUseTex > 0.5 ? texture2D(uTex, vUV) : vec4(uColor, 1.0);
   if (c.a < 0.08) discard;
   float pl = uPLight * clamp(1.0 - distance(vWorld, uPPos)/9.5, 0.0, 1.0);
-  vec3 col = c.rgb * vShade * min(1.15, uLight + pl);
+  vec3 col = c.rgb * vShade * min(1.15, max(uLight + pl, vLight));
   float f = clamp((uFogFar - vDist) / (uFogFar*0.4), 0.0, 1.0);
   col = mix(uFog, col, f);
   gl_FragColor = vec4(col, c.a * uAlpha);
@@ -986,9 +1192,15 @@ gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VS));
 gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, FS));
 gl.linkProgram(prog); gl.useProgram(prog);
 const loc = {};
-for (const a of ['aPos','aUV','aShade']) loc[a] = gl.getAttribLocation(prog, a);
+for (const a of ['aPos','aUV','aShade','aLight']) loc[a] = gl.getAttribLocation(prog, a);
 for (const u of ['uMVP','uFog','uFogFar','uLight','uAlpha','uUseTex','uColor','uTex','uPLight','uPPos']) loc[u] = gl.getUniformLocation(prog, u);
-gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV); gl.enableVertexAttribArray(loc.aShade);
+gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV); gl.enableVertexAttribArray(loc.aShade); gl.enableVertexAttribArray(loc.aLight);
+function setAttribs() {
+  gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 28, 0);
+  gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 28, 12);
+  gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 28, 20);
+  gl.vertexAttribPointer(loc.aLight, 1, gl.FLOAT, false, 28, 24);
+}
 const tex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, tex);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
@@ -1039,21 +1251,55 @@ function queueMesh(cx, cz) {
   const k = ckey(cx,cz);
   if (chunks.has(k) && !queued.has(k)) { queued.add(k); meshQueue.push([cx,cz]); }
 }
+function lightsOf(cx, cz) { // chunk'taki ışık kaynakları (önbellekli)
+  const c = chunks.get(ckey(cx,cz));
+  if (!c) return [];
+  if (c.lights) return c.lights;
+  const out = [], x0 = cx*CH, z0 = cz*CH;
+  for (let y=0;y<H;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
+    const lv = BLOCKS[c.data[bidx(x,y,z)]].light;
+    if (lv) out.push([x0+x+0.5, y+0.5, z0+z+0.5, lv]);
+  }
+  return c.lights = out;
+}
 function buildMesh(cx, cz) {
   const c = chunks.get(ckey(cx,cz));
   if (!c) return;
   const opq = [], wat = [];
   const x0 = cx*CH, z0 = cz*CH;
+  // yakın chunk'lardaki ışık kaynaklarını 8'lik hücre ızgarasına koy
+  const grid = new Map();
+  for (let dx=-1;dx<=1;dx++) for (let dz=-1;dz<=1;dz++)
+    for (const s of lightsOf(cx+dx, cz+dz)) {
+      const k = (s[0]>>3)+','+(s[1]>>3)+','+(s[2]>>3);
+      (grid.get(k) || grid.set(k, []).get(k)).push(s);
+    }
+  const noLight = grid.size === 0;
+  function lightAt(px, py, pz) {
+    if (noLight) return 0;
+    let L = 0;
+    const gx = px>>3, gy = py>>3, gz = pz>>3;
+    for (let ax=gx-1;ax<=gx+1;ax++) for (let ay=gy-1;ay<=gy+1;ay++) for (let az=gz-1;az<=gz+1;az++) {
+      const cell = grid.get(ax+','+ay+','+az);
+      if (!cell) continue;
+      for (const s of cell) {
+        const dx=px-s[0], dy=py-s[1], dz=pz-s[2], d2 = dx*dx+dy*dy+dz*dz;
+        if (d2 < 49) { const v = s[3]*(1-Math.sqrt(d2)/7); if (v > L) L = v; if (L > 0.99) return L; }
+      }
+    }
+    return L;
+  }
   for (let y=0;y<H;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
     const b = c.data[bidx(x,y,z)];
     if (!b) continue;
     const def = BLOCKS[b], wx = x0+x, wz = z0+z;
     if (def.cross) {
       const t = def.t[1];
+      const L = Math.max(def.light||0, lightAt(wx+0.5, y+0.5, wz+0.5));
       for (const q of CROSSQ) for (const vi of [0,1,2,0,2,3]) {
         const co = q[vi];
         const uv = tileUV(t, co[0], 1-co[1]);
-        opq.push(wx+co[0], y+co[1], wz+co[2], uv[0], uv[1], 0.95);
+        opq.push(wx+co[0], y+co[1], wz+co[2], uv[0], uv[1], 0.95, L);
       }
       continue;
     }
@@ -1061,14 +1307,16 @@ function buildMesh(cx, cz) {
       const nb = getBlock(wx+f.d[0], y+f.d[1], wz+f.d[2]);
       if (!(nb === 0 || (isTransp(nb) && nb !== b))) continue;
       const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
-      const arr = def.water ? wat : opq;
+      const arr = (def.water || def.trans) ? wat : opq;
       const yTop = def.water && getBlock(wx, y+1, wz) !== b ? 0.88 : 1;
+      const L = def.light ? def.light :
+        lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6);
       for (const vi of [0,1,2,0,2,3]) {
         const co = f.c[vi];
         const cy = co[1] === 1 ? yTop : 0;
         const u = faceUV(f, co);
         const uv = tileUV(tileI, u[0], u[1]);
-        arr.push(wx+co[0], y+cy, wz+co[2], uv[0], uv[1], f.s);
+        arr.push(wx+co[0], y+cy, wz+co[2], uv[0], uv[1], f.s, L);
       }
     }
   }
@@ -1078,7 +1326,7 @@ function buildMesh(cx, cz) {
     const vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
-    return [vbo, arr.length/6];
+    return [vbo, arr.length/7];
   }
   [c.vboO, c.cntO] = upload(opq, c.vboO);
   [c.vboW, c.cntW] = upload(wat, c.vboW);
@@ -1088,7 +1336,7 @@ function buildMesh(cx, cz) {
 const cubeArr = [];
 for (const f of FACES) for (const vi of [0,1,2,0,2,3]) {
   const co = f.c[vi];
-  cubeArr.push(co[0]-0.5, co[1], co[2]-0.5, 0, 0, f.s);
+  cubeArr.push(co[0]-0.5, co[1], co[2]-0.5, 0, 0, f.s, 0);
 }
 const cubeVbo = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
@@ -1351,7 +1599,7 @@ function respawn() {
   clearEffects();
   if (dim !== 'overworld') switchWorld('overworld');
   P.x = SPAWN.x; P.z = SPAWN.z; P.vx=P.vy=P.vz=0;
-  ensureChunks();
+  ensureChunksNow(P.x, P.z, 1); ensureChunks();
   P.y = safeY(Math.floor(SPAWN.x), Math.floor(SPAWN.z));
   $('deathscreen').style.display = 'none';
   updateHearts(); updateHotbar();
@@ -1375,11 +1623,14 @@ function setDim(d) {
   const ax = d==='overworld' ? Math.floor(SPAWN.x) : d==='nether' ? 8 : 0;
   const az = d==='overworld' ? Math.floor(SPAWN.z) : d==='nether' ? 8 : 0;
   P.x = ax+0.5; P.z = az+0.5; P.vx=P.vy=P.vz=0; P.fallD = 0;
-  ensureChunks();
+  ensureChunksNow(P.x, P.z, 1); ensureChunks();
   P.y = groundY(ax, az);
   const pb = d==='end' ? BID.end_portal : BID.nether_portal;
   if (getBlock(ax, Math.floor(P.y), az) === 0) setBlock(ax, Math.floor(P.y), az, pb);
   portalArmed = false; portalT = 0;
+  const fx = $('portalfx');
+  fx.style.display = 'block'; fx.style.opacity = 1;
+  setTimeout(() => { fx.style.opacity = 0; setTimeout(() => fx.style.display='none', 450); }, 700);
   sfx(180, 0.7, 'sine', 0.14, 40);
   toast(d==='nether' ? '🔥 Nether\'e geçtin' : d==='end' ? '🌌 End\'e geçtin' : '🌍 Ana dünyaya döndün');
   saveState();
@@ -1455,7 +1706,7 @@ function hurtMob(e, d, kx, kz) {
   if (e.hp <= 0) {
     for (const [id, mn, mx] of e.def.drops) {
       const n = mn + Math.round(Math.random()*(mx-mn));
-      if (n > 0) addItem(id, n);
+      if (n > 0) spawnDrop(id, n, e.x, e.y+0.4, e.z);
     }
     emitParts(e.x, e.y+e.hgt*0.5, e.z, [240,240,240], 14, 3, 0.6);
     sfx(200, 0.3, 'triangle', 0.12, 60);
@@ -1524,18 +1775,51 @@ function updateMobs(dt, light) {
     moveEnt(e, dt);
     if (e.blocked && e.onGround && sp > 0.1) e.vy = 7.5;
   }
-  // oklar
+  // oklar & mermiler
   for (let i=arrows.length-1; i>=0; i--) {
     const a = arrows[i];
     a.t -= dt;
-    a.vy -= 14*dt;
+    a.vy -= (a.type === 'fire' ? 1.5 : a.type === 'eye' ? 0.5 : 14) * dt;
     a.x += a.vx*dt; a.y += a.vy*dt; a.z += a.vz*dt;
+    if (a.type === 'fire' && Math.random() < 0.7) emitParts(a.x, a.y, a.z, [250,150,40], 1, 0.6, 0.3);
+    if (a.type === 'eye' && Math.random() < 0.7) emitParts(a.x, a.y, a.z, [110,230,180], 1, 0.4, 0.5);
+    if (a.type === 'eye') { // göz sadece süzülür, çarpışmaz
+      if (a.t <= 0) { emitParts(a.x, a.y, a.z, [110,230,180], 12, 2, 0.8); sfx(1400, 0.3, 'sine', 0.1, 500); arrows.splice(i,1); }
+      continue;
+    }
+    if (a.type === 'fire') { // ateş topu: canlıya veya bloğa çarpınca patlar
+      let hit = isSolid(getBlock(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)));
+      for (const e of ents) if (Math.abs(a.x-e.x) < e.w+0.4 && Math.abs(a.z-e.z) < e.w+0.4 && a.y > e.y-0.3 && a.y < e.y+e.hgt+0.3) { hurtMob(e, 6, a.vx*0.1, a.vz*0.1); hit = true; break; }
+      if (hit || a.t <= 0) { explosion(a.x, a.y, a.z, 1.6); arrows.splice(i,1); }
+      continue;
+    }
     if (a.t <= 0 || isSolid(getBlock(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { arrows.splice(i,1); continue; }
     if (Math.abs(a.x-P.x) < 0.5 && Math.abs(a.z-P.z) < 0.5 && a.y > P.y && a.y < P.y+P.hgt) {
       damagePlayer(3, 'ok'); arrows.splice(i,1);
     }
   }
+  // yapı kafesleri (spawner) ve köylüler
+  chunkMobT -= dt;
+  if (chunkMobT <= 0) {
+    chunkMobT = 2.5;
+    for (const [k,c] of chunks) {
+      if (c.vsp && !c.vspDone) {
+        const [ccx] = k.split(',').map(Number);
+        if (Math.abs(ccx*CH - P.x) < 64) { c.vspDone = true; for (const [vx2,vy2,vz2] of c.vsp) spawnMob('villager', vx2, vy2, vz2); }
+      }
+      if (c.spawners && RULES.mobSpawning && !isCreative()) {
+        for (const [sx2,sy2,sz2] of c.spawners) {
+          if (Math.hypot(sx2-P.x, sz2-P.z) < 14 && getBlock(sx2,sy2,sz2) === BID.spawner &&
+              ents.filter(e=>e.def.hostile).length < 8 && Math.random() < 0.35) {
+            const m = spawnMob('zombie', sx2+1.5, sy2, sz2+1.5);
+            if (m) emitParts(sx2+0.5, sy2+0.5, sz2+0.5, [230,120,30], 6, 2, 0.4);
+          }
+        }
+      }
+    }
+  }
 }
+let chunkMobT = 1;
 let arrows = [];
 function explosion(x, y, z, rad) {
   const r = Math.ceil(rad);
@@ -1565,6 +1849,43 @@ function updateTnt(dt) {
     if (f.t <= 0) { setBlock(f.x, f.y, f.z, 0); explosion(f.x+0.5, f.y+0.5, f.z+0.5, 3.2); tntFuses.splice(i,1); }
   }
 }
+/* ================= YERE DÜŞEN EŞYALAR ================= */
+let drops = [], dropUid = 1;
+function spawnDrop(id, n, x, y, z, vx, vy, vz, netUid) {
+  if (!ITEMS[id]) return null;
+  if (drops.length > 90) drops.shift();
+  const d = { uid: netUid || ('d'+(dropUid++)+'_'+((Math.random()*9999)|0)), id, n,
+    x, y, z, vx: vx===undefined?(Math.random()-0.5)*2.4:vx, vy: vy===undefined?3.2:vy, vz: vz===undefined?(Math.random()-0.5)*2.4:vz,
+    w:0.12, hgt:0.25, onGround:false, age:0, delay:0.7, dim };
+  drops.push(d);
+  if (!netUid && typeof MP !== 'undefined' && MP.peer) mpSend({ t:'dropS', uid:d.uid, id, n, x, y, z, d:dim });
+  return d;
+}
+function updateDrops(dt) {
+  for (let i=drops.length-1; i>=0; i--) {
+    const d = drops[i];
+    if (d.dim !== dim) continue;
+    d.age += dt; d.delay -= dt;
+    d.vy -= 20*dt;
+    d.vx *= (1 - Math.min(1, dt*3)); d.vz *= (1 - Math.min(1, dt*3));
+    moveEnt(d, dt);
+    if (d.age > 300) { drops.splice(i,1); continue; } // 5 dk sonra kaybolur
+    if (d.delay <= 0 && !P.dead &&
+        Math.hypot(P.x-d.x, (P.y+0.9)-d.y, P.z-d.z) < 1.35) {
+      const left = addItem(d.id, d.n); // envanter doluysa yerde kalır
+      if (left < d.n) { sfx(600, 0.09, 'sine', 0.1, 1000); }
+      if (left === 0) {
+        if (typeof MP !== 'undefined' && MP.peer) mpSend({ t:'dropT', uid:d.uid });
+        drops.splice(i,1);
+      } else { d.n = left; d.delay = 1.5; }
+    }
+  }
+}
+function throwItem(id, n) { // envanterden dışarı atma
+  const dvec = camDir();
+  spawnDrop(id, n, P.x + dvec.x*0.6, P.y + 1.3, P.z + dvec.z*0.6, dvec.x*5, 2.2, dvec.z*5);
+  sfx(320, 0.08, 'triangle', 0.09, 150);
+}
 /* ================= PARTİKÜLLER ================= */
 let parts = [];
 function emitParts(x, y, z, rgb, n, spd, life) {
@@ -1582,6 +1903,34 @@ function updateParts(dt) {
     if (isSolid(getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)))) { p.vy = 0; p.vx *= 0.6; p.vz *= 0.6; p.y = Math.ceil(p.y); }
   }
 }
+const tileCubeCache = {};
+function tileCube(t) { // belirli karoyla kaplı birim küp (drop & el görünümü)
+  if (tileCubeCache[t]) return tileCubeCache[t];
+  const arr = [];
+  for (const f of FACES) for (const vi of [0,1,2,0,2,3]) {
+    const co = f.c[vi];
+    const u = faceUV(f, co);
+    const uv = tileUV(t, u[0], u[1]);
+    arr.push(co[0]-0.5, co[1]-0.5, co[2]-0.5, uv[0], uv[1], f.s, 0);
+  }
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+  return tileCubeCache[t] = vbo;
+}
+const iconAvgCache = {};
+function iconAvg(id) {
+  if (iconAvgCache[id]) return iconAvgCache[id];
+  const it = ITEMS[id];
+  if (it && it.block) return iconAvgCache[id] = tileAvg(BLOCKS[it.block].t[1]);
+  let r=0,g=0,b=0,n=0;
+  if (it && it.icon) for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
+    const p = it.icon(x,y);
+    if (p) { r+=p[0]; g+=p[1]; b+=p[2]; n++; }
+  }
+  n = n||1;
+  return iconAvgCache[id] = [r/n, g/n, b/n];
+}
 const tileAvgCache = {};
 function tileAvg(t) { // karo ortalama rengi (kırılma partikülleri için)
   if (tileAvgCache[t]) return tileAvgCache[t];
@@ -1595,9 +1944,7 @@ function tileAvg(t) { // karo ortalama rengi (kırılma partikülleri için)
 function drawEnts(proj, view, now) {
   gl.uniform1f(loc.uUseTex, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
-  gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 24, 0);
-  gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 24, 12);
-  gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 24, 20);
+  setAttribs();
   const pv = mmul(proj, view);
   function drawModel(e, def, flash) {
     const col = b => { const c = hex(b); return flash ? [1, 0.4, 0.4] : [c[0]/255, c[1]/255, c[2]/255]; };
@@ -1667,17 +2014,42 @@ function drawEnts(proj, view, now) {
     const flash = e.hurtT > 0 || (e.fuse >= 0 && (e.fuse*8|0)%2===0);
     drawModel(e, e.def, flash);
   }
-  // uzak oyuncu (co-op)
-  if (MP.peer && MP.remote && MP.remote.dim === dim) {
-    const r = MP.remote;
-    drawModel({ x:r.x, y:r.y, z:r.z, yaw:r.yaw, vx:r.vx||0, vz:r.vz||0, onGround:true },
-      { model:'human', w:0.3, hgt:1.8, body:'#3a6ea8', head:'#d8a878' }, false);
+  // uzak oyuncular (co-op) — kendi skinleriyle
+  for (const pid in MP.remotes) {
+    const r = MP.remotes[pid];
+    if (!r || r.dim !== dim) continue;
+    drawSkinnedPlayer(pv, { x:r.x, y:r.y, z:r.z, yaw:r.yaw, vx:r.vx||0, vz:r.vz||0 },
+      r.skinTex || defaultSkinTex, !!r.slim, now);
   }
-  // oklar
+  // oklar & mermiler
   for (const a of arrows) {
-    gl.uniform3f(loc.uColor, 0.55, 0.45, 0.3);
-    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(mtrans(a.x, a.y, a.z), mscale(0.08, 0.08, 0.3))));
+    if (a.type === 'fire') gl.uniform3f(loc.uColor, 1, 0.5, 0.1);
+    else if (a.type === 'eye') gl.uniform3f(loc.uColor, 0.5, 0.9, 0.7);
+    else gl.uniform3f(loc.uColor, 0.55, 0.45, 0.3);
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(mtrans(a.x, a.y, a.z), mscale(0.09, 0.09, a.type?0.14:0.3))));
     gl.drawArrays(gl.TRIANGLES, 0, 36);
+  }
+  // yerdeki eşyalar (dönen mini küpler)
+  for (const d of drops) {
+    if (d.dim !== dim) continue;
+    const bob = 0.12 + Math.sin(d.age*3)*0.05;
+    const m = mmul(mtrans(d.x, d.y+bob, d.z), mmul(mrotY(d.age*1.2), mscale(0.26, 0.26, 0.26)));
+    const it = ITEMS[d.id];
+    if (it && it.block) {
+      gl.uniform1f(loc.uUseTex, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(BLOCKS[it.block].t[1]));
+      setAttribs();
+      gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, m));
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+      gl.uniform1f(loc.uUseTex, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
+      setAttribs();
+    } else {
+      const c = iconAvg(d.id);
+      gl.uniform3f(loc.uColor, c[0]/255, c[1]/255, c[2]/255);
+      gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(m, mscale(0.6, 0.6, 0.6))));
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+    }
   }
   // partiküller
   for (const p of parts) {
@@ -1773,11 +2145,14 @@ function finishBreak(st) {
     if (chestData[key]) { for (const s of chestData[key]) if (s) addItem(s.id, s.n); delete chestData[key]; }
   }
   if (!isCreative() && st.harvest) {
-    let dropId = def.drop === undefined ? def.id : def.drop;
-    if (def.dropP && Math.random() > def.dropP) dropId = null;
-    if (dropId && ITEMS[dropId]) {
-      const [mn,mx] = def.dropN || [1,1];
-      addItem(dropId, mn + Math.round(Math.random()*(mx-mn)));
+    const list = def.drops ? def.drops :
+      [[def.drop === undefined ? def.id : def.drop, ...(def.dropN || [1,1])]];
+    for (let [dropId, mn, mx] of list) {
+      if (def.dropP && !def.drops && Math.random() > def.dropP) continue;
+      if (dropId && ITEMS[dropId]) {
+        const n = (mn||1) + Math.round(Math.random()*((mx||mn||1)-(mn||1)));
+        if (n > 0) spawnDrop(dropId, n, st.x+0.5, st.y+0.4, st.z+0.5); // önce yere düşer
+      }
     }
   }
   blockSound(def, false);
@@ -1789,10 +2164,141 @@ function instaBreak() { // yaratıcı masaüstü tek tık
   if (!r || BLOCKS[r.b].unbreakable) return;
   finishBreak({ ...r, harvest:false });
 }
+/* ================= ATEŞ & EKİN & PORTAL MEKANİĞİ ================= */
+let fireList = [], fireT = 0;
+const cropSet = new Set();
+let cropT = 0;
+function updateFire(dt) {
+  const feet = getBlock(Math.floor(P.x), Math.floor(P.y+0.2), Math.floor(P.z));
+  if (feet === BID.fire && !isCreative()) P.burnT = 3.5;
+  if (P.inLava && !isCreative()) P.burnT = Math.max(P.burnT||0, 2);
+  if (P.inWater && !P.inLava) P.burnT = 0;
+  if (P.burnT > 0) {
+    P.burnT -= dt;
+    P.burnTick = (P.burnTick||0) - dt;
+    if (P.burnTick <= 0) {
+      if (!hasEff('fire_resistance') && !P.inLava) damagePlayer(1, 'ateş'); // lav hasarı zaten ayrı
+      P.burnTick = 1; noiseSfx(500, 0.14, 0.07);
+    }
+  }
+  fireT -= dt;
+  if (fireT > 0) return;
+  fireT = 1;
+  for (let i=fireList.length-1; i>=0; i--) {
+    const f = fireList[i];
+    if (getBlock(f.x, f.y, f.z) !== BID.fire) { fireList.splice(i,1); continue; }
+    const r = Math.random();
+    if (r < 0.25 || getBlock(f.x, f.y-1, f.z) === 0) { setBlock(f.x, f.y, f.z, 0); fireList.splice(i,1); continue; }
+    if (r < 0.42 && fireList.length < 40) { // kontrollü yayılma
+      const dirs = [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[0,-1,0]];
+      const [dx,dy,dz] = dirs[(Math.random()*6)|0];
+      if (BLOCKS[getBlock(f.x+dx, f.y+dy, f.z+dz)].flammable) setBlock(f.x+dx, f.y+dy, f.z+dz, BID.fire);
+    }
+    if (Math.random() < 0.5 && Math.hypot(f.x-P.x, f.z-P.z) < 24)
+      emitParts(f.x+0.5, f.y+0.7, f.z+0.5, [240,140,40], 1, 1, 0.4);
+  }
+}
+function cropTick(dt) {
+  cropT -= dt;
+  if (cropT > 0) return;
+  cropT = 3;
+  let i = 0;
+  for (const key of cropSet) {
+    if (++i > 150) break;
+    const [x,y,z] = key.split(',').map(Number);
+    const b = getBlock(x, y, z);
+    if (b < BID.lentil_crop_0 || b > BID.lentil_crop_2) { cropSet.delete(key); continue; }
+    const below = getBlock(x, y-1, z);
+    if (below !== BID.farmland && below !== BID.farmland_wet) {
+      setBlock(x, y, z, 0); spawnDrop('lentil_seeds', 1, x+0.5, y+0.3, z+0.5); cropSet.delete(key); continue;
+    }
+    let wet = false; // suya yakınsa nemli
+    for (let dx=-4; dx<=4 && !wet; dx++) for (let dz=-4; dz<=4; dz++)
+      if (getBlock(x+dx, y-1, z+dz) === BID.water) { wet = true; break; }
+    if (wet && below === BID.farmland) setBlock(x, y-1, z, BID.farmland_wet);
+    if (!wet && below === BID.farmland_wet) setBlock(x, y-1, z, BID.farmland);
+    if (b !== BID.lentil_crop_2 && Math.random() < (wet ? 0.45 : 0.18))
+      setBlock(x, y, z, b === BID.lentil_crop_0 ? BID.lentil_crop_1 : BID.lentil_crop_2);
+  }
+}
+function portalOpenFx(x, y, z) {
+  emitParts(x+0.5, y+1, z+0.5, [150,60,220], 25, 4, 1);
+  sfx(120, 1.0, 'sine', 0.16, 700); noiseSfx(300, 0.8, 0.1);
+  toast('🌀 Portal açıldı!');
+  const fx = $('portalfx');
+  fx.style.display = 'block'; fx.style.opacity = 1;
+  setTimeout(() => { fx.style.opacity = 0; setTimeout(() => fx.style.display='none', 450); }, 600);
+}
+function portalRect(ax, ay, az, axis) { // obsidyen çerçeve doğrulama
+  const O = BID.obsidian;
+  const gb = (u, yy) => axis === 'x' ? getBlock(u, yy, az) : getBlock(ax, yy, u);
+  const u0 = axis === 'x' ? ax : az;
+  let left = u0, right = u0;
+  while (gb(left-1, ay) === 0 && u0-left < 4) left--;
+  while (gb(right+1, ay) === 0 && right-u0 < 4) right++;
+  if (gb(left-1, ay) !== O || gb(right+1, ay) !== O) return null;
+  let y1 = ay, y2 = ay;
+  while (gb(u0, y1-1) === 0 && ay-y1 < 5) y1--;
+  while (gb(u0, y2+1) === 0 && y2-ay < 5) y2++;
+  if (gb(u0, y1-1) !== O || gb(u0, y2+1) !== O) return null;
+  if (y2-y1+1 < 2 || right-left+1 < 1) return null;
+  for (let u=left; u<=right; u++) {
+    for (let yy=y1; yy<=y2; yy++) if (gb(u, yy) !== 0) return null;
+    if (gb(u, y1-1) !== O || gb(u, y2+1) !== O) return null;
+  }
+  for (let yy=y1; yy<=y2; yy++) if (gb(left-1, yy) !== O || gb(right+1, yy) !== O) return null;
+  return axis === 'x' ? {x1:left, x2:right, y1, y2, z1:az, z2:az} : {x1:ax, x2:ax, y1, y2, z1:left, z2:right};
+}
+function tryNetherPortal(x, y, z) {
+  for (const [ax,ay,az] of [[x,y+1,z],[x+1,y,z],[x-1,y,z],[x,y,z+1],[x,y,z-1]]) {
+    if (getBlock(ax, ay, az) !== 0) continue;
+    for (const axis of ['x','z']) {
+      const rc = portalRect(ax, ay, az, axis);
+      if (rc) {
+        for (let i=rc.x1; i<=rc.x2; i++) for (let j=rc.y1; j<=rc.y2; j++) for (let k2=rc.z1; k2<=rc.z2; k2++)
+          setBlock(i, j, k2, BID.nether_portal);
+        portalOpenFx(ax, ay, az);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function checkEndPortal(fx, fy, fz) { // 12 gözlü çerçeve halkası → 3x3 portal
+  for (let cx2=fx-2; cx2<=fx+2; cx2++) for (let cz2=fz-2; cz2<=fz+2; cz2++) {
+    let all = true;
+    for (let o=-1; o<=1 && all; o++) {
+      if (getBlock(cx2-2, fy, cz2+o) !== BID.portal_frame_eye) all = false;
+      else if (getBlock(cx2+2, fy, cz2+o) !== BID.portal_frame_eye) all = false;
+      else if (getBlock(cx2+o, fy, cz2-2) !== BID.portal_frame_eye) all = false;
+      else if (getBlock(cx2+o, fy, cz2+2) !== BID.portal_frame_eye) all = false;
+    }
+    if (all) {
+      for (let dx=-1; dx<=1; dx++) for (let dz=-1; dz<=1; dz++) setBlock(cx2+dx, fy, cz2+dz, BID.end_portal);
+      portalOpenFx(cx2, fy, cz2);
+      return true;
+    }
+  }
+  return false;
+}
+function useEye() { // Kadim Göz: en yakın kaleyi gösterir
+  const s = nearestStronghold();
+  const dx = s.x - P.x, dz = s.z - P.z;
+  const dist = Math.hypot(dx, dz);
+  const l = dist || 1;
+  arrows.push({ x:P.x, y:P.y+1.6, z:P.z, vx:dx/l*8, vy:2, vz:dz/l*8, t:2.5, type:'eye' });
+  sfx(800, 0.5, 'sine', 0.12, 1600);
+  const dirs = ['kuzey','kuzeydoğu','doğu','güneydoğu','güney','güneybatı','batı','kuzeybatı'];
+  const ang = ((Math.atan2(dx, -dz) * 180/Math.PI + 360 + 22.5) % 360 / 45) | 0;
+  toast(dist < 12 ? '🏰 Kale tam altında — kaz!' : `👁 Kadim Göz ${dirs[ang]} yönünü gösteriyor (~${Math.round(dist)}m)`);
+  if (Math.random() < 0.2 && !isCreative()) { consumeHeld(); toast('💔 Göz kayboldu!'); }
+  swingHand();
+}
 function eatHeld(held, it) {
   if (isCreative() || P.hunger >= 20) return;
   P.hunger = Math.min(20, P.hunger + it.food);
   if (held.id === 'golden_apple') { P.absorb = Math.max(P.absorb, 4); P.hp = Math.min(P.maxhp, P.hp+4); }
+  if (it.hpBonus) P.hp = Math.min(P.maxhp, P.hp + it.hpBonus); // kebap az can da doldurur
   consumeHeld(); updateHearts(); updateHunger();
   const d = camDir();
   emitParts(P.x + d.x, P.y+1.4, P.z + d.z, hex(FOODS[held.id] ? FOODS[held.id][2] : '#c8a05a'), 6, 1.5, 0.4);
@@ -1805,9 +2311,46 @@ function doPlace() {
   const it = held ? ITEMS[held.id] : null;
   // yemek her yerde yenebilir (nişan gerekmez)
   if (it && it.food) { eatHeld(held, it); return; }
+  if (it && it.fireball) { // ateş topu fırlat
+    const d = camDir();
+    arrows.push({ x:P.x+d.x*0.8, y:P.y+1.35+d.y*0.8, z:P.z+d.z*0.8, vx:d.x*16, vy:d.y*16, vz:d.z*16, t:3, type:'fire' });
+    consumeHeld(); swingHand(); sfx(300, 0.25, 'sawtooth', 0.13, 70);
+    return;
+  }
   const r = raycast(6.5);
+  if (it && it.eye) { // Kadim Göz: çerçeveye tak veya yön göster
+    if (r && r.b === BID.portal_frame) {
+      setBlock(r.x, r.y, r.z, BID.portal_frame_eye);
+      consumeHeld(); sfx(700, 0.3, 'sine', 0.12, 1400); swingHand();
+      checkEndPortal(r.x, r.y, r.z);
+    } else useEye();
+    return;
+  }
   if (!r) return;
   const hitDef = BLOCKS[r.b];
+  if (it && it.igniter) { // çakmak taşı ve çelik
+    if (r.b === BID.obsidian && tryNetherPortal(r.x, r.y, r.z)) { wearHeld(1); swingHand(); return; }
+    if (hitDef.ignite) { igniteTnt(r.x, r.y, r.z); wearHeld(1); return; }
+    if (getBlock(r.px, r.py, r.pz) === 0) {
+      setBlock(r.px, r.py, r.pz, BID.fire);
+      wearHeld(1); swingHand(); noiseSfx(900, 0.25, 0.13);
+    }
+    return;
+  }
+  if (held && held.id.endsWith('_hoe')) { // çapa: toprağı tarıma aç
+    if ([BID.grass_block, BID.dirt, BID.dirt_path, BID.coarse_dirt].includes(r.b) && getBlock(r.x, r.y+1, r.z) === 0) {
+      setBlock(r.x, r.y, r.z, BID.farmland);
+      noiseSfx(500, 0.12, 0.12); wearHeld(1); swingHand();
+      return;
+    }
+  }
+  if (it && it.plant) { // tohum ek
+    if ((r.b === BID.farmland || r.b === BID.farmland_wet) && getBlock(r.x, r.y+1, r.z) === 0) {
+      setBlock(r.x, r.y+1, r.z, BID[it.plant]);
+      consumeHeld(); noiseSfx(1200, 0.08, 0.08); swingHand();
+    }
+    return;
+  }
   // etkileşimli blok?
   if (hitDef.inter) { openInter(hitDef.inter, r); return; }
   if (hitDef.ignite) { igniteTnt(r.x, r.y, r.z); return; }
@@ -1825,6 +2368,7 @@ function doPlace() {
   if (BLOCKS[it.block].solid &&
       px+1 > P.x-P.w && px < P.x+P.w && py+1 > P.y && py < P.y+P.hgt && pz+1 > P.z-P.w && pz < P.z+P.w) return;
   setBlock(px, py, pz, it.block);
+  if (it.block === BID.chest) chestData[px+','+py+','+pz] = Array(27).fill(null); // oyuncu sandığına ganimet dolmasın
   consumeHeld();
   blockSound(BLOCKS[it.block], true);
   swingHand();
@@ -1832,16 +2376,24 @@ function doPlace() {
 function attackDmg(held) {
   return Math.max(1, (held && held.dmg ? held.dmg : 1) + 3*effLvl('strength') - 2*effLvl('weakness'));
 }
+function isCrit() { return !P.onGround && P.vy < -0.5 && !P.fly && !P.inWater; }
+function attackEnt(e) {
+  const held = heldItem() ? ITEMS[heldItem().id] : null;
+  const d = camDir();
+  let dmg = attackDmg(held);
+  if (isCrit()) { // kritik vuruş: düşerken vur
+    dmg = Math.ceil(dmg * 1.5);
+    emitParts(e.x, e.y+e.hgt+0.3, e.z, [255,215,70], 10, 3, 0.5);
+    sfx(1300, 0.12, 'square', 0.12, 400);
+    toast('💢 Kritik!');
+  }
+  hurtMob(e, dmg, d.x, d.z);
+  swingHand();
+  wearHeld(held && held.tool ? 2 : 1);
+}
 function doTap() { // dokunma: önce canlıya vur, yoksa yerleştir/etkileşim
   const e = raycastEnt(4);
-  if (e) {
-    const held = heldItem() ? ITEMS[heldItem().id] : null;
-    const d = camDir();
-    hurtMob(e, attackDmg(held), d.x, d.z);
-    swingHand();
-    wearHeld(held && held.tool ? 2 : 1); // MC: alet 2, kılıç 1 yıpranır
-    return;
-  }
+  if (e) { attackEnt(e); return; }
   doPlace();
 }
 function openInter(kind, r) {
@@ -1857,24 +2409,58 @@ function nearStation() {
   return false;
 }
 /* ================= SES ================= */
-let audioCtx = null, sndOn = true;
+let audioCtx = null, sndOn = true, sndVol = 1, sfxActive = 0;
+let noiseBuf = null;
+function actx2() {
+  audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+  if (!noiseBuf) {
+    noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.5, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  return audioCtx;
+}
 function sfx(freq, dur, type, vol, f2) {
-  if (!sndOn) return;
+  if (!sndOn || sfxActive > 10) return;
   try {
-    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    const ac = actx2();
+    sfxActive++; setTimeout(()=>sfxActive--, dur*1000);
+    const o = ac.createOscillator(), g = ac.createGain();
     o.type = type||'triangle'; o.frequency.value = freq;
-    if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), audioCtx.currentTime+dur);
-    g.gain.setValueAtTime(vol||0.12, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime+dur);
+    if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), ac.currentTime+dur);
+    g.gain.setValueAtTime((vol||0.12)*sndVol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime+dur);
+  } catch(e) {}
+}
+function noiseSfx(freq, dur, vol) { // gürültü tabanlı: cam, yaprak, toprak, ateş
+  if (!sndOn || sfxActive > 10) return;
+  try {
+    const ac = actx2();
+    sfxActive++; setTimeout(()=>sfxActive--, dur*1000);
+    const src = ac.createBufferSource(); src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 1.1;
+    const g = ac.createGain();
+    g.gain.setValueAtTime((vol||0.14)*sndVol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    src.connect(f); f.connect(g); g.connect(ac.destination);
+    src.start(); src.stop(ac.currentTime+dur);
   } catch(e) {}
 }
 function blockSound(def, place) {
-  const base = (def.cutout && !def.cross) ? 850 : def.cross ? 500 :
-    def.tool==='axe' ? 240 : def.tool==='shovel' ? 130 : def.tool==='pick' ? 190 : 300;
-  sfx(base*(place?1.3:1)*(0.9+Math.random()*0.2), 0.07, def.tool==='shovel'?'triangle':'square', 0.09);
+  const id = def.id || '';
+  const p = place ? 1.3 : 1, r = 0.9+Math.random()*0.2;
+  if (id.includes('glass') || id === 'ice') { // cam
+    if (place) sfx(700*r, 0.06, 'sine', 0.08);
+    else { noiseSfx(3200*r, 0.16, 0.16); sfx(1800*r, 0.08, 'square', 0.05); }
+  } else if (id.includes('leaves') || def.cross) noiseSfx(1500*r, 0.1, 0.08);      // yaprak/bitki
+  else if (id.includes('_ore') || id.includes('_block') && def.tool==='pick' && def.hard>=3)
+    { sfx(190*p*r, 0.07, 'square', 0.09); sfx(950*r, 0.05, 'triangle', 0.06); }   // maden/metal
+  else if (def.tool === 'axe') sfx(240*p*r, 0.08, 'square', 0.1);                  // ahşap
+  else if (def.tool === 'shovel') noiseSfx(420*r*(place?1.4:1), 0.09, 0.13);       // toprak/kum
+  else if (id.includes('wool')) noiseSfx(700*r, 0.08, 0.06);                       // yün
+  else sfx(190*p*r, 0.07, 'square', 0.1);                                          // taş
 }
 // menü / buton tık sesi
 document.addEventListener('pointerdown', (e) => {
@@ -1883,8 +2469,9 @@ document.addEventListener('pointerdown', (e) => {
 }, true);
 
 /* ================= İKONLAR & HUD ================= */
-const iconCache = {};
+const iconCache = {}, iconOverride = {};
 function uiIcon(id) {
+  if (iconOverride[id]) return iconOverride[id];
   if (iconCache[id]) return iconCache[id];
   const cv = document.createElement('canvas'); cv.width = cv.height = 16;
   const cx = cv.getContext('2d');
@@ -1944,11 +2531,34 @@ function updateHand() {
   const it = inv[hotSel];
   handEl.style.backgroundImage = it ? `url(${uiIcon(it.id)})` : offhand ? `url(${uiIcon(offhand.id)})` : 'none';
 }
-let swingTimer = null;
+let swingTimer = null, swingA = 0;
 function swingHand() {
+  swingA = 1;
   handEl.classList.add('swing');
   clearTimeout(swingTimer);
   swingTimer = setTimeout(() => handEl.classList.remove('swing'), 110);
+}
+function drawHeld(proj, now) { // eldeki blok/meşale 3D görünür
+  const src = heldItem() || offhand;
+  const it = src ? ITEMS[src.id] : null;
+  if (!it || !it.block) { handEl.style.opacity = 1; return; }
+  handEl.style.opacity = 0;
+  const def = BLOCKS[it.block];
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.BLEND);
+  gl.uniform1f(loc.uUseTex, 1);
+  gl.uniform1f(loc.uPLight, 0);
+  gl.uniform1f(loc.uLight, 1);
+  gl.uniform1f(loc.uAlpha, 1);
+  const sw = swingA;
+  const bobY = Math.sin(now/210) * (Math.hypot(P.vx,P.vz) > 1.5 ? 0.02 : 0.006);
+  const m = mmul(mtrans(0.42 - sw*0.1, -0.46 + bobY - sw*0.08, -0.78),
+    mmul(mrotY(0.65 + sw*0.6), mmul(mrotX(-sw*0.7),
+      def.cross ? mscale(0.4, 0.4, 0.06) : mscale(0.28, 0.28, 0.28))));
+  gl.uniformMatrix4fv(loc.uMVP, false, mmul(proj, m));
+  gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(def.t[1]));
+  setAttribs();
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
 function updateHearts() {
   const h = $('hearts');
@@ -2001,6 +2611,39 @@ function closePanels() {
 }
 document.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => $(b.dataset.close).style.display='none'));
 let invTab = 'bag', pickSlot = -1, openChestKey = null;
+// envanterden dışarı sürükleyerek yere atma
+function attachDrag(el, slotIdx) {
+  let downX = 0, downY = 0, dragging = false, moved = false;
+  const ghost = $('dragghost');
+  el.addEventListener('pointerdown', (e) => {
+    if (!inv[slotIdx]) return;
+    downX = e.clientX; downY = e.clientY; dragging = true; moved = false;
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    if (!moved && Math.hypot(e.clientX-downX, e.clientY-downY) > 12) {
+      moved = true; pickSlot = -1;
+      ghost.style.display = 'block';
+      ghost.style.backgroundImage = `url(${uiIcon(inv[slotIdx].id)})`;
+    }
+    if (moved) { ghost.style.left = (e.clientX-20)+'px'; ghost.style.top = (e.clientY-20)+'px'; }
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    ghost.style.display = 'none';
+    if (!moved) return; // normal tık; onclick devralır
+    const panel = $('invpanel').getBoundingClientRect();
+    const outside = e.clientX < panel.left || e.clientX > panel.right || e.clientY < panel.top || e.clientY > panel.bottom;
+    if (outside && inv[slotIdx]) {
+      const it = inv[slotIdx];
+      throwItem(it.id, it.n);       // tüm yığını at
+      inv[slotIdx] = null;
+      updateHotbar(); renderInv();
+    }
+  });
+}
 
 function openInv(tab) {
   closePanels();
@@ -2068,6 +2711,7 @@ function renderInv() {
       if (it) { slotBg(s, it.id);
         if (!isCreative() && it.n>1) { const c=document.createElement('span'); c.className='cnt'; c.textContent=it.n; s.appendChild(c); }
         addDurBar(s, it); }
+      attachDrag(s, i);
       s.onclick = () => {
         if (pickSlot < 0) { if (inv[i]) pickSlot = i; }
         else { const t = inv[i]; inv[i] = inv[pickSlot]; inv[pickSlot] = t; pickSlot = -1; updateHotbar(); }
@@ -2077,7 +2721,7 @@ function renderInv() {
     }
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:11px;opacity:.6;margin-bottom:6px';
-    hint.textContent = 'Mavi çerçeve = eşya çubuğu, sarı = zırh, yeşil = 2. el. Taşımak için iki göze sırayla dokun.';
+    hint.textContent = 'İki göze sırayla dokun = taşı. Bir gözü panelin DIŞINA sürükle = yere at. Mavi=çubuk, sarı=zırh, yeşil=2.el.';
     body.appendChild(hint); body.appendChild(g);
   } else if (invTab === 'blocks' || invTab === 'items') {
     const g = document.createElement('div'); g.className = 'grid';
@@ -2159,7 +2803,16 @@ function renderFurnace() {
 function openChest(key) {
   closePanels();
   openChestKey = key;
-  if (!chestData[key]) chestData[key] = Array(27).fill(null);
+  if (!chestData[key]) { // dünya üretimi sandığı: ganimet doldur
+    chestData[key] = Array(27).fill(null);
+    const LOOT = [['iron_ingot',1,4],['coal',2,6],['bread',1,3],['apple',1,2],['string',1,3],
+      ['gold_ingot',1,2],['lentil_seeds',2,4],['torch',3,8],['ender_pearl',1,1],['diamond',1,1],['kadim_goz',1,1]];
+    const n = 3 + ((Math.random()*3)|0);
+    for (let i=0;i<n;i++) {
+      const [id,mn,mx] = LOOT[(Math.random()*LOOT.length)|0];
+      chestData[key][(Math.random()*27)|0] = { id, n: mn + ((Math.random()*(mx-mn+1))|0) };
+    }
+  }
   $('chestpanel').style.display = 'flex';
   renderChest();
 }
@@ -2255,7 +2908,7 @@ function runCmd(line) {
     const x = co(0,P.x), y = co(1,P.y), z = co(2,P.z);
     if ([x,y,z].some(isNaN)) return chatMsg('Kullanım: /tp <x> <y> <z>');
     P.x=x; P.y=clamp(y,1,H); P.z=z; P.vx=P.vy=P.vz=0; P.fallD=0;
-    ensureChunks();
+    ensureChunksNow(P.x, P.z, 1); ensureChunks();
     chatMsg(`✔ Işınlandın: ${x|0} ${y|0} ${z|0}`);
   } else if (cmd === 'gamerule') {
     const r = a[0], v = a[1];
@@ -2355,8 +3008,7 @@ window.addEventListener('pointerdown', (e) => {
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock && canvas.requestPointerLock(); return; }
     if (e.button === 0) {
       const ent = raycastEnt(4);
-      if (ent) { const held = heldItem() ? ITEMS[heldItem().id] : null; const d = camDir();
-        hurtMob(ent, attackDmg(held), d.x, d.z); swingHand(); wearHeld(held && held.tool ? 2 : 1); }
+      if (ent) attackEnt(ent);
       else if (isCreative()) { instaBreak(); swingHand(); }
       else startBreaking();
     }
@@ -2443,6 +3095,10 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
   if (e.code === 'Escape') closePanels();
+  if (e.code === 'KeyQ') { // eldeki eşyadan 1 tane at
+    const s = inv[hotSel];
+    if (s) { throwItem(s.id, 1); s.n--; if (s.n <= 0) inv[hotSel] = null; updateHotbar(); }
+  }
   if (e.code.startsWith('Digit')) {
     const d = +e.code.slice(5)-1;
     if (d >= 0 && d < 9) { hotSel = d; updateHotbar(); }
@@ -2453,6 +3109,13 @@ window.addEventListener('keyup', (e) => {
   if (e.code === 'Space') input.jump = false;
   if (e.code === 'ShiftLeft') input.down = false;
 });
+// klavye/fare kullanılınca mobil tuşları gizle, dokununca geri getir
+window.addEventListener('keydown', (e) => {
+  if (['KeyW','KeyA','KeyS','KeyD','Space'].includes(e.code)) document.body.classList.add('kbmode');
+});
+window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') document.body.classList.remove('kbmode');
+}, true);
 const jumpbtn = $('jumpbtn'), downbtn = $('downbtn');
 let lastJumpTap = 0;
 function toggleFly() {
@@ -2473,82 +3136,363 @@ downbtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.down
 downbtn.addEventListener('pointerup', () => input.down = false);
 downbtn.addEventListener('pointercancel', () => input.down = false);
 
-/* ================= ÇOK OYUNCULU (WebRTC P2P) ================= */
-const MP = { pc:null, ch:null, peer:false, remote:null, isHost:false, applying:false, posT:0 };
-function mpSetup(host) {
-  try { if (MP.pc) MP.pc.close(); } catch(e) {}
-  MP.pc = new RTCPeerConnection({ iceServers:[{urls:'stun:stun.l.google.com:19302'}] });
-  MP.isHost = host; MP.peer = false; MP.remote = null;
-  if (host) { MP.ch = MP.pc.createDataChannel('ck'); mpBind(); }
-  else MP.pc.ondatachannel = e => { MP.ch = e.channel; mpBind(); };
-  MP.pc.onicegatheringstatechange = () => { if (MP.pc.iceGatheringState === 'complete') mpEmitCode(); };
-  MP.pc.onicecandidate = (ev) => { if (!ev.candidate) mpEmitCode(); };
-  clearTimeout(MP.codeTimer);
-  MP.codeTimer = setTimeout(mpEmitCode, 3500); // ağ yavaşsa eldeki adaylarla kodu ver
+/* ================= SKİN SİSTEMİ (MC uyumlu 64x64 PNG) ================= */
+let skinSlim = false, skinURL = null, skinTexSelf = null, defaultSkinTex = null;
+const skinPartVbos = {};
+function makeDefaultSkin() { // özgün varsayılan skin (telifsiz)
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const c2 = cv.getContext('2d');
+  const f = (x,y,w2,h2,col) => { c2.fillStyle = col; c2.fillRect(x,y,w2,h2); };
+  f(0,0,32,16,'#c89464'); f(8,8,16,3,'#4a3120'); f(8,0,16,8,'#4a3120'); // kafa + saç
+  f(9,12,2,2,'#ffffff'); f(13,12,2,2,'#ffffff'); f(10,13,1,1,'#25507a'); f(14,13,1,1,'#25507a'); // gözler
+  f(10,15,4,1,'#8a5a44'); // ağız
+  f(16,16,24,16,'#2d7a4a'); // gövde (yeşil tişört)
+  f(40,16,16,16,'#2d7a4a'); f(32,48,16,16,'#2d7a4a'); // kollar
+  f(44,28,8,4,'#c89464'); f(36,60,8,4,'#c89464');     // eller
+  f(0,16,16,16,'#31415a'); f(16,48,16,16,'#31415a');  // bacaklar
+  return cv;
 }
-function mpEmitCode() {
-  if (!MP.pc || !MP.pc.localDescription || MP.peer) return;
-  const code = btoa(unescape(encodeURIComponent(JSON.stringify(MP.pc.localDescription))));
-  if ($('mpcode').value !== code) {
-    $('mpcode').value = code;
-    $('mpstatus').textContent = '⬆ Üstteki kodu arkadaşına gönder.';
-  }
+function skinToTex(img) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const c2 = cv.getContext('2d');
+  c2.imageSmoothingEnabled = false;
+  if (img.height && img.width && img.height*2 === img.width) { // eski 64x32 format
+    c2.drawImage(img, 0, 0, 64, 32);
+    c2.drawImage(cv, 0, 16, 16, 16, 16, 48, 16, 16);  // bacak → sol bacak
+    c2.drawImage(cv, 40, 16, 16, 16, 32, 48, 16, 16); // kol → sol kol
+  } else c2.drawImage(img, 0, 0, 64, 64);
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return t;
 }
-function mpBind() {
-  MP.ch.onopen = () => {
-    MP.peer = true; toast('🎮 Arkadaşın bağlandı!'); sfx(600,0.15,'sine',0.12,900);
-    $('mpstatus').textContent = '✅ Bağlı!';
-    if (MP.isHost) mpSend({ t:'hello', seed, tod:timeOfDay,
-      edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
+const SKIN_BOXES = { head:[0,0,8,8,8], body:[16,16,8,12,4], armR:[40,16,4,12,4], armL:[32,48,4,12,4], legR:[0,16,4,12,4], legL:[16,48,4,12,4] };
+function skinPartVbo(part, slim) {
+  const key = part + (slim && (part==='armR'||part==='armL') ? '_s' : '');
+  if (skinPartVbos[key]) return skinPartVbos[key];
+  let [u, v, w2, h2, d2] = SKIN_BOXES[part];
+  if (slim && (part==='armR'||part==='armL')) w2 = 3;
+  const R = (x,y,w3,h3) => [x/64, y/64, w3/64, h3/64];
+  const rects = { // -z ön, +z arka, +x sol, -x sağ, +y üst, -y alt
+    '0,0,-1': R(u+d2, v+d2, w2, h2), '0,0,1': R(u+2*d2+w2, v+d2, w2, h2),
+    '1,0,0': R(u, v+d2, d2, h2), '-1,0,0': R(u+d2+w2, v+d2, d2, h2),
+    '0,1,0': R(u+d2, v, w2, d2), '0,-1,0': R(u+d2+w2, v, w2, d2),
   };
-  MP.ch.onclose = () => { MP.peer = false; MP.remote = null; toast('🔌 Bağlantı koptu'); };
-  MP.ch.onmessage = ev => { try { mpRecv(JSON.parse(ev.data)); } catch(e) {} };
+  const arr = [];
+  for (const f of FACES) {
+    const [ru, rv, rw, rh] = rects[f.d.join(',')];
+    for (const vi of [0,1,2,0,2,3]) {
+      const co = f.c[vi];
+      let uu, vv;
+      if (f.d[1] !== 0) { uu = co[0]; vv = co[2]; }
+      else if (f.d[0] !== 0) { uu = f.d[0] > 0 ? co[2] : 1-co[2]; vv = 1-co[1]; }
+      else { uu = f.d[2] < 0 ? co[0] : 1-co[0]; vv = 1-co[1]; }
+      arr.push(co[0]-0.5, co[1], co[2]-0.5, ru + uu*rw, rv + vv*rh, f.s, 0);
+    }
+  }
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+  return skinPartVbos[key] = vbo;
 }
-function mpSend(o) { if (MP.ch && MP.ch.readyState === 'open') { try { MP.ch.send(JSON.stringify(o)); } catch(e) {} } }
-function mpRecv(m) {
-  if (m.t === 'hello') { // ev sahibinin dünyasını devral
-    seed = m.seed;
-    try { localStorage.setItem('ck_seed', seed); } catch(e) {}
+function drawSkinnedPlayer(pv, e, tex2, slim, now) {
+  gl.uniform1f(loc.uUseTex, 1);
+  gl.uniform3f(loc.uColor, 1, 1, 1);
+  gl.bindTexture(gl.TEXTURE_2D, tex2 || defaultSkinTex);
+  const px = 1/16;
+  const base = mmul(mtrans(e.x, e.y, e.z), mrotY(-e.yaw));
+  const speed = Math.min(1, Math.hypot(e.vx||0, e.vz||0)/2);
+  const sw = Math.sin(now/140) * speed * 0.7;
+  const legH = 12*px, bodyH = 12*px, armW = (slim?3:4)*px;
+  const draw = (part, m) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, skinPartVbo(part, slim));
+    setAttribs();
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, m));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+  };
+  const limbM = (ox, oy, ang, sx, sy, sz) =>
+    mmul(base, mmul(mtrans(ox, oy, 0), mmul(mrotX(ang), mmul(mtrans(0, -sy, 0), mscale(sx, sy, sz)))));
+  draw('legR', limbM(-2*px, legH, sw, 4*px, legH, 4*px));
+  draw('legL', limbM(2*px, legH, -sw, 4*px, legH, 4*px));
+  draw('body', mmul(base, mmul(mtrans(0, legH, 0), mscale(8*px, bodyH, 4*px))));
+  draw('armR', limbM(-(4*px + armW/2), legH+bodyH-1*px, -sw, armW, 12*px, 4*px));
+  draw('armL', limbM(4*px + armW/2, legH+bodyH-1*px, sw, armW, 12*px, 4*px));
+  draw('head', mmul(base, mmul(mtrans(0, legH+bodyH, 0), mscale(8*px, 8*px, 8*px))));
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.uniform1f(loc.uUseTex, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
+  setAttribs();
+}
+function applySkin(dataURL, slim, silent) {
+  skinSlim = !!slim;
+  $('skinarms').value = skinSlim ? 'slim' : 'classic';
+  if (!dataURL) { skinURL = null; skinTexSelf = null; return; }
+  const img = new Image();
+  img.onload = () => {
+    try { skinTexSelf = skinToTex(img); skinURL = dataURL;
+      try { localStorage.setItem('ck2_skin', JSON.stringify({url:dataURL, slim:skinSlim})); } catch(e2) {}
+      if (MP.peer) mpSend({ t:'skin', url:skinURL, slim:skinSlim });
+      if (!silent) toast('🧍 Skin yüklendi!');
+    } catch(e2) { toast('Skin uygulanamadı, varsayılan kullanılıyor'); }
+  };
+  img.onerror = () => { if (!silent) toast('⚠️ PNG okunamadı, varsayılan skin kullanılıyor'); };
+  img.src = dataURL;
+}
+$('skinfile').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => applySkin(rd.result, $('skinarms').value === 'slim');
+  rd.readAsDataURL(f);
+});
+$('skinarms').addEventListener('change', () => { if (skinURL) applySkin(skinURL, $('skinarms').value === 'slim', true); else skinSlim = $('skinarms').value === 'slim'; });
+defaultSkinTex = skinToTex(makeDefaultSkin());
+try { const sk0 = JSON.parse(localStorage.getItem('ck2_skin')||'null'); if (sk0 && sk0.url) applySkin(sk0.url, sk0.slim, true); } catch(e) {}
+
+/* ================= DOKU PAKETİ ================= */
+async function unzip(buf) { // merkez dizinli minimal ZIP okuyucu
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  for (let i=buf.byteLength-22; i>=Math.max(0, buf.byteLength-65558); i--)
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('ZIP değil');
+  const count = dv.getUint16(eocd+10, true);
+  let off = dv.getUint32(eocd+16, true);
+  const files = {};
+  for (let i=0; i<count; i++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off+10, true);
+    const csize = dv.getUint32(off+20, true);
+    const nlen = dv.getUint16(off+28, true), elen = dv.getUint16(off+30, true), clen = dv.getUint16(off+32, true);
+    const lho = dv.getUint32(off+42, true);
+    const name = new TextDecoder().decode(u8.subarray(off+46, off+46+nlen));
+    const lnlen = dv.getUint16(lho+26, true), lelen = dv.getUint16(lho+28, true);
+    const dataStart = lho+30+lnlen+lelen;
+    if (name.toLowerCase().endsWith('.png') && csize > 0) {
+      let bytes = u8.slice(dataStart, dataStart+csize);
+      if (method === 8) bytes = new Uint8Array(await new Response(
+        new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+      files[name] = bytes;
+    }
+    off += 46 + nlen + elen + clen;
+  }
+  return files;
+}
+function refreshAtlas() {
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+  for (const k in iconCache) delete iconCache[k];
+  for (const k in tileAvgCache) delete tileAvgCache[k];
+  for (const k in tileCubeCache) { gl.deleteBuffer(tileCubeCache[k]); delete tileCubeCache[k]; }
+  updateHotbar();
+}
+async function applyTexturePNGs(entries) { // {ad → Uint8Array|Blob}
+  let applied = 0;
+  actx.imageSmoothingEnabled = false;
+  for (const name in entries) {
+    try {
+      const base = name.replace(/\.png$/i, '').split('/').pop().toLowerCase();
+      const img = await createImageBitmap(entries[name] instanceof Blob ? entries[name] : new Blob([entries[name]], {type:'image/png'}));
+      const put = (ti) => { actx.clearRect((ti%ATLAS_N)*16, ((ti/ATLAS_N)|0)*16, 16, 16);
+        actx.drawImage(img, (ti%ATLAS_N)*16, ((ti/ATLAS_N)|0)*16, 16, 16); applied++; };
+      const suf = (s2, ti2) => { const b2 = base.slice(0, -s2.length); return base.endsWith(s2) && BID[b2] ? (put(BLOCKS[BID[b2]].t[ti2]), true) : false; };
+      if (suf('_top', 0) || suf('_side', 1) || suf('_bottom', 2)) continue;
+      if (BID[base]) { [...new Set(BLOCKS[BID[base]].t)].forEach(put); continue; }
+      if (ITEMS[base] && !ITEMS[base].block) { // eşya ikonu
+        const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+        const c2 = cv.getContext('2d'); c2.imageSmoothingEnabled = false;
+        c2.drawImage(img, 0, 0, 16, 16);
+        iconOverride[base] = cv.toDataURL(); applied++;
+      }
+    } catch(e) { /* bozuk png: varsayılan kalır */ }
+  }
+  refreshAtlas();
+  return applied;
+}
+$('tpfile').addEventListener('change', async (e) => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  try {
+    const entries = {};
+    for (const f of files) {
+      if (f.name.toLowerCase().endsWith('.zip')) Object.assign(entries, await unzip(await f.arrayBuffer()));
+      else if (f.name.toLowerCase().endsWith('.png')) entries[f.name] = f;
+    }
+    const n = await applyTexturePNGs(entries);
+    toast(n > 0 ? '🎨 ' + n + ' doku uygulandı!' : '⚠️ Eşleşen doku bulunamadı (dosya adı = blok adı olmalı, örn. stone.png)');
+  } catch(err) { toast('⚠️ Paket okunamadı: ' + err.message); }
+  e.target.value = '';
+});
+$('tpreset').addEventListener('click', () => {
+  for (let ti=0; ti<tilePainters.length; ti++) if (tilePainters[ti]) paintTile(ti, tilePainters[ti]);
+  for (const k in iconOverride) delete iconOverride[k];
+  refreshAtlas();
+  toast('🎨 Varsayılan dokular geri yüklendi');
+});
+
+/* ================= ÇOK OYUNCULU (WebRTC P2P + 6 haneli oda kodu) ================= */
+// MP.peer: en az bir bağlantı var mı? MP.conns: peerId -> {pc,ch,open}. MP.remotes: peerId -> pozisyon+skin
+const MP = { peer:false, isHost:false, applying:false, posT:0, room:null, conns:{}, remotes:{}, sig:null, myId:'p'+((Math.random()*1e6)|0) };
+const ICE = { iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}] };
+const SIG_BASE = 'wss://ntfy.sh/'; // ücretsiz anonim pub/sub; sinyalleşme için
+function mpStatus(t) { const el = $('mpstatus'); if (el) el.textContent = t; }
+
+// --- basit sinyalleşme kanalı (ntfy.sh WebSocket + HTTP POST) ---
+function sigOpen(topic, onMsg) {
+  const ws = new WebSocket(SIG_BASE + topic + '/ws');
+  ws.onmessage = ev => { try { const d = JSON.parse(ev.data); if (d.event === 'message' && d.message) onMsg(JSON.parse(d.message)); } catch(e) {} };
+  ws.onerror = () => mpStatus('⚠️ Aracı sunucuya ulaşılamadı. Manuel bağlantıyı deneyin.');
+  return ws;
+}
+function sigSend(topic, obj) {
+  try { fetch('https://ntfy.sh/' + topic, { method:'POST', body: JSON.stringify(obj) }).catch(()=>{}); } catch(e) {}
+}
+
+// mkChannel=true → bu taraf TEKLİF verir ve datachannel'ı kurar (WebRTC kuralı)
+function newPC(peerId, mkChannel) {
+  const pc = new RTCPeerConnection(ICE);
+  const conn = { pc, ch:null, open:false };
+  MP.conns[peerId] = conn;
+  if (mkChannel) { conn.ch = pc.createDataChannel('ck'); bindCh(peerId, conn.ch); }
+  else pc.ondatachannel = e => { conn.ch = e.channel; bindCh(peerId, conn.ch); };
+  return conn;
+}
+async function waitIce(pc) { // non-trickle: tüm adaylar toplanana kadar bekle (manuel kod için)
+  if (pc.iceGatheringState === 'complete') return;
+  await new Promise(res => { const to = setTimeout(res, 3000);
+    pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); } }); });
+}
+function bindCh(peerId, ch) {
+  ch.onopen = () => {
+    MP.conns[peerId].open = true; MP.peer = true;
+    toast('🎮 Oyuncu katıldı!'); sfx(600,0.15,'sine',0.12,900); mpStatus('✅ Bağlı! Oda: ' + MP.room);
+    if (MP.isHost) chSend(peerId, { t:'hello', seed, tod:timeOfDay,
+      edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
+    if (skinURL) chSend(peerId, { t:'skin', url:skinURL, slim:skinSlim });
+    for (const d of drops) if (d.dim === dim) chSend(peerId, { t:'dropS', uid:d.uid, id:d.id, n:d.n, x:d.x, y:d.y, z:d.z, d:dim });
+  };
+  ch.onclose = () => { if (MP.conns[peerId]) MP.conns[peerId].open = false; delete MP.remotes[peerId];
+    MP.peer = Object.values(MP.conns).some(c=>c.open); toast('🔌 Bir oyuncu ayrıldı'); };
+  ch.onmessage = ev => { try { mpRecv(peerId, JSON.parse(ev.data)); } catch(e) {} };
+}
+function chSend(peerId, o) { const c = MP.conns[peerId]; if (c && c.ch && c.ch.readyState === 'open') { try { c.ch.send(JSON.stringify(o)); } catch(e) {} } }
+function mpSend(o) { for (const pid in MP.conns) chSend(pid, o); } // herkese yayınla (odaya)
+function mpBroadcastExcept(from, o) { for (const pid in MP.conns) if (pid !== from) chSend(pid, o); }
+
+function mpRecv(from, m) {
+  if (m.t === 'hello') {
+    seed = m.seed; try { localStorage.setItem('ck_seed', seed); } catch(e) {}
     timeOfDay = m.tod;
     worlds.overworld = { chunks:new Map(), edits:m.edits.o };
     worlds.nether = { chunks:new Map(), edits:m.edits.n };
     worlds.end = { chunks:new Map(), edits:m.edits.e };
     chunks = worlds[dim].chunks; edits = worlds[dim].edits;
     ents.length = 0;
-    ensureChunks();
+    ensureChunksNow(P.x, P.z, 1); ensureChunks();
     P.y = safeY(Math.floor(P.x), Math.floor(P.z));
     saveEdits();
-    toast('🌍 Ev sahibinin dünyası yüklendi');
-  } else if (m.t === 'pos') MP.remote = m;
+    toast('🌍 Ortak dünya yüklendi');
+  } else if (m.t === 'pos') { MP.remotes[from] = Object.assign(MP.remotes[from]||{}, m); }
+  else if (m.t === 'skin') { const r = MP.remotes[from] = MP.remotes[from]||{}; r.slim = m.slim;
+    if (m.url) { const img = new Image(); img.onload = () => { try { r.skinTex = skinToTex(img); } catch(e){} }; img.src = m.url; }
+    if (MP.isHost) mpBroadcastExcept(from, m); } // ev sahibi diğerlerine yansıtır
   else if (m.t === 'set') {
-    if (m.d === dim) { MP.applying = true; setBlock(m.x, m.y, m.z, m.b); MP.applying = false; }
-    else { const w = worlds[m.d];
-      if (w) { if (!w.edits) w.edits = loadEditsFor(m.d);
-        const k = Math.floor(m.x/CH)+','+Math.floor(m.z/CH);
-        (w.edits[k] = w.edits[k] || {})[bidx(((m.x%CH)+CH)%CH, m.y, ((m.z%CH)+CH)%CH)] = m.b;
-        w.chunks.clear(); } }
-  } else if (m.t === 'chat') chatMsg('<Arkadaş> ' + m.msg);
+    applyRemoteSet(m);
+    if (MP.isHost) mpBroadcastExcept(from, m);
+  } else if (m.t === 'dropS') { if (!drops.some(d=>d.uid===m.uid)) { const d = spawnDrop(m.id, m.n, m.x, m.y, m.z, 0, 0, 0, m.uid); if (d) d.dim = m.d; } if (MP.isHost) mpBroadcastExcept(from, m); }
+  else if (m.t === 'dropT') { const i = drops.findIndex(d=>d.uid===m.uid); if (i>=0) drops.splice(i,1); if (MP.isHost) mpBroadcastExcept(from, m); }
+  else if (m.t === 'chat') { chatMsg('<Oyuncu> ' + m.msg); if (MP.isHost) mpBroadcastExcept(from, m); }
 }
-$('mpbtn').addEventListener('click', () => { menu.style.display='none'; closePanels(); $('mppanel').style.display='flex'; });
+function applyRemoteSet(m) {
+  if (m.d === dim) { MP.applying = true; setBlock(m.x, m.y, m.z, m.b); MP.applying = false; }
+  else { const w = worlds[m.d];
+    if (w) { if (!w.edits) w.edits = loadEditsFor(m.d);
+      const k = Math.floor(m.x/CH)+','+Math.floor(m.z/CH);
+      (w.edits[k] = w.edits[k] || {})[bidx(((m.x%CH)+CH)%CH, m.y, ((m.z%CH)+CH)%CH)] = m.b;
+      w.chunks.clear(); } }
+}
+
+// --- oda kur (ev sahibi): 6 haneli kod üret, katılımcıları dinle ---
 $('mphost').addEventListener('click', () => {
-  mpSetup(true);
-  MP.pc.createOffer().then(o => MP.pc.setLocalDescription(o));
-  $('mpstatus').textContent = '⏳ Kod oluşturuluyor…';
+  const code = ('' + ((Math.random()*900000|0) + 100000)).slice(0,6);
+  MP.room = code; MP.isHost = true;
+  $('mproom').textContent = code;
+  mpStatus('⏳ Oda açık. Arkadaşların kodu girip katılabilir…');
+  try {
+    // katılım isteklerini dinle. Katılan=TEKLİF veren+datachannel kurucu; ev sahibi=CEVAP veren
+    MP.sig = sigOpen('ck-'+code+'-join', async (msg) => {
+      if (!msg.offer || !msg.from || MP.conns[msg.from]) return;
+      const conn = newPC(msg.from, false); // answerer
+      conn.pc.onicecandidate = e => { if (e.candidate) sigSend('ck-'+code+'-h2-'+msg.from, { ice:e.candidate }); };
+      sigOpen('ck-'+code+'-g2-'+msg.from, m2 => { if (m2.ice && conn.pc.remoteDescription) conn.pc.addIceCandidate(m2.ice).catch(()=>{}); });
+      await conn.pc.setRemoteDescription(msg.offer);
+      const ans = await conn.pc.createAnswer();
+      await conn.pc.setLocalDescription(ans);
+      sigSend('ck-'+code+'-ans-'+msg.from, { answer: ans });
+    });
+    toast('🏠 Oda ' + code + ' açıldı');
+  } catch(e) { mpStatus('⚠️ Aracı sunucuya ulaşılamadı — manuel bağlantıyı kullanın.'); }
+});
+// --- odaya katıl (misafir = TEKLİF veren) ---
+$('mpjoin').addEventListener('click', async () => {
+  const code = ($('mpjoincode').value || '').replace(/\D/g,'').slice(0,6);
+  if (code.length !== 6) { mpStatus('✖ 6 haneli kod girin.'); return; }
+  MP.room = code; MP.isHost = false;
+  $('mproom').textContent = code;
+  mpStatus('⏳ Odaya bağlanılıyor…');
+  try {
+    const conn = newPC('host', true); // offerer + datachannel
+    conn.pc.onicecandidate = e => { if (e.candidate) sigSend('ck-'+code+'-g2-'+MP.myId, { ice:e.candidate }); };
+    sigOpen('ck-'+code+'-h2-'+MP.myId, m2 => { if (m2.ice && conn.pc.remoteDescription) conn.pc.addIceCandidate(m2.ice).catch(()=>{}); });
+    sigOpen('ck-'+code+'-ans-'+MP.myId, async m2 => {
+      if (m2.answer && !conn.pc.currentRemoteDescription) await conn.pc.setRemoteDescription(m2.answer).catch(()=>{});
+    });
+    const off = await conn.pc.createOffer();
+    await conn.pc.setLocalDescription(off);
+    sigSend('ck-'+code+'-join', { offer: off, from: MP.myId });
+    mpStatus('⏳ Ev sahibine katılım isteği gönderildi…');
+  } catch(e) { mpStatus('⚠️ Bağlanılamadı — manuel bağlantıyı deneyin.'); }
+});
+$('mpjoincode').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g,'').slice(0,6); });
+
+// --- manuel yedek (aracı sunucu engelliyse: kopyala-yapıştır) ---
+let manualConn = null;
+$('mpmanual').addEventListener('click', async () => {
+  MP.isHost = false; MP.room = MP.room || 'MANU';
+  manualConn = newPC('host', true); // katılan = teklif veren + datachannel
+  const off = await manualConn.pc.createOffer();
+  await manualConn.pc.setLocalDescription(off);
+  await waitIce(manualConn.pc);
+  $('mpcode').value = btoa(unescape(encodeURIComponent(JSON.stringify(manualConn.pc.localDescription))));
+  mpStatus('⬆ Bu kodu ev sahibine gönderin.');
 });
 $('mpcopy').addEventListener('click', () => {
   $('mpcode').select();
-  try { navigator.clipboard.writeText($('mpcode').value); toast('📋 Kopyalandı'); } catch(e) { document.execCommand('copy'); }
+  try { navigator.clipboard.writeText($('mpcode').value); toast('📋 Kopyalandı'); } catch(e) { try { document.execCommand('copy'); } catch(e2) {} }
 });
-$('mpgo').addEventListener('click', () => {
+$('mpgo').addEventListener('click', async () => {
   try {
     const d = JSON.parse(decodeURIComponent(escape(atob($('mpin').value.trim()))));
-    if (!MP.pc || (d.type === 'offer' && MP.isHost && !MP.peer)) mpSetup(false);
-    MP.pc.setRemoteDescription(d).then(() => {
-      if (d.type === 'offer') return MP.pc.createAnswer().then(a => MP.pc.setLocalDescription(a));
-    }).catch(e => $('mpstatus').textContent = 'Hata: ' + e.message);
-    $('mpstatus').textContent = d.type === 'offer' ? '⏳ Cevap kodu üretiliyor…' : '⏳ Bağlanıyor…';
-  } catch(e) { $('mpstatus').textContent = '✖ Kod çözülemedi. Tamamını yapıştırdığından emin ol.'; }
+    if (d.type === 'offer') { // ev sahibi: gelen teklife cevap üret (answerer)
+      MP.isHost = true; MP.room = MP.room || 'MANU';
+      const conn = newPC('guest'+Object.keys(MP.conns).length, false);
+      await conn.pc.setRemoteDescription(d);
+      const ans = await conn.pc.createAnswer();
+      await conn.pc.setLocalDescription(ans);
+      await waitIce(conn.pc);
+      $('mpcode').value = btoa(unescape(encodeURIComponent(JSON.stringify(conn.pc.localDescription))));
+      mpStatus('⬇ Bu cevabı katılana geri gönderin.');
+    } else if (d.type === 'answer' && manualConn) { // katılan: cevabı işle
+      await manualConn.pc.setRemoteDescription(d);
+      mpStatus('⏳ Bağlanıyor…');
+    }
+  } catch(e) { mpStatus('✖ Kod çözülemedi.'); }
 });
+$('mpbtn').addEventListener('click', () => { menu.style.display='none'; closePanels(); $('mppanel').style.display='flex'; });
 
 /* ================= MENÜ & KAYIT ================= */
 const menu = $('menu');
@@ -2557,10 +3501,16 @@ $('menubtn').addEventListener('pointerdown', (e) => {
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
 let shaderOn = true;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn })); } catch(e) {} }
-$('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; saveOpts(); });
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn, vol:sndVol })); } catch(e) {} }
+$('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; saveOpts();
+  if (RDIST >= 8) toast('⚠️ '+RDIST+' chunk zayıf cihazlarda yavaşlatabilir — FPS düşerse otomatik azaltılır'); });
 $('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
 $('shadersel').addEventListener('change', (e) => { shaderOn = e.target.value === '1'; saveOpts(); });
+$('volslider').addEventListener('input', (e) => { sndVol = e.target.value/100; $('vollabel').textContent = e.target.value; saveOpts(); });
+$('fsbtn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  else document.documentElement.requestFullscreen().catch(()=>toast('Tarayıcı tam ekrana izin vermedi'));
+});
 /* --- tuş yerlerini taşıma --- */
 const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','hotbar'];
 let uiEdit = false, uiDrag = null, uiOffX = 0, uiOffY = 0;
@@ -2599,6 +3549,7 @@ $('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui')
     if (o.rdist) { RDIST = o.rdist; $('rdist').value = o.rdist; }
     if (o.shader !== undefined) { shaderOn = !!o.shader; $('shadersel').value = o.shader ? '1' : '0'; }
     if (o.snd !== undefined) { sndOn = !!o.snd; $('sndsel').value = o.snd ? '1' : '0'; }
+    if (o.vol !== undefined) { sndVol = o.vol; $('volslider').value = Math.round(o.vol*100); $('vollabel').textContent = Math.round(o.vol*100); }
   } catch(e) {}
   uiApply();
 })();
@@ -2634,6 +3585,22 @@ function loadState() {
 window.addEventListener('beforeunload', saveState);
 
 /* ================= CHUNK YÖNETİMİ ================= */
+const genQueue = [];
+const genQueued = new Set();
+function processGen(n) { // kare başına sınırlı chunk üretimi (takılmayı önler)
+  while (n-- > 0 && genQueue.length) {
+    const [cx,cz] = genQueue.shift();
+    genQueued.delete(ckey(cx,cz));
+    if (!chunks.has(ckey(cx,cz))) chunks.set(ckey(cx,cz), genChunk(cx,cz));
+  }
+}
+function ensureChunksNow(bx, bz, r) { // ışınlanma/doğma için anında üretim
+  const pcx = Math.floor(bx/CH), pcz = Math.floor(bz/CH);
+  for (let dx=-r; dx<=r; dx++) for (let dz=-r; dz<=r; dz++) {
+    const k = ckey(pcx+dx, pcz+dz);
+    if (!chunks.has(k)) chunks.set(k, genChunk(pcx+dx, pcz+dz));
+  }
+}
 function ensureChunks() {
   const pcx = Math.floor(P.x/CH), pcz = Math.floor(P.z/CH);
   const G = RDIST+1;
@@ -2641,7 +3608,7 @@ function ensureChunks() {
     for (let dz=-r; dz<=r; dz++) for (let dx=-r; dx<=r; dx++) {
       if (Math.max(Math.abs(dx),Math.abs(dz)) !== r) continue;
       const k = ckey(pcx+dx, pcz+dz);
-      if (!chunks.has(k)) chunks.set(k, genChunk(pcx+dx, pcz+dz));
+      if (!chunks.has(k) && !genQueued.has(k)) { genQueued.add(k); genQueue.push([pcx+dx, pcz+dz]); }
     }
   for (let dz=-RDIST; dz<=RDIST; dz++) for (let dx=-RDIST; dx<=RDIST; dx++) {
     const cx = pcx+dx, cz = pcz+dz, c = chunks.get(ckey(cx,cz));
@@ -2680,6 +3647,7 @@ function findSpawn() { // su üstünde, çöl olmayan kara bul
 const SPAWN = findSpawn();
 const hadSave = loadState();
 if (!hadSave) { P.x = SPAWN.x; P.z = SPAWN.z; }
+ensureChunksNow(P.x, P.z, 1);
 ensureChunks();
 if (!hadSave) P.y = safeY(Math.floor(P.x), Math.floor(P.z));
 if (aabbHit(P.x,P.y,P.z,P.w,P.hgt)) P.y = safeY(Math.floor(P.x), Math.floor(P.z));
@@ -2701,7 +3669,7 @@ $('playc').addEventListener('click', () => startGame('creative'));
 $('plays').addEventListener('click', () => startGame('survival'));
 updateHotbar(); updateHearts();
 
-let tickScale = 1, tickFrozen = false;
+let tickScale = 1, tickFrozen = false, lowFpsT = 0;
 let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
@@ -2712,9 +3680,16 @@ function frame(now) {
   const sdt = tickFrozen ? 0 : dt * tickScale; // /tick oyun hızı
   fpsN++; fpsT += dt;
   if (fpsT >= 0.5) { fps = Math.round(fpsN/fpsT); fpsN = 0; fpsT = 0; }
+  // otomatik optimizasyon: FPS uzun süre düşükse görüş mesafesini azalt
+  if (fps > 0 && fps < 15 && RDIST > 3) { lowFpsT += dt; } else lowFpsT = Math.max(0, lowFpsT - dt);
+  if (lowFpsT > 8) {
+    lowFpsT = 0; RDIST--; $('rdist').value = RDIST in {2:1,3:1,4:1,5:1,6:1,8:1,10:1} ? RDIST : 6; saveOpts();
+    toast('⚡ FPS düşük: görüş mesafesi ' + RDIST + ' chunk\'a indirildi');
+  }
   const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
   boundaryT++;
   if (cx !== lastCX || cz !== lastCZ || boundaryT > 90) { lastCX=cx; lastCZ=cz; boundaryT=0; ensureChunks(); }
+  processGen(genQueue.length > 30 ? 4 : 2);
   let meshBudget = 2;
   while (meshBudget-- > 0 && meshQueue.length) {
     const [mx,mz] = meshQueue.shift();
@@ -2731,8 +3706,13 @@ function frame(now) {
   updateTnt(sdt);
   tickEffects(sdt);
   updateParts(sdt);
+  updateDrops(dt);
+  updateFire(sdt);
+  cropTick(sdt);
+  swingA = Math.max(0, swingA - dt*7);
   if (MP.peer) { MP.posT -= dt;
     if (MP.posT <= 0) { MP.posT = 0.1; mpSend({t:'pos', x:P.x, y:P.y, z:P.z, yaw:P.yaw, vx:P.vx, vz:P.vz, dim}); } }
+  else { for (const k in MP.remotes) delete MP.remotes[k]; }
   stateT += dt;
   if (stateT > 4) { stateT = 0; saveState(); }
 
@@ -2759,9 +3739,7 @@ function frame(now) {
   gl.bindTexture(gl.TEXTURE_2D, tex);
   function bindDraw(vbo, cnt) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 24, 0);
-    gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 24, 12);
-    gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 24, 20);
+    setAttribs();
     gl.drawArrays(gl.TRIANGLES, 0, cnt);
   }
   gl.uniform1f(loc.uAlpha, 1);
@@ -2781,6 +3759,8 @@ function frame(now) {
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   for (const c of waterList) bindDraw(c.vboW, c.cntW);
   gl.depthMask(true);
+  drawHeld(proj, now);
+  $('burnoverlay').style.display = P.burnT > 0 ? 'block' : 'none';
   const hb = getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z));
   waterOv.style.display = (hb === BID.water || hb === BID.lava) ? 'block' : 'none';
   waterOv.style.background = hb === BID.lava ? 'rgba(220,80,10,.5)' : 'rgba(20,60,160,.3)';
@@ -2795,7 +3775,13 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
   hurt:(d)=>damagePlayer(d,'test'), effects:()=>effects, addEffect, EFFECTS,
   parts:()=>parts, arrows:()=>arrows, MP, biomeAt, BIOME_DEFS,
-  tick:()=>({ scale:tickScale, frozen:tickFrozen }), ver:'5.0' };
+  tick:()=>({ scale:tickScale, frozen:tickFrozen }),
+  drops:()=>drops, nearestStronghold, useEyeTest:useEye, isCritTest:isCrit,
+  checkEndPortalTest:checkEndPortal, tryNetherPortalTest:tryNetherPortal,
+  hasDefaultSkin:()=>!!defaultSkinTex, applyTexturePNGsTest:applyTexturePNGs, ensureChunksNow,
+  blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },
+  applySkinTest:applySkin, dropTest:()=>spawnDrop('diamond', 1, P.x, P.y+1, P.z),
+  ver:'6.0' };
 </script>
 </body>
 </html>
