@@ -32,6 +32,11 @@
   #invbtn  { right:16px; bottom:178px; font-size:26px; }
   #chatbtn { right:66px; top:14px; width:44px; height:44px; font-size:19px; border-radius:10px; }
   #menubtn { right:14px; top:14px; width:44px; height:44px; font-size:20px; border-radius:10px; }
+  #sprintbtn { left:12px; top:58px; width:46px; height:46px; font-size:20px; border-radius:10px; opacity:.55; }
+  #sprintbtn::after { content:'KAPALI'; position:absolute; bottom:-13px; left:50%; transform:translateX(-50%);
+    font-size:8px; letter-spacing:.5px; color:#fff; text-shadow:1px 1px 0 #000; }
+  #sprintbtn.on { opacity:1; background:rgba(90,200,90,.4); border-color:#8f9; }
+  #sprintbtn.on::after { content:'AÇIK'; color:#cfffd0; }
   #hotbar { left:50%; bottom:8px; transform:translateX(-50%); display:flex; gap:3px; z-index:11; }
   .slot { width:44px; height:44px; border:2px solid rgba(255,255,255,.35); border-radius:6px; position:relative;
     background-color:rgba(0,0,0,.35); background-repeat:no-repeat; image-rendering:pixelated; }
@@ -128,6 +133,7 @@
 <button class="btn" id="invbtn">🎒</button>
 <button class="btn hud" id="chatbtn">💬</button>
 <button class="btn hud" id="menubtn">☰</button>
+<button class="btn hud" id="sprintbtn" title="Koşu kilidi">🏃</button>
 <div class="hud" id="hearts"></div>
 <div class="hud" id="hunger"></div>
 <div class="hud" id="fx"></div>
@@ -1834,6 +1840,7 @@ function physics(dt) {
   if (P.riding) { P.inWater = getBlock(Math.floor(P.x),Math.floor(P.y+0.4),Math.floor(P.z))===BID.water; return; } // araç sürer
   let sp = P.fly ? 9.5 : (P.inLava ? 1.7 : P.inWater ? 2.6 : 4.3);
   sp *= (1 + 0.22*effLvl('speed')) * Math.max(0.3, 1 - 0.15*effLvl('slowness'));
+  if (sprintOn && !P.inLava) sp *= 1.35; // sürekli koşu kilidi
   const s = Math.sin(P.yaw), cs = Math.cos(P.yaw);
   const iv = inputVec();
   const mx = (iv.f * s + iv.r * cs) * sp;
@@ -3117,6 +3124,7 @@ let audioCtx = null, sndOn = true, sndVol = 1, sfxActive = 0;
 let noiseBuf = null;
 function actx2() {
   audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume().catch(()=>{}); // iOS/Safari kullanıcı hareketinde başlat
   if (!noiseBuf) {
     noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.5, audioCtx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -3740,9 +3748,10 @@ window.addEventListener('pointerdown', (e) => {
   }
   if (P.dead || uiOpen()) return;
   const tg = e.target;
-  if (tg && tg.closest && tg.closest('#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#splash,.panel,#chatpanel,#deathscreen')) return;
+  if (tg && tg.closest && tg.closest('#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#sprintbtn,#splash,.panel,#chatpanel,#deathscreen')) return;
   if (e.pointerType === 'mouse') {
-    if (document.pointerLockElement !== canvas) { canvas.requestPointerLock && canvas.requestPointerLock(); return; }
+    const lockEl = document.pointerLockElement || document.webkitPointerLockElement;
+    if (lockEl !== canvas) { (canvas.requestPointerLock || canvas.webkitRequestPointerLock || (()=>{})).call(canvas); return; }
     if (e.button === 0) {
       const ent = raycastEnt(4);
       if (ent) attackEnt(ent);
@@ -4274,8 +4283,9 @@ $('menubtn').addEventListener('pointerdown', (e) => {
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
 let shaderOn = true, autoOpt = false, chunkAuto = false, adaptT = 0, adaptFps = 60;
+let sprintOn = false;
 let fovDeg = 70, damageTiltOn = true, viewEffects = true, tiltT = 0, tiltDir = 1, bobPhase = 0;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt, fov:fovDeg, veff:viewEffects, tilt:damageTiltOn })); } catch(e) {} }
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt, fov:fovDeg, veff:viewEffects, tilt:damageTiltOn, sprint:sprintOn })); } catch(e) {} }
 $('fovslider').addEventListener('input', (e) => { fovDeg = +e.target.value; $('fovlabel').textContent = e.target.value; saveOpts(); });
 $('veffsel').addEventListener('change', (e) => { viewEffects = e.target.value === '1'; saveOpts(); });
 $('tiltsel').addEventListener('change', (e) => { damageTiltOn = e.target.value === '1'; saveOpts(); });
@@ -4291,9 +4301,30 @@ $('autooptsel').addEventListener('change', (e) => { autoOpt = e.target.value ===
 $('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
 $('shadersel').addEventListener('change', (e) => { shaderOn = e.target.value === '1'; saveOpts(); });
 $('volslider').addEventListener('input', (e) => { sndVol = e.target.value/100; $('vollabel').textContent = e.target.value; saveOpts(); });
+/* --- tam ekran (Safari/iOS webkit yedekli) --- */
+function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function reqFullscreen(el) {
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+  if (!fn) return Promise.reject(new Error('nofs'));
+  try { const r = fn.call(el); return (r && r.catch) ? r : Promise.resolve(); }
+  catch(e) { return Promise.reject(e); }
+}
+function exitFullscreen() {
+  const fn = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fn) try { const r = fn.call(document); if (r && r.catch) r.catch(()=>{}); } catch(e) {}
+}
 $('fsbtn').addEventListener('click', () => {
-  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-  else document.documentElement.requestFullscreen().catch(()=>toast('Tarayıcı tam ekrana izin vermedi'));
+  if (fsElement()) exitFullscreen();
+  else reqFullscreen(document.documentElement).catch(()=>toast('Tarayıcı/iOS tam ekrana izin vermedi'));
+});
+/* --- koşu kilidi (sprint on/off) --- */
+function applySprintBtn() { const b = $('sprintbtn'); if (b) b.classList.toggle('on', sprintOn); }
+$('sprintbtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  sprintOn = !sprintOn;
+  applySprintBtn();
+  saveOpts();
+  toast(sprintOn ? '🏃 Koşu kilidi AÇIK' : '🚶 Koşu kilidi kapalı');
 });
 /* --- tuş yerlerini taşıma --- */
 const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','hotbar'];
@@ -4340,7 +4371,9 @@ $('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui')
     if (o.fov !== undefined) { fovDeg = o.fov; $('fovslider').value = o.fov; $('fovlabel').textContent = o.fov; }
     if (o.veff !== undefined) { viewEffects = !!o.veff; $('veffsel').value = o.veff ? '1' : '0'; }
     if (o.tilt !== undefined) { damageTiltOn = !!o.tilt; $('tiltsel').value = o.tilt ? '1' : '0'; }
+    if (o.sprint !== undefined) { sprintOn = !!o.sprint; }
   } catch(e) {}
+  applySprintBtn();
   uiApply();
 })();
 $('newworld').addEventListener('click', () => {
@@ -4452,7 +4485,7 @@ function startGame(mode) {
   $('splash').style.display = 'none';
   updateHotbar(); updateHearts();
   sfx(440, 0.1);
-  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+  reqFullscreen(document.documentElement).catch(()=>{}); // iOS Safari'de sessizce atlanır
   saveState();
 }
 $('playc').addEventListener('click', () => startGame('creative'));
