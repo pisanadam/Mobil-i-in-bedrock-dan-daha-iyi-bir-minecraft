@@ -28,7 +28,11 @@ Tek bir `index.html` dosyası — kütüphane yok, bağımlılık yok, telifli m
 ## ✨ Özellikler
 
 ### Dünya
-- 🌍 Sonsuz, prosedürel dünya, **21 biyomla**: Ova, Orman, Huş Ormanı, Koyu Orman, Çiçekli Orman, Kiraz Korusu, Yağmur Ormanı, Savan, Bataklık, Mantar Tarlası, Çöl, Çorak Topraklar (terakota katmanlı platolar), Tayga, Karlı Tayga, Karlı Ova, Buz Dikenleri, Dağlar, Kumsal + **3 özel biyom**: Kristal Vadisi ✨ (parlayan kristaller), Gökkuşağı Tepeleri 🌈 (renkli beton katmanları), Obsidyen Çorak 🌑 (lav gölleri ve magma)
+- 📏 **Minecraft'taki yükseklik sınırı: -64 → 319** (384 blok yükseklik). Bedrock -64'te, gökyüzü sınırı 319, deniz seviyesi 62. Derin kayrak & elmas dipte, dağlar 150'ye çıkar. Performans için sadece dolu katmanlar işlenir (`maxY` optimizasyonu) + FPS otomatik ayarı
+- 🌊 **Deniz biyomları**: Okyanus, Derin Okyanus, Sıcak Okyanus (kumlu + mercan), Soğuk Okyanus, Donmuş Okyanus (buz yüzeyli); su altında **kelp ormanları, deniz çayırı, mercan blokları**
+- 🐟 **10 deniz canlısı**: Morina, Somon, Balon Balığı, Tropik Balık, Mürekkep Balığı, **Parlak Mürekkep** (ışık saçar), **Yunus**, Deniz Kaplumbağası, **Muhafız** (lazer atar), **Boğulmuş** — hepsi suda 3B yüzer, karada çırpınır
+- 🏛️ **Yapılar** (Minecraft benzeri, biyoma özel): Çöl Tapınağı (piramit + gizli TNT'li hazine odası), Orman Tapınağı, Cadı Kulübesi, İglo, Yağmacı Karolu, Harabe Portal, Batık Gemi/Okyanus Harabesi, **Okyanus Anıtı** (prizmarin + muhafızlar) — mevcut köy/stronghold/zindan/maden/kule/nether kalesi/bastion'a ek
+- 🌍 Sonsuz, prosedürel dünya, **26 biyomla** (21 kara + 5 deniz): Ova, Orman, Huş Ormanı, Koyu Orman, Çiçekli Orman, Kiraz Korusu, Yağmur Ormanı, Savan, Bataklık, Mantar Tarlası, Çöl, Çorak Topraklar (terakota katmanlı platolar), Tayga, Karlı Tayga, Karlı Ova, Buz Dikenleri, Dağlar, Kumsal + **3 özel biyom**: Kristal Vadisi ✨ (parlayan kristaller), Gökkuşağı Tepeleri 🌈 (renkli beton katmanları), Obsidyen Çorak 🌑 (lav gölleri ve magma)
 - 🕳️ **Mağaralar** ve derinliğe göre **8 cevher türü** (kömür, demir, bakır, altın, lapis, kızıltaş, elmas, zümrüt — taş **ve derin kayrak** varyantlarıyla)
 - 🌳 8 ağaç türü (meşe, ladin, huş, kiraz…), çiçekler, mantarlar, şeker kamışı, kaktüsler
 - 🌅 Gündüz/gece döngüsü, sis, sesler

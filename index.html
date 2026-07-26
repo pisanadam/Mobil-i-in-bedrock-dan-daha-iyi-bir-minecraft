@@ -239,7 +239,8 @@
 <script>
 'use strict';
 /* ================= TEMEL ================= */
-const CH = 16, H = 64, WATER_Y = 22;
+const CH = 16, Y_MIN = -64, H = 384, WATER_Y = 62; // dünya -64..319 (Minecraft gibi)
+const Y_MAX = Y_MIN + H - 1; // 319 (yerleştirilebilir en yüksek)
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl', { antialias:false });
 let seed = parseInt(localStorage.getItem('ck_seed') || '0');
@@ -516,6 +517,14 @@ defCross('red_mushroom','Kırmızı Mantar', T.cross_shroom('#c22a2a','#e0d8c8')
 defCross('crimson_fungus','Kızıl Mantar', T.cross_shroom('#8a2222','#c86a3a'));
 defCross('warped_fungus','Çarpık Mantar', T.cross_shroom('#2a8a7a','#c86a3a'));
 defCross('sugar_cane','Şeker Kamışı', T.cane('#7ab84a'));
+// --- deniz bitkileri (su içinde) ---
+defCross('kelp','Yosun (Kelp)', T.cane('#3a7a3a'), {drop:'kelp', water:0});
+defCross('seagrass','Deniz Çayırı', T.cross_grass('#3a8a5a'), {drop:null});
+defBlock('tube_coral_block','Tüp Mercan', stone3(tile(T.flat('#3a5ad8',20))), {hard:0.4, tool:'pick', tier:1});
+defBlock('brain_coral_block','Beyin Mercanı', stone3(tile(T.flat('#d85a9a',20))), {hard:0.4, tool:'pick', tier:1});
+defBlock('horn_coral_block','Boynuz Mercanı', stone3(tile(T.flat('#e8c838',20))), {hard:0.4, tool:'pick', tier:1});
+defBlock('prismarine_bricks','Prizmarin Tuğlası', stone3(tile(T.brick('#5a9a8a','#4a8a7a'))), {hard:1.5, tool:'pick', tier:1});
+defBlock('dark_prismarine','Koyu Prizmarin', stone3(tile(T.flat('#2a4a3a',14))), {hard:1.5, tool:'pick', tier:1});
 defCross('torch','Meşale', T.torch('#f8c838'));
 defCross('soul_torch','Ruh Meşalesi', T.torch('#48c8d8'));
 defCross('lantern','Fener', (x,y,r)=>{ if (y>=5&&y<=12&&x>=5&&x<=10) { if (y>=7&&y<=10&&x>=6&&x<=9) return nzc(hex('#f8c050'),30,r); return nzc(hex('#3a3a44'),12,r); } if (y===4&&x>=7&&x<=8) return nzc(hex('#3a3a44'),12,r); return [0,0,0,0]; });
@@ -805,6 +814,12 @@ const BIOME_DEFS = {
   crystal_valley: {n:'Kristal Vadisi ✨', top:'calcite', under:'calcite', tree:[[11,1]], tp:0.3},
   rainbow_hills:  {n:'Gökkuşağı Tepeleri 🌈', rainbow:1, tree:[[4,0.5],[3,0.5]], tp:0.06},
   obsidian_waste: {n:'Obsidyen Çorak 🌑', top:'blackstone', under:'blackstone', tree:[], tp:0, dead:0.012, magma:0.04, lavaSea:1},
+  // --- deniz biyomları ---
+  ocean:          {n:'Okyanus', ocean:1, top:'gravel', tree:[]},
+  deep_ocean:     {n:'Derin Okyanus', ocean:1, deep:1, top:'gravel', tree:[]},
+  warm_ocean:     {n:'Sıcak Okyanus', ocean:1, warm:1, top:'sand', tree:[]},
+  cold_ocean:     {n:'Soğuk Okyanus', ocean:1, top:'gravel', tree:[]},
+  frozen_ocean:   {n:'Donmuş Okyanus', ocean:1, frozen:1, top:'gravel', tree:[]},
 };
 const RAINBOW = ['red_concrete','orange_concrete','yellow_concrete','lime_concrete','cyan_concrete','light_blue_concrete','purple_concrete','magenta_concrete'];
 const TERRA_LAYERS = ['terracotta','orange_terracotta','red_terracotta','brown_terracotta','yellow_terracotta','white_terracotta','orange_terracotta'];
@@ -812,6 +827,14 @@ function biomeAt(wx, wz) {
   const t = fbm(wx*0.0028+900, wz*0.0028-70);   // sıcaklık
   const m = fbm(wx*0.004+555, wz*0.004-333);    // nem
   const w = fbm(wx*0.0055-40, wz*0.0055+120);   // tuhaflık
+  const c = fbm(wx*0.0016+1234, wz*0.0016-987); // kıta/okyanus
+  if (c < 0.34) { // okyanuslar (kıta gürültüsü düşükse)
+    const deep = c < 0.24;
+    if (t < 0.28) return 'frozen_ocean';
+    if (t > 0.68) return 'warm_ocean';
+    if (t < 0.42) return 'cold_ocean';
+    return deep ? 'deep_ocean' : 'ocean';
+  }
   if (w > 0.8) return t < 0.42 ? 'crystal_valley' : t < 0.58 ? 'rainbow_hills' : 'obsidian_waste';
   if (w < 0.16) return 'mushroom_fields';
   if (t < 0.3) return m < 0.38 ? 'snowy_plains' : m < 0.5 ? 'ice_spikes' : m < 0.68 ? 'snowy_taiga' : 'taiga';
@@ -828,13 +851,20 @@ function biomeAt(wx, wz) {
 function heightAt(wx, wz) {
   const n = fbm(wx*0.009+31, wz*0.009+7);
   const m = fbm(wx*0.035+900, wz*0.035+400);
-  let h = 15 + n*n*40 + m*7;
+  // deniz seviyesi WATER_Y=62; kara ~64..110, dağlar ~150
+  let h = 58 + n*n*64 + m*10;
   const b = biomeAt(wx, wz);
-  if (b === 'mountains') h += 16*Math.max(0, n-0.25);
-  else if (b === 'swamp') h = WATER_Y + (h-WATER_Y)*0.3 + 0.8;
-  else if (b === 'badlands') h = 20 + Math.floor(Math.max(0,h-16)/7)*7 + m*2;
-  else if (b === 'rainbow_hills') h += 7*Math.sin(n*9);
-  return Math.max(2, Math.min(58, h|0));
+  const bd = BIOME_DEFS[b];
+  if (bd && bd.ocean) { // okyanuslar deniz seviyesinin altında
+    const depth = bd.deep ? 32 : 16;
+    h = WATER_Y - depth + n*depth*0.7 + m*4;
+  }
+  else if (b === 'mountains') h += 46*Math.max(0, n-0.25);
+  else if (b === 'swamp') h = WATER_Y + (h-WATER_Y)*0.25 + 1;
+  else if (b === 'badlands') h = WATER_Y + Math.floor(Math.max(0,h-WATER_Y)/8)*8 + m*3;
+  else if (b === 'rainbow_hills') h += 10*Math.sin(n*9);
+  else if (b === 'beach') h = WATER_Y - 1 + n*3;
+  return Math.max(Y_MIN+4, Math.min(300, h|0));
 }
 function treeAt(wx, wz) {
   const cxx = Math.floor(wx/5), czz = Math.floor(wz/5);
@@ -849,17 +879,17 @@ function treeAt(wx, wz) {
   for (const [ty, wgt] of bd.tree) { acc += wgt; if (t < acc) return ty; }
   return bd.tree[0][0];
 }
-function oreAt(wx, y, wz, deep) {
+function oreAt(wx, y, wz, deep) { // y: worldY (-64..surface); Minecraft 1.18 dağılımına yakın
   const v = hash3(wx*3+7, y*5+1, wz*7+3);
-  if (v < 0.009 && y < 40) return deep ? BID.deepslate_coal_ore : BID.coal_ore;
-  if (v < 0.016 && y < 34) return deep ? BID.deepslate_iron_ore : BID.iron_ore;
-  if (v < 0.021 && y > 14 && y < 40) return deep ? BID.deepslate_copper_ore : BID.copper_ore;
-  if (v < 0.0235 && y < 20) return deep ? BID.deepslate_gold_ore : BID.gold_ore;
-  if (v < 0.027 && y < 18) return deep ? BID.deepslate_redstone_ore : BID.redstone_ore;
-  if (v < 0.0295 && y < 26) return deep ? BID.deepslate_lapis_ore : BID.lapis_ore;
-  if (v < 0.0318 && y < 13) return deep ? BID.deepslate_diamond_ore : BID.diamond_ore;
-  if (v < 0.0328 && y < 13) return deep ? BID.deepslate_emerald_ore : BID.emerald_ore;
-  if (v < 0.0345 && y < 10) return BID.obsidian;
+  if (v < 0.010 && y < 130) return deep ? BID.deepslate_coal_ore : BID.coal_ore;
+  if (v < 0.017 && y < 64) return deep ? BID.deepslate_iron_ore : BID.iron_ore;
+  if (v < 0.022 && y > -16 && y < 112) return deep ? BID.deepslate_copper_ore : BID.copper_ore;
+  if (v < 0.0245 && y < 32) return deep ? BID.deepslate_gold_ore : BID.gold_ore;
+  if (v < 0.028 && y < 16) return deep ? BID.deepslate_redstone_ore : BID.redstone_ore;
+  if (v < 0.0305 && y < 32) return deep ? BID.deepslate_lapis_ore : BID.lapis_ore;
+  if (v < 0.033 && y < 8) return deep ? BID.deepslate_diamond_ore : BID.diamond_ore;
+  if (v < 0.034 && y > -8 && y < 40) return deep ? BID.deepslate_emerald_ore : BID.emerald_ore;
+  if (v < 0.0355 && y < -8) return BID.obsidian;
   return 0;
 }
 
@@ -878,7 +908,8 @@ function switchWorld(d) { // sadece konteynerleri değiştirir
   chunks = worlds[d].chunks; edits = worlds[d].edits;
 }
 const ckey = (cx,cz) => cx+','+cz;
-const bidx = (x,y,z) => (y*CH+z)*CH+x;
+const RI = (x,iy,z) => (iy*CH+z)*CH+x;        // ham iç indeks (iy: 0..H-1)
+const bidx = (x,wy,z) => ((wy-Y_MIN)*CH+z)*CH+x; // dünya-Y indeksi (wy: -64..319)
 
 function genTree(data, x0, z0, wx, wz, g, type) {
   const put = (lx,ly,lz,b) => { if (lx>=0&&lx<CH&&lz>=0&&lz<CH&&ly>0&&ly<H&&!data[bidx(lx,ly,lz)]) data[bidx(lx,ly,lz)] = b; };
@@ -946,29 +977,32 @@ function genChunk(cx, cz) {
   if (dim === 'end') return genEnd(cx, cz);
   return genOverworld(cx, cz);
 }
+const NB = Y_MIN, NT = Y_MIN + 128; // Nether penceresi: worldY -64..63
 function genNether(cx, cz) {
   const data = new Uint8Array(CH*H*CH);
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
     const wx = x0+x, wz = z0+z;
     const reg = fbm(wx*0.015+70, wz*0.015-40);
-    for (let y=0; y<H; y++) {
+    for (let y=NB; y<NT; y++) {
+      const ly = y - NB; // 0..127
       let b;
-      if (y === 0 || y === H-1) b = BID.bedrock;
-      else if (y > 4 && y < 52 && vnoise3(wx*0.07, y*0.09, wz*0.07) > 0.52) b = y <= 11 ? BID.lava : 0;
+      if (ly === 0 || ly === 127) b = BID.bedrock;
+      else if (ly > 4 && ly < 116 && vnoise3(wx*0.07, y*0.09, wz*0.07) > 0.52) b = ly <= 11 ? BID.lava : 0;
       else {
         const v = hash3(wx*3+7, y*5+1, wz*7+3);
         if (v < 0.02) b = BID.nether_quartz_ore;
         else if (v < 0.031) b = BID.nether_gold_ore;
-        else if (v < 0.0335 && y < 24) b = BID.ancient_debris;
-        else if (y < 14 && reg < 0.38) b = BID.blackstone;
-        else if (reg > 0.78 && y % 9 < 3) b = BID.basalt;
+        else if (v < 0.0335 && ly < 24) b = BID.ancient_debris;
+        else if (ly < 14 && reg < 0.38) b = BID.blackstone;
+        else if (reg > 0.78 && ly % 9 < 3) b = BID.basalt;
         else b = BID.netherrack;
       }
       data[bidx(x,y,z)] = b;
     }
     // yüzeyler: nylium + mantarlar, tavan: ışık taşı
-    for (let y=1; y<H-2; y++) {
+    for (let y=NB+1; y<NT-2; y++) {
+      const ly = y - NB;
       const i = bidx(x,y,z);
       if (data[i] === BID.netherrack && !data[bidx(x,y+1,z)]) {
         const nyl = fbm(wx*0.02+11, wz*0.02+77);
@@ -978,9 +1012,9 @@ function genNether(cx, cz) {
           else if (k < 0.075) data[bidx(x,y+1,z)] = BID.shroomlight; }
         else if (nyl > 0.7) { data[i] = BID.warped_nylium;
           if (k < 0.06) data[bidx(x,y+1,z)] = BID.warped_fungus; }
-        else if (k < 0.05 && y < 16) data[i] = BID.soul_sand;
+        else if (k < 0.05 && ly < 16) data[i] = BID.soul_sand;
       }
-      if (data[i] && data[i] !== BID.lava && y > 36 && !data[bidx(x,y-1,z)] && hash2(wx*7+y, wz*11) < 0.025)
+      if (data[i] && data[i] !== BID.lava && ly > 100 && !data[bidx(x,y-1,z)] && hash2(wx*7+y, wz*11) < 0.025)
         data[i] = BID.glowstone;
     }
   }
@@ -1014,11 +1048,11 @@ function nearestNetherStruct() {
 function genNetherStructures(data, cx, cz) {
   const x0 = cx*CH, z0 = cz*CH;
   const spawners = [], netMobs = [];
-  const pb = (wx,wy,wz,b) => { if (wx>=x0&&wx<x0+CH&&wz>=z0&&wz<z0+CH&&wy>0&&wy<H) { data[bidx(wx-x0,wy,wz-z0)]=b; if (b===BID.spawner) spawners.push([wx,wy,wz]); } };
+  const pb = (wx,wy,wz,b) => { if (wx>=x0&&wx<x0+CH&&wz>=z0&&wz<z0+CH&&wy>Y_MIN&&wy<=Y_MAX) { data[bidx(wx-x0,wy,wz-z0)]=b; if (b===BID.spawner) spawners.push([wx,wy,wz]); } };
   const box = (x1,y1,z1,x2,y2,z2,b,hollow) => {
     for (let x=Math.max(x1,x0); x<=Math.min(x2,x0+CH-1); x++)
       for (let z=Math.max(z1,z0); z<=Math.min(z2,z0+CH-1); z++)
-        for (let y=Math.max(1,y1); y<=Math.min(H-2,y2); y++)
+        for (let y=Math.max(Y_MIN+1,y1); y<=Math.min(Y_MAX-1,y2); y++)
           pb(x,y,z, hollow && x>x1&&x<x2&&y>y1&&y<y2&&z>z1&&z<z2 ? 0 : b);
   };
   // --- NETHER KALESİ (nether tuğlası köprü/koridorlar + blaze kafesi) ---
@@ -1106,29 +1140,31 @@ function genOverworld(cx, cz) {
     let bio = biomeAt(wx,wz);
     let bd = BIOME_DEFS[bio];
     if (h <= WATER_Y+1 && !bd.lavaSea && !bd.rainbow && bio !== 'badlands' && bio !== 'crystal_valley') { bio = 'beach'; bd = BIOME_DEFS.beach; }
-    const deepY = 9 + (hash2(wx,wz)*4|0);
+    const deepStart = 2 + (hash2(wx,wz)*5|0); // deepslate worldY < ~4
     // üst blok seçimi
     let topB;
     if (bd.rainbow) topB = BID[RAINBOW[Math.abs(h>>1) % RAINBOW.length]];
-    else if (bd.stoneTop && h > 38) topB = h > 48 ? BID.snow_block : BID.stone;
-    else if (h > 50) topB = BID.snow_block;
+    else if (bd.stoneTop && h > 96) topB = h > 120 ? BID.snow_block : BID.stone;
+    else if (h > 128) topB = BID.snow_block;
+    else if (bd.ocean) topB = (bd.warm ? BID.sand : BID.gravel);
     else topB = BID[bd.top];
-    const underB = bd.rainbow ? topB : (bd.under ? BID[bd.under] : (bio==='beach' ? BID.sand : BID.dirt));
-    for (let y=0; y<=h; y++) {
+    const underB = bd.rainbow ? topB : (bd.under ? BID[bd.under] : ((bio==='beach'||bd.ocean) ? BID.sand : BID.dirt));
+    for (let y=Y_MIN; y<=h; y++) {
       let b;
-      const deep = y < deepY;
-      if (y === 0) b = BID.bedrock;
-      else if (y > 3 && y < h-3 && vnoise3(wx*0.09, y*0.11, wz*0.09) > 0.73) b = 0; // mağara
+      const deep = y < deepStart;
+      if (y === Y_MIN || (y < Y_MIN+4 && hash3(wx,y,wz) < 0.55)) b = BID.bedrock; // pürüzlü anakaya tabanı
+      else if (y > Y_MIN+3 && y < h-3 && vnoise3(wx*0.09, y*0.11, wz*0.09) > 0.73) b = 0; // mağara
+      else if (y > Y_MIN+3 && y < 8 && vnoise3(wx*0.05+50, y*0.06, wz*0.05+50) > 0.80) b = 0; // derin geniş mağara
       else if (y === h) b = topB;
-      else if (bd.layers && y > h-8) b = BID[TERRA_LAYERS[y % TERRA_LAYERS.length]];
-      else if (y > h-3) b = underB;
+      else if (bd.layers && y > h-10) b = BID[TERRA_LAYERS[((y%TERRA_LAYERS.length)+TERRA_LAYERS.length)%TERRA_LAYERS.length]];
+      else if (y > h-4) b = underB;
       else b = oreAt(wx,y,wz,deep) || (deep ? BID.deepslate : BID.stone);
       data[bidx(x,y,z)] = b;
     }
     const fluid = bd.lavaSea ? BID.lava : BID.water;
     for (let y=h+1; y<=WATER_Y; y++) data[bidx(x,y,z)] = fluid;
     // yüzey süsleri
-    if (h > WATER_Y && h < 50 && data[bidx(x,h,z)] && h+1 < H) {
+    if (h > WATER_Y && h < 128 && data[bidx(x,h,z)] && h+1 < Y_MAX) {
       const k = hash2(wx*13+5, wz*17+8);
       const top = data[bidx(x,h,z)];
       const put1 = b => data[bidx(x,h+1,z)] = b;
@@ -1146,14 +1182,24 @@ function genOverworld(cx, cz) {
     }
     if (h === WATER_Y+1 && !bd.lavaSea && hash2(wx*7,wz*11) < 0.10 && data[bidx(x,h,z)]) {
       const n = 2 + (hash2(wx,wz)*2|0);
-      for (let i=1;i<=n && h+i<H;i++) data[bidx(x,h+i,z)] = BID.sugar_cane;
+      for (let i=1;i<=n && h+i<Y_MAX;i++) data[bidx(x,h+i,z)] = BID.sugar_cane;
+    }
+    if (bd.frozen && data[bidx(x,WATER_Y,z)] === BID.water) data[bidx(x,WATER_Y,z)] = BID.ice; // donmuş okyanus buzu
+    // deniz bitki örtüsü: yosun ormanı, deniz çayırı, mercan
+    if (bd.ocean && h < WATER_Y-1) {
+      const k2 = hash2(wx*17+3, wz*19+9);
+      if (bd.warm && k2 < 0.12) data[bidx(x,h,z)] = BID[['tube_coral_block','brain_coral_block','horn_coral_block'][(hash2(wx,wz)*3)|0]] || data[bidx(x,h,z)];
+      else if (k2 < 0.16) { // kelp sütunu
+        const kh = 3 + (hash2(wx*3,wz*5)*8|0);
+        for (let i=1;i<=kh && h+i<WATER_Y;i++) data[bidx(x,h+i,z)] = BID.kelp;
+      } else if (k2 < 0.26) data[bidx(x,h+1,z)] = BID.seagrass;
     }
   }
   for (let wz=z0-3; wz<z0+CH+3; wz++) for (let wx=x0-3; wx<x0+CH+3; wx++) {
     const t = treeAt(wx,wz);
     if (!t) continue;
     const g = heightAt(wx,wz);
-    if (g <= WATER_Y || g > 52) continue;
+    if (g <= WATER_Y || g > 130) continue;
     genTree(data, x0, z0, wx, wz, g, t);
   }
   const st = genStructures(data, cx, cz);
@@ -1186,7 +1232,7 @@ function genStructures(data, cx, cz) {
   const x0 = cx*CH, z0 = cz*CH;
   const spawners = [], vsp = [];
   const pb = (wx,wy,wz,b) => {
-    if (wx>=x0 && wx<x0+CH && wz>=z0 && wz<z0+CH && wy>0 && wy<H) {
+    if (wx>=x0 && wx<x0+CH && wz>=z0 && wz<z0+CH && wy>Y_MIN && wy<=Y_MAX) {
       data[bidx(wx-x0, wy, wz-z0)] = b;
       if (b === BID.spawner) spawners.push([wx,wy,wz]);
     }
@@ -1194,7 +1240,7 @@ function genStructures(data, cx, cz) {
   const box = (x1,y1,z1,x2,y2,z2,b,hollow) => {
     for (let x=Math.max(x1,x0); x<=Math.min(x2,x0+CH-1); x++)
       for (let z=Math.max(z1,z0); z<=Math.min(z2,z0+CH-1); z++)
-        for (let y=Math.max(1,y1); y<=Math.min(H-2,y2); y++)
+        for (let y=Math.max(Y_MIN+1,y1); y<=Math.min(Y_MAX-1,y2); y++)
           pb(x,y,z, hollow && x>x1&&x<x2&&y>y1&&y<y2&&z>z1&&z<z2 ? 0 : b);
   };
   // --- STRONGHOLD (kale + portal odası) ---
@@ -1234,7 +1280,7 @@ function genStructures(data, cx, cz) {
         const hx = vx + (((hash2(vx+hI*7, vz+1)*36)|0) - 18);
         const hz = vz + (((hash2(vx+3, vz+hI*11)*36)|0) - 18);
         const hg = heightAt(hx, hz);
-        if (hg <= WATER_Y || hg > 45) continue;
+        if (hg <= WATER_Y || hg > 120) continue;
         box(hx-2, hg-2, hz-2, hx+2, hg, hz+2, BID.cobblestone, false);   // temel
         box(hx-2, hg+1, hz-2, hx+2, hg+4, hz+2, BID.oak_planks, true);   // oda
         pb(hx, hg+1, hz-2, 0); pb(hx, hg+2, hz-2, 0);                    // kapı
@@ -1271,7 +1317,7 @@ function genStructures(data, cx, cz) {
     const tz = trz*160 + 30 + ((hash2(trx*11,trz*13)*100)|0);
     if (Math.abs(tx-x0) < 24 && Math.abs(tz-z0) < 24) {
       const tg = heightAt(tx, tz);
-      if (tg > WATER_Y && tg < 44) {
+      if (tg > WATER_Y && tg < 120) {
         box(tx-2, tg-2, tz-2, tx+2, tg, tz+2, BID.cobblestone, false);
         box(tx-2, tg+1, tz-2, tx+2, tg+9, tz+2, BID.stone_bricks, true);
         pb(tx, tg+1, tz-2, 0); pb(tx, tg+2, tz-2, 0);
@@ -1282,11 +1328,106 @@ function genStructures(data, cx, cz) {
       }
     }
   }
+  genExtraStructures(x0, z0, pb, box, spawners, vsp);
   return { spawners, vsp };
 }
+// --- Minecraft benzeri ek yapılar (biyoma özel) ---
+function genExtraStructures(x0, z0, pb, box, spawners, vsp) {
+  const sat = (rx,rz,salt,prob,span,off) => { // bölge ızgarasında yapı merkezi
+    if (hash2(rx*salt+3, rz*(salt+40)+7) >= prob) return null;
+    const sx = rx*span + off + ((hash2(rx*7,rz*3)*(span-2*off))|0);
+    const sz = rz*span + off + ((hash2(rx*11,rz*5)*(span-2*off))|0);
+    return [sx, sz];
+  };
+  const near = (sx,sz,r) => Math.abs(sx-x0) < r && Math.abs(sz-z0) < r;
+  const RG = (span) => [Math.floor((x0)/span), Math.floor((z0)/span)];
+  const biome = (sx,sz) => biomeAt(sx,sz);
+  // --- ÇÖL TAPINAĞI (piramit) ---
+  { const [rx,rz]=RG(160); const s=sat(rx,rz,401,0.5,160,30);
+    if (s && near(s[0],s[1],40) && biome(s[0],s[1])==='desert') {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      for (let lvl=0; lvl<6; lvl++) box(tx-5+lvl, g+lvl, tz-5+lvl, tx+5-lvl, g+lvl, tz+5-lvl, BID.sandstone, false);
+      box(tx-4, g, tz-4, tx+4, g+4, tz+4, BID.sandstone, true);
+      box(tx-1, g-6, tz-1, tx+1, g-1, tz+1, BID.sandstone, true); // gizli hazine odası
+      pb(tx, g-5, tz, BID.tnt); pb(tx-1, g-5, tz, BID.chest); pb(tx+1, g-5, tz, BID.chest);
+      pb(tx, g+5, tz, BID.orange_terracotta);
+    } }
+  // --- ORMAN TAPINAĞI ---
+  { const [rx,rz]=RG(176); const s=sat(rx,rz,433,0.5,176,30);
+    if (s && near(s[0],s[1],40) && biome(s[0],s[1])==='jungle') {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      box(tx-4, g-3, tz-4, tx+4, g+6, tz+4, BID.mossy_cobblestone, true);
+      pb(tx, g+1, tz-4, 0); pb(tx, g+2, tz-4, 0);
+      pb(tx-3, g+1, tz-3, BID.chest); pb(tx+3, g+1, tz+3, BID.spawner);
+      spawners.push([tx+3, g+1, tz+3]);
+    } }
+  // --- CADI KULÜBESİ (bataklık, kazıklı) ---
+  { const [rx,rz]=RG(144); const s=sat(rx,rz,467,0.5,144,24);
+    if (s && near(s[0],s[1],36) && biome(s[0],s[1])==='swamp') {
+      const [tx,tz]=s, g=WATER_Y;
+      for (const [ox,oz] of [[-2,-2],[2,-2],[-2,2],[2,2]]) for (let y=g-3;y<=g;y++) pb(tx+ox,y,tz+oz,BID.spruce_log);
+      box(tx-3, g+1, tz-3, tx+3, g+4, tz+3, BID.spruce_planks, true);
+      pb(tx, g+1, tz-3, 0); pb(tx, g+2, tz-3, 0);
+      pb(tx+2, g+1, tz+2, BID.cauldron||BID.chest); pb(tx-2, g+1, tz-2, BID.brewing_stand);
+    } }
+  // --- İGLO (karlı) ---
+  { const [rx,rz]=RG(152); const s=sat(rx,rz,491,0.5,152,26);
+    if (s && near(s[0],s[1],36) && ['snowy_plains','snowy_taiga','ice_spikes','frozen_ocean'].includes(biome(s[0],s[1]))) {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      for (let dx=-3;dx<=3;dx++) for (let dy=0;dy<=3;dy++) for (let dz=-3;dz<=3;dz++) {
+        const d=Math.hypot(dx,dy*1.3,dz); if (d>2.3 && d<3.4) pb(tx+dx,g+dy,tz+dz,BID.snow_block);
+      }
+      pb(tx, g+1, tz-3, 0); pb(tx, g+2, tz-3, 0);
+      pb(tx+2, g+1, tz+2, BID.chest); pb(tx-2, g+1, tz+2, BID.red_bed||BID.red_wool);
+    } }
+  // --- YAĞMACI KAROLU (kule) ---
+  { const [rx,rz]=RG(168); const s=sat(rx,rz,521,0.4,168,28);
+    if (s && near(s[0],s[1],40) && ['plains','savanna','taiga','desert'].includes(biome(s[0],s[1]))) {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      if (g > WATER_Y) { box(tx-2, g, tz-2, tx+2, g+10, tz+2, BID.dark_oak_log, true);
+        box(tx-2, g+11, tz-3, tx+2, g+11, tz+3, BID.dark_oak_planks, false);
+        pb(tx, g+9, tz, BID.chest); pb(tx, g+1, tz-2, 0); pb(tx, g+2, tz-2, 0);
+        vsp.push([tx+0.5, g+11, tz+0.5, 'piglin_brute']); } // yağmacı yerine (özgün)
+    } }
+  // --- HARABE PORTAL ---
+  { const [rx,rz]=RG(140); const s=sat(rx,rz,547,0.45,140,22);
+    if (s && near(s[0],s[1],36)) {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      if (g > WATER_Y-2) { // kırık obsidyen çerçeve
+        for (let y=0;y<5;y++) for (let x=0;x<4;x++) if ((x===0||x===3||y===0||y===4) && hash2(tx+x,tz+y*3)<0.75)
+          pb(tx+x, g+y, tz, BID.obsidian);
+        pb(tx+1, g-1, tz, BID.chest); pb(tx+2, g, tz+1, BID.crying_obsidian);
+        pb(tx, g, tz-1, BID.netherrack); pb(tx+3, g, tz+1, BID.gold_block);
+      }
+    } }
+  // --- BATIK GEMİ / OKYANUS HARABESİ (okyanus/kumsal) ---
+  { const [rx,rz]=RG(184); const s=sat(rx,rz,577,0.5,184,30);
+    if (s && near(s[0],s[1],40)) { const bm=biome(s[0],s[1]); const bd=BIOME_DEFS[bm];
+      if (bd.ocean || bm==='beach') {
+        const [tx,tz]=s, g=heightAt(tx,tz);
+        // gemi gövdesi (tahta)
+        box(tx-2, g+1, tz-5, tx+2, g+3, tz+5, BID.oak_planks, true);
+        box(tx-1, g+4, tz-3, tx+1, g+6, tz+2, BID.oak_planks, true); // güverte kabini
+        pb(tx, g+7, tz, BID.oak_log); // direk
+        pb(tx, g+2, tz-4, BID.chest); pb(tx, g+2, tz+4, BID.chest); // hazine
+        // gömülü hazine (yakın kumsalda)
+        pb(tx+6, g-2, tz, BID.chest);
+      }
+    } }
+  // --- OKYANUS ANITI (derin okyanus, prizmarin) ---
+  { const [rx,rz]=RG(320); const s=sat(rx,rz,601,0.35,320,60);
+    if (s && near(s[0],s[1],48) && BIOME_DEFS[biome(s[0],s[1])].deep) {
+      const [tx,tz]=s, g=heightAt(tx,tz);
+      box(tx-7, g+1, tz-7, tx+7, g+12, tz+7, BID.prismarine_bricks, true);
+      box(tx-3, g+3, tz-3, tx+3, g+9, tz+3, 0, false);
+      pb(tx, g+5, tz, BID.dark_prismarine); pb(tx, g+6, tz, BID.gold_block); // gizli altın
+      pb(tx-5, g+10, tz, BID.sea_lantern); pb(tx+5, g+10, tz, BID.sea_lantern);
+      vsp.push([tx+0.5, g+4, tz+0.5, 'guardian']); vsp.push([tx-2, g+4, tz+2, 'guardian']);
+    } }
+}
 function getBlock(wx, wy, wz) {
-  if (wy < 0) return BID.bedrock;
-  if (wy >= H) return 0;
+  if (wy < Y_MIN) return BID.bedrock;
+  if (wy > Y_MAX) return 0;
   const cx = Math.floor(wx/CH), cz = Math.floor(wz/CH);
   const c = chunks.get(ckey(cx,cz));
   if (!c) return 0;
@@ -1301,7 +1442,7 @@ function saveEdits() {
   }, 800);
 }
 function setBlock(wx, wy, wz, b) {
-  if (wy < 0 || wy >= H) return;
+  if (wy < Y_MIN || wy > Y_MAX) return;
   const cx = Math.floor(wx/CH), cz = Math.floor(wz/CH);
   const c = chunks.get(ckey(cx,cz));
   if (!c) return;
@@ -1309,6 +1450,8 @@ function setBlock(wx, wy, wz, b) {
   const old = c.data[bidx(lx,wy,lz)];
   c.data[bidx(lx,wy,lz)] = b;
   c.lights = null;
+  if (b && wy > (c.maxY===undefined?Y_MIN:c.maxY)) c.maxY = wy;      // en üst kat güncelle
+  else if (!b && c.maxY === wy) c.maxY = undefined;                   // üst blok silindi → yeniden hesapla
   const k = ckey(cx,cz);
   (edits[k] = edits[k] || {})[bidx(lx,wy,lz)] = b;
   saveEdits();
@@ -1412,12 +1555,19 @@ function queueMesh(cx, cz) {
   const k = ckey(cx,cz);
   if (chunks.has(k) && !queued.has(k)) { queued.add(k); meshQueue.push([cx,cz]); }
 }
+function chunkMaxY(c) { // dolu en üst worldY (üstteki hava taranmaz → perf)
+  if (c.maxY !== undefined) return c.maxY;
+  let my = Y_MIN;
+  for (let z=0;z<CH;z++) for (let x=0;x<CH;x++)
+    for (let y=Y_MAX; y>my; y--) if (c.data[bidx(x,y,z)]) { my = y; break; }
+  return c.maxY = my;
+}
 function lightsOf(cx, cz) { // chunk'taki ışık kaynakları (önbellekli)
   const c = chunks.get(ckey(cx,cz));
   if (!c) return [];
   if (c.lights) return c.lights;
-  const out = [], x0 = cx*CH, z0 = cz*CH;
-  for (let y=0;y<H;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
+  const out = [], x0 = cx*CH, z0 = cz*CH, my = chunkMaxY(c);
+  for (let y=Y_MIN;y<=my;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
     const lv = BLOCKS[c.data[bidx(x,y,z)]].light;
     if (lv) out.push([x0+x+0.5, y+0.5, z0+z+0.5, lv]);
   }
@@ -1450,7 +1600,8 @@ function buildMesh(cx, cz) {
     }
     return L;
   }
-  for (let y=0;y<H;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
+  const myTop = chunkMaxY(c);
+  for (let y=Y_MIN;y<=myTop;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
     const b = c.data[bidx(x,y,z)];
     if (!b) continue;
     const def = BLOCKS[b], wx = x0+x, wz = z0+z;
@@ -1729,7 +1880,7 @@ function physics(dt) {
   // adım sesleri
   const hsp2 = Math.hypot(P.vx, P.vz);
   if (P.onGround && hsp2 > 2) { stepT -= dt*hsp2; if (stepT <= 0) { stepT = 1.7; sfx(65+Math.random()*45, 0.05, 'triangle', 0.05); } }
-  if (P.y < -12) { if (isCreative()) { P.y = H; P.vy = 0; } else damagePlayer(100, 'boşluk'); }
+  if (P.y < Y_MIN-6) { if (isCreative()) { P.y = 120; P.vy = 0; } else damagePlayer(100, 'boşluk'); }
 }
 function damagePlayer(d, src) {
   if (isCreative() || P.dead || d <= 0) return;
@@ -1777,11 +1928,11 @@ function respawn() {
   updateHearts(); updateHotbar();
 }
 function safeY(bx, bz) {
-  for (let y=H-1; y>0; y--) if (isSolid(getBlock(bx, y, bz))) return y+1.01;
+  for (let y=Y_MAX; y>Y_MIN; y--) if (isSolid(getBlock(bx, y, bz))) return y+1.01;
   return WATER_Y+2;
 }
 function groundY(bx, bz) { // boyut geçişleri için: hava boşluklu zemin bul, yoksa oda aç
-  for (let y=H-4; y>1; y--)
+  for (let y=Y_MAX-2; y>Y_MIN; y--)
     if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) return y+1.01;
   setBlock(bx, 30, bz, dim==='nether' ? BID.netherrack : dim==='end' ? BID.end_stone : BID.stone);
   setBlock(bx, 31, bz, 0); setBlock(bx, 32, bz, 0);
@@ -1840,7 +1991,28 @@ const MOBS = {
   wither_skeleton:{name:'Wither İskeleti', w:0.35, hgt:2.4, hp:20, sp:1.7, body:'#2a2a2e', head:'#1a1a1e', model:'human', hostile:1, dmg:4, wither:1, drops:[['coal',0,1],['bone',0,1],['wither_skeleton_skull',0,1]]},
   piglin:{name:'Piglin', w:0.35, hgt:1.9, hp:16, sp:1.5, body:'#b8785c', head:'#e0a888', model:'human', neutral:1, dmg:3, drops:[['gold_nugget',1,3]]},
   piglin_brute:{name:'Piglin Zorbası', w:0.38, hgt:2.0, hp:26, sp:1.8, body:'#8a5a3c', head:'#c88860', model:'human', hostile:1, dmg:5, drops:[['gold_ingot',0,1]]},
+  // --- deniz canlıları ---
+  cod:      {name:'Morina', w:0.25, hgt:0.4, hp:3, sp:1.4, body:'#c8a068', head:'#b89058', model:'fish', aquatic:1, drops:[['cod',1,1]]},
+  salmon:   {name:'Somon', w:0.3, hgt:0.4, hp:3, sp:1.4, body:'#c85a4a', head:'#b84a3a', model:'fish', aquatic:1, drops:[['salmon',1,1]]},
+  pufferfish:{name:'Balon Balığı', w:0.3, hgt:0.4, hp:3, sp:1.0, body:'#d8b838', head:'#e8c848', model:'fish', aquatic:1, puff:1, drops:[['pufferfish',1,1]]},
+  tropical_fish:{name:'Tropik Balık', w:0.22, hgt:0.35, hp:3, sp:1.5, body:'#e87838', head:'#f0c040', model:'fish', aquatic:1, drops:[['tropical_fish',1,1]]},
+  squid:    {name:'Mürekkep Balığı', w:0.4, hgt:0.7, hp:10, sp:1.2, body:'#3a4a8a', head:'#4a5a9a', model:'squid', aquatic:1, drops:[['ink_sac',1,3]]},
+  glow_squid:{name:'Parlak Mürekkep', w:0.4, hgt:0.7, hp:10, sp:1.2, body:'#2a8a9a', head:'#3aaaba', eye:'#a0f0ff', model:'squid', aquatic:1, light:0.4, drops:[['glow_ink_sac',1,3]]},
+  dolphin:  {name:'Yunus', w:0.45, hgt:0.6, hp:10, sp:2.6, body:'#8aa0b8', head:'#9ab0c8', model:'fish', aquatic:1, neutral:1, dmg:3, drops:[]},
+  turtle:   {name:'Deniz Kaplumbağası', w:0.5, hgt:0.5, hp:30, sp:0.7, body:'#5a9a4a', head:'#8ab86a', model:'quad', amphibious:1, drops:[['seagrass',1,2]]},
+  guardian: {name:'Muhafız', w:0.5, hgt:0.85, hp:30, sp:1.6, body:'#6a9a8a', head:'#8ababa', eye:'#e85838', model:'guardian', aquatic:1, hostile:1, ranged:'laser', drops:[['prismarine_shard',1,2]]},
+  drowned:  {name:'Boğulmuş', w:0.3, hgt:1.9, hp:20, sp:1.4, body:'#3a6a6a', head:'#2a5a5a', model:'human', aquatic:1, amphibious:1, hostile:1, dmg:3, drops:[['rotten_flesh',0,2]]},
 };
+for (const [id,nm,c,food] of [['cod','Çiğ Morina','#c8a068',2],['salmon','Çiğ Somon','#c85a4a',2],
+  ['cooked_cod','Pişmiş Morina','#b8945a',5],['cooked_salmon','Pişmiş Somon','#c86a4a',6],
+  ['tropical_fish','Tropik Balık','#e87838',1],['ink_sac','Mürekkep Kesesi','#1a1a24',0],
+  ['glow_ink_sac','Parlak Mürekkep','#3aaaba',0],['prismarine_shard','Prizmarin Kırığı','#7abaaa',0],
+  ['prismarine_crystals','Prizmarin Kristali','#c8e8d8',0],['nautilus_shell','Deniz Kabuğu','#e8dcc8',0],
+  ['heart_of_the_sea','Denizin Kalbi','#4a9a9a',0],['scute','Kaplumbağa Kabuğu Parçası','#6aaa4a',0]])
+  if (!ITEMS[id]) defItem(id, nm, food ? {icon:IC.food(c,null), food} : {icon:IC.raw(c)});
+defRecipe('cooked_cod', 1, [['cod',1]]); // fırında da pişer
+defRecipe('cooked_salmon', 1, [['salmon',1]]);
+SMELTS.push(['cod','cooked_cod'], ['salmon','cooked_salmon']);
 if (!ITEMS.dragon_egg) defItem('dragon_egg','Ejderha Yumurtası',{icon:IC.pearl('#101018'), stack:1});
 defItem('blaze_rod','Alev Çubuğu',{icon:(x,y)=>{ if (Math.abs(x-8)<2 && y>2 && y<14) return (y%3<2?hex('#f8c030'):hex('#e07020')); return null; }});
 defItem('wither_skeleton_skull','Wither İskelet Kafası',{icon:IC.food('#2a2a2e','#0a0a0e'), stack:1});
@@ -1864,12 +2036,29 @@ function trySpawns(dt, light) {
   const hostile = ents.filter(e=>e.def.hostile).length;
   const a = Math.random()*6.28, d = 18 + Math.random()*18;
   const bx = Math.floor(P.x + Math.sin(a)*d), bz = Math.floor(P.z + Math.cos(a)*d);
-  let gy = -1;
-  for (let y=H-4; y>1; y--)
-    if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) { gy = y+1; break; }
-  if (gy < 0) return;
   const pick = (list) => { const r = Math.random(); let acc = 0;
     for (const [t,w] of list) { acc += w; if (r < acc) return t; } return list[0][0]; };
+  // --- okyanus: su sütununda deniz canlısı doğur (zemin gerekmez) ---
+  if (dim === 'overworld') {
+    const bdo = BIOME_DEFS[biomeAt(bx,bz)];
+    if (bdo && bdo.ocean && getBlock(bx, WATER_Y-2, bz) === BID.water) {
+      const passive2 = ents.filter(e=>!e.def.hostile).length;
+      const wy = WATER_Y - 2 - (Math.random()*8|0);
+      if (getBlock(bx,wy,bz) === BID.water && passive2 < 10) {
+        const list = bdo.warm ? [['cod',0.25],['tropical_fish',0.35],['pufferfish',0.15],['dolphin',0.1],['squid',0.15]]
+          : bdo.frozen ? [['cod',0.4],['salmon',0.3],['squid',0.2],['glow_squid',0.1]]
+          : [['cod',0.3],['salmon',0.25],['squid',0.2],['dolphin',0.12],['glow_squid',0.08],['turtle',0.05]];
+        spawnMob(pick(list), bx+0.5, wy, bz+0.5);
+      }
+      if (ents.filter(e=>e.def.hostile).length < 6 && RULES.mobSpawning && !isCreative() && Math.random()<0.3)
+        spawnMob(bdo.deep && Math.random()<0.3 ? 'guardian' : 'drowned', bx+0.5, wy, bz+0.5);
+      return;
+    }
+  }
+  let gy = -1;
+  for (let y=Y_MAX-2; y>Y_MIN; y--)
+    if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) { gy = y+1; break; }
+  if (gy < 0) return;
   if (dim === 'nether') {
     if (hostile < 9 && RULES.mobSpawning && !isCreative())
       spawnMob(pick([['zombie',0.28],['wither_skeleton',0.22],['blaze',0.18],['piglin',0.2],['skeleton',0.12]]), bx+0.5, gy, bz+0.5);
@@ -1909,7 +2098,7 @@ function hurtMob(e, d, kx, kz) {
 function tpMob(e) {
   for (let t=0; t<8; t++) {
     const bx = Math.floor(e.x + (Math.random()-0.5)*16), bz = Math.floor(e.z + (Math.random()-0.5)*16);
-    for (let y=H-4; y>1; y--)
+    for (let y=Y_MAX-2; y>Y_MIN; y--)
       if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) {
         emitParts(e.x, e.y+1, e.z, [180,80,220], 10, 2, 0.5);
         e.x = bx+0.5; e.y = y+1.01; e.z = bz+0.5; e.vx=e.vy=e.vz=0;
@@ -1976,6 +2165,14 @@ function updateMobs(dt, light) {
         if (e.fuse >= 0) { e.mSp = 0; e.fuse -= dt;
           if (dist > 5) e.fuse = -1;
           else if (e.fuse <= 0) { explosion(e.x, e.y+0.8, e.z, 2.6); ents.splice(i,1); continue; } }
+      } else if (e.def.ranged === 'laser') { // muhafız lazeri (anlık ışın)
+        if (dist < 6) e.mSp = 0;
+        if (dist < 12 && e.atkT <= 0) {
+          e.atkT = 3; e.charging = 1.4;
+        }
+        if (e.charging > 0) { e.charging -= dt; e.mSp = 0;
+          if (Math.random()<dt*10) emitParts(e.x+(P.x-e.x)*Math.random(), e.y+0.5+(P.y+1-e.y)*Math.random(), e.z+(P.z-e.z)*Math.random(), [232,88,56], 1, 0.3, 0.3);
+          if (e.charging <= 0 && dist < 13) { damagePlayer(4, 'Muhafız'); sfx(700,0.2,'sawtooth',0.1,300); } }
       } else if (e.def.ranged) { // iskelet ok / blaze ateş topu atar
         if (dist < 10) e.mSp = 0;
         if (dist < 16 && e.atkT <= 0) {
@@ -2002,6 +2199,28 @@ function updateMobs(dt, light) {
     const sp = e.mSp;
     e.vx += (Math.sin(e.yaw)*sp - e.vx) * Math.min(1, dt*6);
     e.vz += (-Math.cos(e.yaw)*sp - e.vz) * Math.min(1, dt*6);
+    if (e.def.aquatic) { // deniz canlısı: suda 3B yüzer, karada çırpınır
+      const headW = getBlock(Math.floor(e.x), Math.floor(e.y+e.hgt*0.5), Math.floor(e.z)) === BID.water;
+      if (headW) {
+        // yüzey altında kal, wander/hedef yönünde süz
+        e.swimT = (e.swimT||0) - dt;
+        if (e.swimT <= 0) { e.swimT = 1.5+Math.random()*2; e.swimVy = (Math.random()-0.5)*1.5; }
+        e.vy += (e.swimVy - e.vy) * Math.min(1,dt*3);
+        if (getBlock(Math.floor(e.x), Math.floor(e.y-0.3), Math.floor(e.z)) !== BID.water) e.vy = Math.abs(e.vy)+0.5; // dipten kaç
+        if (getBlock(Math.floor(e.x), Math.floor(e.y+e.hgt+0.3), Math.floor(e.z)) !== BID.water) e.vy = -Math.abs(e.vy)-0.3; // yüzeyden dal
+        e.x += e.vx*dt; e.y += e.vy*dt; e.z += e.vz*dt;
+        if (e.def.model==='squid' && Math.random()<dt*0.5) emitParts(e.x,e.y,e.z,hex(e.def.body),2,0.5,0.5);
+        continue;
+      } else if (!e.def.amphibious) { // karada: çırpın + boğul
+        e.vy -= 26*dt; e.vx*=0.8; e.vz*=0.8;
+        if (Math.random()<dt*3) e.vy = 3; // zıplama çırpınması
+        e.hurtT = 0.2;
+        e.suffocate = (e.suffocate||0) + dt;
+        if (e.suffocate > 15) { ents.splice(i,1); continue; }
+        moveEnt(e, dt);
+        continue;
+      }
+    }
     if (e.def.flying) { // blaze: havada süzülür, oyuncu yüksekliğine yaklaşır
       const targetY = P.y + 1.5;
       e.vy += ((targetY - e.y) * 1.5 - e.vy) * Math.min(1, dt*3);
@@ -2069,7 +2288,7 @@ function updateMobs(dt, light) {
     for (const [k,c] of chunks) {
       if (c.vsp && !c.vspDone) {
         const [ccx] = k.split(',').map(Number);
-        if (Math.abs(ccx*CH - P.x) < 64) { c.vspDone = true; for (const [vx2,vy2,vz2] of c.vsp) spawnMob('villager', vx2, vy2, vz2); }
+        if (Math.abs(ccx*CH - P.x) < 64) { c.vspDone = true; for (const [vx2,vy2,vz2,vt] of c.vsp) spawnMob(vt || 'villager', vx2, vy2, vz2); }
       }
       if (c.netMobs && !c.netMobsDone) { // Nether kalesi/bastion sakinleri
         const [ncx] = k.split(',').map(Number);
@@ -2336,6 +2555,23 @@ function drawEnts(proj, view, now) {
       still(0, 0, 0, w*1.2, hh*squash, w*1.2, bc);
       still(0, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
       still(0.18, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
+    } else if (def.model === 'fish') {
+      const wig = Math.sin(now/90)*0.15;
+      still(0, hh*0.5, 0, hh*1.6, hh*0.9, hh*0.7, bc);          // gövde
+      still(wig, hh*0.5, hh*0.9, hh*0.5, hh*0.6, 0.05, lc);     // kuyruk yüzgeci
+      eyes(hh*0.6, -hh*0.35, hh*1.2);
+      if (def.puff && e.hurtT>0) still(0, hh*0.5, 0, hh*2.2, hh*1.4, hh*1.2, bc); // balon
+    } else if (def.model === 'squid') {
+      still(0, hh*0.5, 0, hh*0.9, hh*0.7, hh*0.9, bc);          // kafa/gövde
+      const sw2 = Math.sin(now/150)*0.2;
+      for (let k=0;k<6;k++){ const a2=k*Math.PI/3;
+        still(Math.cos(a2)*hh*0.3, hh*0.1+sw2, Math.sin(a2)*hh*0.3, 0.08, hh*0.5, 0.08, lc); } // kollar
+      eyes(hh*0.6, -hh*0.45, hh*0.9);
+    } else if (def.model === 'guardian') {
+      still(0, hh*0.5, 0, hh*1.1, hh*0.9, hh*1.1, bc);          // gövde
+      const flare = e.charging>0 ? 1.3 : 1;
+      still(0, hh*0.55, -hh*0.5, hh*0.4*flare, hh*0.4*flare, 0.06, ec); // tek büyük göz
+      for (let k=0;k<4;k++){ const a2=k*Math.PI/2; still(Math.cos(a2)*hh*0.55, hh*0.5, Math.sin(a2)*hh*0.55, 0.1, hh*0.7, 0.1, lc); } // dikenler
     } else if (def.model === 'blaze') {
       still(0, hh*0.35, 0, 0.5, 0.5, 0.5, hc);           // merkez çekirdek
       eyes(hh*0.5, -0.26, 0.5);
@@ -3394,7 +3630,7 @@ function runCmd(line) {
     const co = (i, cur) => a[i]==='~' ? cur : parseFloat(a[i]);
     const x = co(0,P.x), y = co(1,P.y), z = co(2,P.z);
     if ([x,y,z].some(isNaN)) return chatMsg('Kullanım: /tp <x> <y> <z>');
-    P.x=x; P.y=clamp(y,1,H); P.z=z; P.vx=P.vy=P.vz=0; P.fallD=0;
+    P.x=x; P.y=clamp(y,Y_MIN,Y_MAX); P.z=z; P.vx=P.vy=P.vz=0; P.fallD=0;
     ensureChunksNow(P.x, P.z, 1); ensureChunks();
     chatMsg(`✔ Işınlandın: ${x|0} ${y|0} ${z|0}`);
   } else if (cmd === 'gamerule') {
