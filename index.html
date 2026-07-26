@@ -209,6 +209,8 @@
   </select>
   <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
   <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
+  <label>Otomatik optimizasyon (FPS düşünce görüşü azalt)</label>
+  <select id="autooptsel"><option value="0" selected>Kapalı — ayarlar sabit kalır</option><option value="1">Açık</option></select>
   <label>Ses</label>
   <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
   <label>Ses seviyesi: <span id="vollabel">100</span>%</label>
@@ -4259,10 +4261,12 @@ $('menubtn').addEventListener('pointerdown', (e) => {
   e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
-let shaderOn = true;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn, vol:sndVol })); } catch(e) {} }
+let shaderOn = true, autoOpt = false;
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt })); } catch(e) {} }
 $('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; saveOpts();
-  if (RDIST >= 8) toast('⚠️ '+RDIST+' chunk zayıf cihazlarda yavaşlatabilir — FPS düşerse otomatik azaltılır'); });
+  if (RDIST >= 8) toast('⚠️ '+RDIST+' chunk zayıf cihazlarda yavaşlatabilir'); });
+$('autooptsel').addEventListener('change', (e) => { autoOpt = e.target.value === '1'; lowFpsT = 0; saveOpts();
+  toast(autoOpt ? '⚡ Otomatik optimizasyon açık' : '🔒 Ayarlar sabit kalacak'); });
 $('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
 $('shadersel').addEventListener('change', (e) => { shaderOn = e.target.value === '1'; saveOpts(); });
 $('volslider').addEventListener('input', (e) => { sndVol = e.target.value/100; $('vollabel').textContent = e.target.value; saveOpts(); });
@@ -4309,6 +4313,7 @@ $('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui')
     if (o.shader !== undefined) { shaderOn = !!o.shader; $('shadersel').value = o.shader ? '1' : '0'; }
     if (o.snd !== undefined) { sndOn = !!o.snd; $('sndsel').value = o.snd ? '1' : '0'; }
     if (o.vol !== undefined) { sndVol = o.vol; $('volslider').value = Math.round(o.vol*100); $('vollabel').textContent = Math.round(o.vol*100); }
+    if (o.auto !== undefined) { autoOpt = !!o.auto; $('autooptsel').value = o.auto ? '1' : '0'; }
   } catch(e) {}
   uiApply();
 })();
@@ -4439,11 +4444,13 @@ function frame(now) {
   const sdt = tickFrozen ? 0 : dt * tickScale; // /tick oyun hızı
   fpsN++; fpsT += dt;
   if (fpsT >= 0.5) { fps = Math.round(fpsN/fpsT); fpsN = 0; fpsT = 0; }
-  // otomatik optimizasyon: FPS uzun süre düşükse görüş mesafesini azalt
-  if (fps > 0 && fps < 15 && RDIST > 3) { lowFpsT += dt; } else lowFpsT = Math.max(0, lowFpsT - dt);
-  if (lowFpsT > 8) {
-    lowFpsT = 0; RDIST--; $('rdist').value = RDIST in {2:1,3:1,4:1,5:1,6:1,8:1,10:1} ? RDIST : 6; saveOpts();
-    toast('⚡ FPS düşük: görüş mesafesi ' + RDIST + ' chunk\'a indirildi');
+  // otomatik optimizasyon (varsayılan KAPALI): ayarlardan açılırsa FPS düşünce görüşü azaltır
+  if (autoOpt) {
+    if (fps > 0 && fps < 15 && RDIST > 2) { lowFpsT += dt; } else lowFpsT = Math.max(0, lowFpsT - dt);
+    if (lowFpsT > 8) {
+      lowFpsT = 0; RDIST--; $('rdist').value = RDIST in {2:1,3:1,4:1,5:1,6:1,8:1,10:1} ? RDIST : 6; saveOpts();
+      toast('⚡ FPS düşük: görüş mesafesi ' + RDIST + ' chunk\'a indirildi');
+    }
   }
   const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
   boundaryT++;
