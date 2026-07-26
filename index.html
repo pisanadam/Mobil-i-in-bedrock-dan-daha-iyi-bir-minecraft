@@ -212,6 +212,12 @@
     <option value="20">20 — Efsanevi</option>
     <option value="24">24 — 🔥 DEHŞET ULTRA (çok güçlü cihaz, bol RAM!)</option>
   </select>
+  <label>Görüş açısı (FOV): <span id="fovlabel">70</span>°</label>
+  <input id="fovslider" type="range" min="50" max="110" value="70" style="width:100%">
+  <label>Görüş efektleri (yürüme sallanması, koşu/su FOV, bulantı)</label>
+  <select id="veffsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
+  <label>Hasar eğimi (vurulunca kamera yalpalar)</label>
+  <select id="tiltsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
   <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
   <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
   <label>Otomatik optimizasyon (FPS düşünce görüşü azalt)</label>
@@ -1907,6 +1913,7 @@ function damagePlayer(d, src) {
   P.hp -= d;
   $('hurtoverlay').style.display = 'block';
   setTimeout(()=>$('hurtoverlay').style.display='none', 180);
+  tiltT = 0.4; tiltDir = -tiltDir; // hasar eğimi tetikle
   sfx(120, 0.15, 'sawtooth');
   if (P.hp <= 0) {
     if (offhand && ITEMS[offhand.id] && ITEMS[offhand.id].totem) { // Ölümsüzlük Totemi!
@@ -4267,7 +4274,11 @@ $('menubtn').addEventListener('pointerdown', (e) => {
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
 let shaderOn = true, autoOpt = false, chunkAuto = false, adaptT = 0, adaptFps = 60;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt })); } catch(e) {} }
+let fovDeg = 70, damageTiltOn = true, viewEffects = true, tiltT = 0, tiltDir = 1, bobPhase = 0;
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt, fov:fovDeg, veff:viewEffects, tilt:damageTiltOn })); } catch(e) {} }
+$('fovslider').addEventListener('input', (e) => { fovDeg = +e.target.value; $('fovlabel').textContent = e.target.value; saveOpts(); });
+$('veffsel').addEventListener('change', (e) => { viewEffects = e.target.value === '1'; saveOpts(); });
+$('tiltsel').addEventListener('change', (e) => { damageTiltOn = e.target.value === '1'; saveOpts(); });
 $('rdist').addEventListener('change', (e) => {
   if (e.target.value === 'auto') { chunkAuto = true; RDIST = Math.min(RDIST, 5); adaptT = 0; adaptFps = 60;
     toast('🌡️ Adaptif mod: cihazına göre görüş mesafesini ayarlayacak'); }
@@ -4326,6 +4337,9 @@ $('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui')
     if (o.auto !== undefined) { autoOpt = !!o.auto; $('autooptsel').value = o.auto ? '1' : '0'; }
     if (o.rdist === 'auto') { chunkAuto = true; $('rdist').value = 'auto'; RDIST = Math.min(RDIST||4, 5); }
     else if (o.rdist) { chunkAuto = false; RDIST = o.rdist; $('rdist').value = String(o.rdist); }
+    if (o.fov !== undefined) { fovDeg = o.fov; $('fovslider').value = o.fov; $('fovlabel').textContent = o.fov; }
+    if (o.veff !== undefined) { viewEffects = !!o.veff; $('veffsel').value = o.veff ? '1' : '0'; }
+    if (o.tilt !== undefined) { damageTiltOn = !!o.tilt; $('tiltsel').value = o.tilt ? '1' : '0'; }
   } catch(e) {}
   uiApply();
 })();
@@ -4513,10 +4527,32 @@ function frame(now) {
   gl.clearColor(sky[0], sky[1], sky[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   const asp = canvas.width/canvas.height;
-  const proj = mpersp(1.22, asp, 0.08, 400);
-  let vyaw = P.yaw, vpitch = P.pitch;
-  if (hasEff('nausea')) { vyaw += Math.sin(now/300)*0.06*effLvl('nausea'); vpitch += Math.sin(now/230)*0.04*effLvl('nausea'); }
-  const view = mmul(mrotX(vpitch), mmul(mrotY(vyaw), mtrans(-P.x, -(P.y+P.eye), -P.z)));
+  // görüş açısı (FOV) + koşu/su efekti (görüş efektleri açıksa)
+  let fovRad = fovDeg * Math.PI/180;
+  if (viewEffects) {
+    const spd = Math.hypot(P.vx, P.vz);
+    fovRad *= (1 + (spd > 5 ? 0.06 : 0) + (P.inWater ? -0.04 : 0)); // koşuda hafif genişle
+  }
+  const proj = mpersp(fovRad, asp, 0.08, 400);
+  let vyaw = P.yaw, vpitch = P.pitch, vroll = 0, veyeBob = 0;
+  if (viewEffects) {
+    // yürüme sallanması (view bobbing)
+    const spd2 = Math.hypot(P.vx, P.vz);
+    if (P.onGround && spd2 > 1.5) {
+      bobPhase += dt * spd2 * 1.4;
+      vroll += Math.sin(bobPhase) * 0.012 * Math.min(1, spd2/4);
+      veyeBob += Math.abs(Math.sin(bobPhase)) * 0.035 * Math.min(1, spd2/4);
+    }
+    if (hasEff('nausea')) { vyaw += Math.sin(now/300)*0.06*effLvl('nausea'); vpitch += Math.sin(now/230)*0.04*effLvl('nausea'); }
+  }
+  // hasar eğimi (damage tilt) — vurulunca kamera yalpalar
+  if (damageTiltOn && tiltT > 0) {
+    tiltT -= dt;
+    const k = tiltT / 0.4;
+    vroll += tiltDir * 0.16 * k;
+    vpitch += 0.06 * k;
+  }
+  const view = mmul(mrotZ(vroll), mmul(mrotX(vpitch), mmul(mrotY(vyaw), mtrans(-P.x, -(P.y+P.eye+veyeBob), -P.z))));
   const mvp = mmul(proj, view);
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
