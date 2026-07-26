@@ -702,6 +702,7 @@ defRecipe('glass_bottle', 3, [['glass',3]]);
 defRecipe('water_bottle', 1, [['glass_bottle',1]]);
 defRecipe('brewing_stand', 1, [['blaze_powder',1],['cobblestone',3]], 1);
 defRecipe('blaze_powder', 2, [['magma_cream',1]]);
+defRecipe('blaze_powder', 2, [['blaze_rod',1]]);
 defRecipe('glistering_melon', 1, [['melon_slice',1],['gold_nugget',1]]);
 defRecipe('awkward_potion', 1, [['water_bottle',1],['nether_wart',1]], 1);
 defRecipe('minecart', 1, [['iron_ingot',5]], 1);
@@ -983,9 +984,89 @@ function genNether(cx, cz) {
         data[i] = BID.glowstone;
     }
   }
+  const nst = genNetherStructures(data, cx, cz);
   const e = edits[ckey(cx,cz)];
   if (e) for (const i in e) data[i] = e[i];
-  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
+  return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false, spawners:nst.spawners, netMobs:nst.netMobs };
+}
+function fortressAt(frx, frz) {
+  if (hash2(frx*811+3, frz*277+7) >= 0.6) return null;
+  return { x: frx*448 + 80 + ((hash2(frx*7,frz*3)*280)|0),
+           z: frz*448 + 80 + ((hash2(frx*11,frz*5)*280)|0),
+           y: 30 + ((hash2(frx,frz)*8)|0) };
+}
+function bastionAt(brx, brz) {
+  if (hash2(brx*929+13, brz*641+2) >= 0.4) return null;
+  return { x: brx*544 + 120 + ((hash2(brx*3,brz*7)*300)|0),
+           z: brz*544 + 120 + ((hash2(brx*13,brz*17)*300)|0),
+           y: 34 + ((hash2(brx,brz)*6)|0) };
+}
+function nearestNetherStruct() {
+  const out = {};
+  for (let dx=-1; dx<=1; dx++) for (let dz=-1; dz<=1; dz++) {
+    const f = fortressAt(Math.floor(P.x/448)+dx, Math.floor(P.z/448)+dz);
+    if (f && (!out.fortress || Math.hypot(f.x-P.x,f.z-P.z) < Math.hypot(out.fortress.x-P.x,out.fortress.z-P.z))) out.fortress = f;
+    const b = bastionAt(Math.floor(P.x/544)+dx, Math.floor(P.z/544)+dz);
+    if (b && (!out.bastion || Math.hypot(b.x-P.x,b.z-P.z) < Math.hypot(out.bastion.x-P.x,out.bastion.z-P.z))) out.bastion = b;
+  }
+  return out;
+}
+function genNetherStructures(data, cx, cz) {
+  const x0 = cx*CH, z0 = cz*CH;
+  const spawners = [], netMobs = [];
+  const pb = (wx,wy,wz,b) => { if (wx>=x0&&wx<x0+CH&&wz>=z0&&wz<z0+CH&&wy>0&&wy<H) { data[bidx(wx-x0,wy,wz-z0)]=b; if (b===BID.spawner) spawners.push([wx,wy,wz]); } };
+  const box = (x1,y1,z1,x2,y2,z2,b,hollow) => {
+    for (let x=Math.max(x1,x0); x<=Math.min(x2,x0+CH-1); x++)
+      for (let z=Math.max(z1,z0); z<=Math.min(z2,z0+CH-1); z++)
+        for (let y=Math.max(1,y1); y<=Math.min(H-2,y2); y++)
+          pb(x,y,z, hollow && x>x1&&x<x2&&y>y1&&y<y2&&z>z1&&z<z2 ? 0 : b);
+  };
+  // --- NETHER KALESİ (nether tuğlası köprü/koridorlar + blaze kafesi) ---
+  const frx = Math.floor((x0)/448), frz = Math.floor((z0)/448);
+  for (const [rfx, rfz] of [[frx,frz],[frx+1,frz],[frx,frz+1],[frx+1,frz+1],[frx-1,frz],[frx,frz-1]]) {
+    const F = fortressAt(rfx, rfz);
+    if (!F) continue;
+    const fx = F.x, fz = F.z, fy = F.y;
+    if (Math.abs(fx-x0) < 90 && Math.abs(fz-z0) < 90) {
+      // ana köprü (uzun koridor)
+      box(fx-40, fy, fz-2, fx+40, fy+5, fz+2, BID.nether_bricks, true);
+      box(fx-2, fy, fz-40, fx+2, fy+5, fz+40, BID.nether_bricks, true);
+      // parmaklık üstü
+      for (let x=fx-40; x<=fx+40; x+=1) if (x%2===0) { pb(x,fy+4,fz-2,BID.nether_bricks); pb(x,fy+4,fz+2,BID.nether_bricks); }
+      // blaze kafes odası (kesişimde)
+      box(fx-4, fy, fz-4, fx+4, fy+6, fz+4, BID.nether_bricks, true);
+      pb(fx, fy+1, fz, BID.spawner); netMobs.push([fx+1.5, fy+1, fz, 'blaze']); netMobs.push([fx-1.5, fy+1, fz, 'wither_skeleton']);
+      // nether siğili bahçesi + sandık
+      for (const [ox2,oz2] of [[6,0],[-6,0],[0,6],[0,-6]]) { pb(fx+ox2, fy+1, fz+oz2, BID.soul_sand); pb(fx+ox2, fy+2, fz+oz2, BID.crimson_wart_block||BID.netherrack); }
+      pb(fx+3, fy+1, fz+3, BID.chest);
+      pb(fx, fy+5, fz, BID.glowstone);
+      // koridor tavan boşlukları
+      for (let o=-1;o<=1;o++){ pb(fx+4,fy+1,fz+o,0); pb(fx+4,fy+2,fz+o,0); pb(fx-4,fy+1,fz+o,0); pb(fx-4,fy+2,fz+o,0); }
+    }
+  }
+  // --- BASTION KALINTISI (kara taş dev yapı + piglinler + altın ganimet) ---
+  const brx = Math.floor((x0)/544), brz = Math.floor((z0)/544);
+  for (const [rbx, rbz] of [[brx,brz],[brx+1,brz],[brx,brz+1],[brx+1,brz+1],[brx-1,brz],[brx,brz-1]]) {
+    const B = bastionAt(rbx, rbz);
+    if (!B) continue;
+    const bx = B.x, bz = B.z, by = B.y;
+    if (Math.abs(bx-x0) < 80 && Math.abs(bz-z0) < 80) {
+      box(bx-10, by-2, bz-10, bx+10, by+12, bz+10, BID.blackstone, true);   // dev kule
+      box(bx-8, by, bz-8, bx+8, by+3, bz+8, 0, false);                       // iç zemin boşluğu
+      box(bx-8, by, bz-8, bx+8, by, bz+8, BID.blackstone, false);            // taban
+      // altın ganimet blokları + sandık
+      pb(bx, by+1, bz, BID.gold_block); pb(bx+2, by+1, bz+2, BID.gold_block);
+      pb(bx-2, by+1, bz-2, BID.chest);
+      // köşe kuleleri
+      for (const [sx,sz] of [[-9,-9],[9,-9],[-9,9],[9,9]]) box(bx+sx-1, by, bz+sz-1, bx+sx+1, by+9, bz+sz+1, BID.blackstone, false);
+      // piglinler + zorbası
+      netMobs.push([bx+0.5, by+1, bz+3, 'piglin']); netMobs.push([bx-3, by+1, bz+0.5, 'piglin']); netMobs.push([bx+3, by+1, bz-3, 'piglin_brute']);
+      // kapı boşlukları
+      for (let o=-1;o<=1;o++){ pb(bx+o,by+1,bz-10,0); pb(bx+o,by+2,bz-10,0); }
+      pb(bx, by+11, bz, BID.glowstone);
+    }
+  }
+  return { spawners, netMobs };
 }
 function genEnd(cx, cz) {
   const data = new Uint8Array(CH*H*CH);
@@ -1754,8 +1835,16 @@ const MOBS = {
   slime:  {name:'Balçık', w:0.5, hgt:1.0, hp:8, sp:1.3, body:'#6ac05a', head:'#6ac05a', model:'slime', hostile:1, dmg:2, drops:[['slimeball',1,2]]},
   creeper:{name:'Creeper', w:0.3, hgt:1.7, hp:20, sp:1.6, body:'#5dae52', head:'#4d9a44', model:'creeper', hostile:1, boom:1, drops:[['gunpowder',0,2]]},
   ender_dragon:{name:'Ender Ejderhası', w:2.2, hgt:2.2, hp:100, sp:6, body:'#181822', head:'#26243a', eye:'#c060f0', model:'dragon', boss:1, flying:1, hostile:1, dmg:6, drops:[['dragon_egg',1,1]]},
+  // --- Nether canlıları ---
+  blaze:{name:'Alev', w:0.3, hgt:1.6, hp:20, sp:1.1, body:'#f8a020', head:'#f8d838', eye:'#ffffff', model:'blaze', flying:1, hostile:1, ranged:'fire', light:0.6, drops:[['blaze_rod',0,1]]},
+  wither_skeleton:{name:'Wither İskeleti', w:0.35, hgt:2.4, hp:20, sp:1.7, body:'#2a2a2e', head:'#1a1a1e', model:'human', hostile:1, dmg:4, wither:1, drops:[['coal',0,1],['bone',0,1],['wither_skeleton_skull',0,1]]},
+  piglin:{name:'Piglin', w:0.35, hgt:1.9, hp:16, sp:1.5, body:'#b8785c', head:'#e0a888', model:'human', neutral:1, dmg:3, drops:[['gold_nugget',1,3]]},
+  piglin_brute:{name:'Piglin Zorbası', w:0.38, hgt:2.0, hp:26, sp:1.8, body:'#8a5a3c', head:'#c88860', model:'human', hostile:1, dmg:5, drops:[['gold_ingot',0,1]]},
 };
 if (!ITEMS.dragon_egg) defItem('dragon_egg','Ejderha Yumurtası',{icon:IC.pearl('#101018'), stack:1});
+defItem('blaze_rod','Alev Çubuğu',{icon:(x,y)=>{ if (Math.abs(x-8)<2 && y>2 && y<14) return (y%3<2?hex('#f8c030'):hex('#e07020')); return null; }});
+defItem('wither_skeleton_skull','Wither İskelet Kafası',{icon:IC.food('#2a2a2e','#0a0a0e'), stack:1});
+defItem('nether_star','Nether Yıldızı',{icon:IC.gem('#f0f0e0'), stack:1});
 let ents = [], mobUid = 1;
 function spawnMob(type, x, y, z) {
   const def = MOBS[type];
@@ -1782,8 +1871,8 @@ function trySpawns(dt, light) {
   const pick = (list) => { const r = Math.random(); let acc = 0;
     for (const [t,w] of list) { acc += w; if (r < acc) return t; } return list[0][0]; };
   if (dim === 'nether') {
-    if (hostile < 8 && RULES.mobSpawning && !isCreative())
-      spawnMob(pick([['zombie',0.5],['skeleton',0.3],['creeper',0.2]]), bx+0.5, gy, bz+0.5);
+    if (hostile < 9 && RULES.mobSpawning && !isCreative())
+      spawnMob(pick([['zombie',0.28],['wither_skeleton',0.22],['blaze',0.18],['piglin',0.2],['skeleton',0.12]]), bx+0.5, gy, bz+0.5);
     return;
   }
   if (gy < WATER_Y) return;
@@ -1887,15 +1976,23 @@ function updateMobs(dt, light) {
         if (e.fuse >= 0) { e.mSp = 0; e.fuse -= dt;
           if (dist > 5) e.fuse = -1;
           else if (e.fuse <= 0) { explosion(e.x, e.y+0.8, e.z, 2.6); ents.splice(i,1); continue; } }
-      } else if (e.def.ranged) { // iskelet: ok atar
+      } else if (e.def.ranged) { // iskelet ok / blaze ateş topu atar
         if (dist < 10) e.mSp = 0;
-        if (dist < 15 && e.atkT <= 0) {
-          e.atkT = 2;
+        if (dist < 16 && e.atkT <= 0) {
+          e.atkT = e.def.ranged==='fire' ? 2.2 : 2;
           const ay = P.y+1.2 - (e.y+1.4), al = Math.max(1, dist);
-          arrows.push({ x:e.x, y:e.y+1.4, z:e.z, vx:dx/al*14, vy:ay/al*14 + al*0.35, vz:dz/al*14, t:4 });
-          sfx(400, 0.1, 'square', 0.08, 900);
+          if (e.def.ranged === 'fire') {
+            arrows.push({ x:e.x, y:e.y+1.4, z:e.z, vx:dx/al*11, vy:(ay/al)*11, vz:dz/al*11, t:3, type:'fire' });
+            sfx(300, 0.2, 'sawtooth', 0.09, 80);
+          } else {
+            arrows.push({ x:e.x, y:e.y+1.4, z:e.z, vx:dx/al*14, vy:ay/al*14 + al*0.35, vz:dz/al*14, t:4 });
+            sfx(400, 0.1, 'square', 0.08, 900);
+          }
         }
-      } else if (dist < 1.5 && e.atkT <= 0) { damagePlayer(e.def.dmg, e.def.name); e.atkT = 1; }
+      } else if (dist < 1.6 && e.atkT <= 0) {
+        damagePlayer(e.def.dmg, e.def.name); e.atkT = 1;
+        if (e.def.wither) addEffect('wither', 8, 1); // wither iskeleti soldurma bulaştırır
+      }
     } else {
       e.wanderT -= dt;
       if (e.wanderT <= 0) { e.wanderT = 2+Math.random()*3;
@@ -1905,6 +2002,14 @@ function updateMobs(dt, light) {
     const sp = e.mSp;
     e.vx += (Math.sin(e.yaw)*sp - e.vx) * Math.min(1, dt*6);
     e.vz += (-Math.cos(e.yaw)*sp - e.vz) * Math.min(1, dt*6);
+    if (e.def.flying) { // blaze: havada süzülür, oyuncu yüksekliğine yaklaşır
+      const targetY = P.y + 1.5;
+      e.vy += ((targetY - e.y) * 1.5 - e.vy) * Math.min(1, dt*3);
+      e.vy = Math.max(-3, Math.min(3, e.vy));
+      if (Math.random() < dt*6) emitParts(e.x+(Math.random()-0.5), e.y+Math.random(), e.z+(Math.random()-0.5), [240,150,40], 1, 0.5, 0.4);
+      e.x += e.vx*dt; e.y += e.vy*dt; e.z += e.vz*dt;
+      continue;
+    }
     const inW = getBlock(Math.floor(e.x), Math.floor(e.y+0.3), Math.floor(e.z)) === BID.water;
     if (inW) e.vy = Math.min(e.vy + 14*dt, 2);
     else e.vy -= 26*dt;
@@ -1966,11 +2071,17 @@ function updateMobs(dt, light) {
         const [ccx] = k.split(',').map(Number);
         if (Math.abs(ccx*CH - P.x) < 64) { c.vspDone = true; for (const [vx2,vy2,vz2] of c.vsp) spawnMob('villager', vx2, vy2, vz2); }
       }
+      if (c.netMobs && !c.netMobsDone) { // Nether kalesi/bastion sakinleri
+        const [ncx] = k.split(',').map(Number);
+        if (Math.abs(ncx*CH - P.x) < 56) { c.netMobsDone = true;
+          for (const [mx2,my2,mz2,mt] of c.netMobs) spawnMob(mt, mx2, my2, mz2); }
+      }
       if (c.spawners && RULES.mobSpawning && !isCreative()) {
         for (const [sx2,sy2,sz2] of c.spawners) {
           if (Math.hypot(sx2-P.x, sz2-P.z) < 14 && getBlock(sx2,sy2,sz2) === BID.spawner &&
-              ents.filter(e=>e.def.hostile).length < 8 && Math.random() < 0.35) {
-            const m = spawnMob('zombie', sx2+1.5, sy2, sz2+1.5);
+              ents.filter(e=>e.def.hostile).length < 10 && Math.random() < 0.35) {
+            const mt = dim==='nether' ? (Math.random()<0.6?'blaze':'wither_skeleton') : 'zombie';
+            const m = spawnMob(mt, sx2+1.5, sy2, sz2+1.5);
             if (m) emitParts(sx2+0.5, sy2+0.5, sz2+0.5, [230,120,30], 6, 2, 0.4);
           }
         }
@@ -2225,6 +2336,14 @@ function drawEnts(proj, view, now) {
       still(0, 0, 0, w*1.2, hh*squash, w*1.2, bc);
       still(0, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
       still(0.18, hh*squash*0.55, -w*0.6, 0.1, 0.1, 0.02, ec);
+    } else if (def.model === 'blaze') {
+      still(0, hh*0.35, 0, 0.5, 0.5, 0.5, hc);           // merkez çekirdek
+      eyes(hh*0.5, -0.26, 0.5);
+      const spin = now/120;
+      for (let k=0; k<8; k++) { // dönen alev çubukları
+        const ang = spin + k*Math.PI/4, rr = 0.4;
+        still(Math.cos(ang)*rr, hh*0.15 + (k%2)*0.4, Math.sin(ang)*rr, 0.1, 0.5, 0.1, bc);
+      }
     } else if (def.model === 'dragon') {
       const flap = Math.sin(now/180)*0.5;
       still(0, 0, 0, 1.4, 1.0, 2.6, bc);                       // gövde
@@ -4191,7 +4310,7 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   vehicles:()=>vehicles, spawnVehicle, rideVehicle, redstoneUpdate, toggleLever,
   drinkTest:(id)=>{ const it=ITEMS[id]; inv[hotSel]={id,n:1}; drinkPotion(inv[hotSel], it); },
   POTIONS, POWEROn:()=>poweredRailOn, riding:()=>P.riding,
-  ver:'7.0' };
+  nearestNetherStruct, ver:'8.0' };
 </script>
 </body>
 </html>

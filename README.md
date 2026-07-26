@@ -100,6 +100,14 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### 🐉 Ender Ejderhası
 - End boyutuna girince **boss savaşı**: ada merkezinde uçan, dalış saldırıları yapan kanatlı ejderha, üstte **boss sağlık çubuğu**, ölünce patlama + Ejderha Yumurtası ganimeti. `/summon ender_dragon` ile de çağrılır
 
+### 🔥 Nether içeriği
+- 🏰 **Nether Kalesi**: nether tuğlasından köprü/koridorlar, kesişimde **blaze kafesi** (blaze + wither iskeleti doğurur), siğil bahçesi ve ganimet sandığı
+- 🖤 **Bastion Kalıntısı**: kara taştan dev yapı, köşe kuleleri, **altın ganimet blokları** ve **piglinler** (piglin + piglin zorbası)
+- 🔥 **Blaze**: havada süzülür, ateş topu atar, alev çubuğu düşürür (→ alev tozu → demleme)
+- 💀 **Wither İskeleti**: uzun kara iskelet, vurunca **Soldurma** efekti bulaştırır, kafatası düşürür
+- 🐷 **Piglin** (nötr, altın düşürür) ve **Piglin Zorbası** (saldırgan)
+- Bu canlılar hem yapılarda hem Nether'de rastgele doğar; `/summon blaze|wither_skeleton|piglin` ile de çağrılır
+
 ### 🎮 Çok oyunculu — mob senkronu
 - Artık **canlılar da senkronize**: ev sahibi otoriter (mob yapay zekasını çalıştırır ve durumlarını yayınlar), misafirler aynı mobları görür; misafir bir mob'a vurunca ev sahibine iletilir. Araçlar da senkron
 - **Oda kodu dayanıklılığı**: birden çok ücretsiz sinyal aynası (biri engellenirse diğeri), teklif yeniden yayını; ağ tamamen engelliyse manuel kod yedeği
