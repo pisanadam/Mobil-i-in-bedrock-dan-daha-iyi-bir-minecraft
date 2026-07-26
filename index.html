@@ -199,6 +199,7 @@
   <h3>Ayarlar</h3>
   <label>Görüş mesafesi (chunk)</label>
   <select id="rdist">
+    <option value="auto">🌡️ Otomatik (Adaptif) — cihaza göre ayarlar</option>
     <option value="2">2 — Yakın (hızlı)</option>
     <option value="3" selected>3 — Normal</option>
     <option value="4">4 — Uzak</option>
@@ -206,6 +207,10 @@
     <option value="6">6 — Maksimum</option>
     <option value="8">8 — Uzak+ (güçlü cihaz)</option>
     <option value="10">10 — Ultra (çok güçlü cihaz!)</option>
+    <option value="12">12 — Aşırı</option>
+    <option value="16">16 — Devasa</option>
+    <option value="20">20 — Efsanevi</option>
+    <option value="24">24 — 🔥 DEHŞET ULTRA (çok güçlü cihaz, bol RAM!)</option>
   </select>
   <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
   <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
@@ -4261,10 +4266,15 @@ $('menubtn').addEventListener('pointerdown', (e) => {
   e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 });
 $('closemenu').addEventListener('click', () => menu.style.display = 'none');
-let shaderOn = true, autoOpt = false;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt })); } catch(e) {} }
-$('rdist').addEventListener('change', (e) => { RDIST = +e.target.value; saveOpts();
-  if (RDIST >= 8) toast('⚠️ '+RDIST+' chunk zayıf cihazlarda yavaşlatabilir'); });
+let shaderOn = true, autoOpt = false, chunkAuto = false, adaptT = 0, adaptFps = 60;
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt })); } catch(e) {} }
+$('rdist').addEventListener('change', (e) => {
+  if (e.target.value === 'auto') { chunkAuto = true; RDIST = Math.min(RDIST, 5); adaptT = 0; adaptFps = 60;
+    toast('🌡️ Adaptif mod: cihazına göre görüş mesafesini ayarlayacak'); }
+  else { chunkAuto = false; RDIST = +e.target.value;
+    if (RDIST >= 12) toast('⚠️ '+RDIST+' chunk çok fazla RAM/işlemci ister — cihazın güçlü değilse takılabilir'); }
+  saveOpts();
+});
 $('autooptsel').addEventListener('change', (e) => { autoOpt = e.target.value === '1'; lowFpsT = 0; saveOpts();
   toast(autoOpt ? '⚡ Otomatik optimizasyon açık' : '🔒 Ayarlar sabit kalacak'); });
 $('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
@@ -4314,6 +4324,8 @@ $('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui')
     if (o.snd !== undefined) { sndOn = !!o.snd; $('sndsel').value = o.snd ? '1' : '0'; }
     if (o.vol !== undefined) { sndVol = o.vol; $('volslider').value = Math.round(o.vol*100); $('vollabel').textContent = Math.round(o.vol*100); }
     if (o.auto !== undefined) { autoOpt = !!o.auto; $('autooptsel').value = o.auto ? '1' : '0'; }
+    if (o.rdist === 'auto') { chunkAuto = true; $('rdist').value = 'auto'; RDIST = Math.min(RDIST||4, 5); }
+    else if (o.rdist) { chunkAuto = false; RDIST = o.rdist; $('rdist').value = String(o.rdist); }
   } catch(e) {}
   uiApply();
 })();
@@ -4445,11 +4457,23 @@ function frame(now) {
   fpsN++; fpsT += dt;
   if (fpsT >= 0.5) { fps = Math.round(fpsN/fpsT); fpsN = 0; fpsT = 0; }
   // otomatik optimizasyon (varsayılan KAPALI): ayarlardan açılırsa FPS düşünce görüşü azaltır
-  if (autoOpt) {
+  if (autoOpt && !chunkAuto) {
     if (fps > 0 && fps < 15 && RDIST > 2) { lowFpsT += dt; } else lowFpsT = Math.max(0, lowFpsT - dt);
     if (lowFpsT > 8) {
       lowFpsT = 0; RDIST--; $('rdist').value = RDIST in {2:1,3:1,4:1,5:1,6:1,8:1,10:1} ? RDIST : 6; saveOpts();
       toast('⚡ FPS düşük: görüş mesafesi ' + RDIST + ' chunk\'a indirildi');
+    }
+  }
+  // 🌡️ ADAPTİF chunk modu: performansa/ısınmaya göre görüş mesafesini sürekli ayarla
+  if (chunkAuto && fps > 0) {
+    adaptFps = adaptFps*0.9 + fps*0.1;         // yumuşatılmış FPS
+    adaptT += dt;
+    if (adaptT > 2.5) {
+      adaptT = 0;
+      const busy = genQueue.length > 8 || meshQueue.length > 8; // hâlâ yükleniyor mu
+      if (adaptFps < 26 && RDIST > 2) { RDIST = Math.max(2, RDIST - 2); }        // ısınma/takılma → hızlı geri çek
+      else if (adaptFps >= 52 && RDIST < 24 && !busy) { RDIST++; }               // serin/akıcı → kademeli aç
+      else if (adaptFps < 40 && RDIST > 3) { RDIST--; }                          // hafif zorlanma → azalt
     }
   }
   const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
@@ -4535,7 +4559,8 @@ function frame(now) {
   waterOv.style.background = hb === BID.lava ? 'rgba(220,80,10,.5)' : 'rgba(20,60,160,.3)';
   if (!handEl.classList.contains('swing'))
     handEl.style.bottom = (-6 + Math.sin(now/210)*(Math.hypot(P.vx,P.vz)>1.5?4:1)) + 'px';
-  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0)+'  '+
+  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0)+
+    '  '+(chunkAuto?'🌡️'+RDIST:'👁'+RDIST)+'ch  '+
     (isCreative()?'Yaratıcı':'Hayatta Kalma')+(dim!=='overworld'?(dim==='nether'?'  🔥Nether':'  🌌End'):'');
 }
 requestAnimationFrame(frame);
