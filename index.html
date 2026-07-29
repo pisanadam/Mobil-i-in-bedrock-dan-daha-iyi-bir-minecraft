@@ -2216,6 +2216,10 @@ for (const a of ['aPos','aUV','aShade','aLight']) loc[a] = gl.getAttribLocation(
 for (const u of ['uMVP','uFog','uFogFar','uLight','uAlpha','uUseTex','uColor','uTex','uPLight','uPPos']) loc[u] = gl.getUniformLocation(prog, u);
 gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV); gl.enableVertexAttribArray(loc.aShade); gl.enableVertexAttribArray(loc.aLight);
 function setAttribs() {
+  // Öznitelik dizileri BURADA açılmalı: yeni bir VAO'da hepsi kapalı başlar,
+  // yalnızca başlangıçtaki enable çağrısına güvenilirse VAO'dan çizim boş çıkar.
+  gl.enableVertexAttribArray(loc.aPos); gl.enableVertexAttribArray(loc.aUV);
+  gl.enableVertexAttribArray(loc.aShade); gl.enableVertexAttribArray(loc.aLight);
   gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 28, 0);
   gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 28, 12);
   gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 28, 20);
@@ -3295,19 +3299,25 @@ function updateParts(dt) {
   }
 }
 const tileCubeCache = {};
-function tileCube(t) { // belirli karoyla kaplı birim küp (drop & el görünümü)
-  if (tileCubeCache[t]) return tileCubeCache[t];
+// t sayı ise altı yüz aynı karoyla; [üst,yan,alt] dizisi ise yüze göre kaplanır
+// (çim bloğu elde tutulurken üstte yan dokusu -> topraklı çim görünüyordu)
+function tileCube(t) { // birim küp (yere düşen eşya & el görünümü)
+  const key = Array.isArray(t) ? t.join('_') : t;
+  if (tileCubeCache[key]) return tileCubeCache[key];
+  const pick = (f) => Array.isArray(t)
+    ? (f.d[1] > 0 ? t[0] : f.d[1] < 0 ? t[2] : t[1])
+    : t;
   const arr = [];
   for (const f of FACES) for (const vi of [0,1,2,0,2,3]) {
     const co = f.c[vi];
     const u = faceUV(f, co);
-    const uv = tileUV(t, u[0], u[1]);
+    const uv = tileUV(pick(f), u[0], u[1]);
     arr.push(co[0]-0.5, co[1]-0.5, co[2]-0.5, uv[0], uv[1], f.s, 0);
   }
   const vbo = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
-  return tileCubeCache[t] = vbo;
+  return tileCubeCache[key] = vbo;
 }
 const iconAvgCache = {};
 function iconAvg(id) {
@@ -3478,7 +3488,7 @@ function drawEnts(proj, view, now) {
     const it = ITEMS[d.id];
     if (it && it.block) {
       gl.uniform1f(loc.uUseTex, 1);
-      gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(BLOCKS[it.block].t[1]));
+      gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(BLOCKS[it.block].cross ? BLOCKS[it.block].t[1] : BLOCKS[it.block].t));
       setAttribs();
       gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, m));
       gl.drawArrays(gl.TRIANGLES, 0, 36);
@@ -4202,7 +4212,7 @@ function drawHeld(proj, now) { // eldeki blok/meşale 3D görünür
     mmul(mrotY(0.65 + sw*0.6), mmul(mrotX(-sw*0.7),
       def.cross ? mscale(0.4, 0.4, 0.06) : mscale(0.28, 0.28, 0.28))));
   gl.uniformMatrix4fv(loc.uMVP, false, mmul(proj, m));
-  gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(def.t[1]));
+  gl.bindBuffer(gl.ARRAY_BUFFER, tileCube(def.cross ? def.t[1] : def.t));
   setAttribs();
   gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
@@ -5816,6 +5826,7 @@ let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
 const drawStats = { drawn:0, culled:0 };
+const pixProbe = { want:false, result:null };
 let fpsGate = 0;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -5965,6 +5976,17 @@ function frame(now) {
   for (const c of waterList) bindDraw(c.vboW, c.cntW, c.vaoW);
   gl.depthMask(true);
   drawHeld(proj, now);
+  if (pixProbe.want) {            // test sondası: kare içinde oku (dışarıda tampon geçersiz)
+    const w = canvas.width, hh = canvas.height, sw = 64, sh = 64;
+    const buf = new Uint8Array(sw*sh*4);
+    gl.readPixels(((w-sw)/2)|0, 0, sw, sh, gl.RGBA, gl.UNSIGNED_BYTE, buf);  // alt şerit = zemin
+    let nonSky = 0; const seen = new Set();
+    for (let i=0;i<sw*sh;i++) { const o=i*4, r=buf[o], g=buf[o+1], b=buf[o+2];
+      if (!(b>r+20 && b>g+10)) nonSky++;
+      seen.add((r>>4)+','+(g>>4)+','+(b>>4)); }
+    pixProbe.want = false;
+    pixProbe.result = { ratio: nonSky/(sw*sh), colors: seen.size };
+  }
   $('burnoverlay').style.display = P.burnT > 0 ? 'block' : 'none';
   const hb = getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z));
   waterOv.style.display = (hb === BID.water || hb === BID.lava) ? 'block' : 'none';
@@ -6001,6 +6023,12 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   OPT, damagePlayerTest:damagePlayer, applyOptTest:applyOpt,
   uiIconTest:uiIcon,
   drawStatsTest:()=>drawStats, chunkCountTest:()=>chunks.size, fpsTest:()=>fps,
+  boxInFrustumTest:boxInFrustum, frustumTest:()=>frustum, chunkAt:(a,b)=>chunks.get(ckey(a,b)),
+  vaoExtTest:()=>!!vaoExt,
+  probeAsk:()=>{ pixProbe.want=true; pixProbe.result=null; }, probeGet:()=>pixProbe.result,
+  heldCubeTiles:(def)=>{ const t = def.cross ? def.t[1] : def.t;
+    const pick = (dy)=> Array.isArray(t) ? (dy>0?t[0]:dy<0?t[2]:t[1]) : t;
+    return { top:pick(1), side:pick(0), bottom:pick(-1) }; },
   coreCountTest:coreCount, genQueueLen:()=>genQueue.length, meshQueueLen:()=>meshQueue.length,
   placeVariantTest:placeVariant, toggleShapedTest:toggleShaped, shapeOfTest:shapeOf,
   pistonPushTest:pistonPush, aabbHitTest:aabbHit, SHAPE_FAMILY,
