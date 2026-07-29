@@ -108,9 +108,9 @@
   #mhead { display:flex; align-items:center; gap:10px; padding:14px 16px 10px; }
   #mhead h3 { font-size:19px; letter-spacing:.5px; flex:1; }
   #mhead .x { background:#8a3030; border:none; color:#fff; border-radius:10px; width:38px; height:38px; font-size:17px; }
-  #mtabs { display:flex; gap:6px; overflow-x:auto; padding:0 12px 10px; scrollbar-width:none; }
-  #mtabs::-webkit-scrollbar { display:none; }
-  #mtabs button { flex:0 0 auto; padding:9px 14px; border:none; border-radius:10px; font-size:13px;
+  /* sekmeler sarmalanır: dar ekranda hiçbiri gizli kalmasın (Kaynaklar sekmesi kayboluyordu) */
+  #mtabs { display:flex; flex-wrap:wrap; gap:6px; padding:0 12px 10px; }
+  #mtabs button { flex:0 1 auto; padding:8px 11px; border:none; border-radius:10px; font-size:12.5px;
     background:rgba(255,255,255,.09); color:#cdd6e4; white-space:nowrap; }
   #mtabs button.sel { background:#4a7ec4; color:#fff; font-weight:600; }
   #mbody { flex:1; overflow-y:auto; padding:4px 14px 22px; -webkit-overflow-scrolling:touch; }
@@ -1067,6 +1067,236 @@ defItem('experience_bottle','Tecrübe Şişesi',{icon:IC.pearl('#8fe86a'), stack
 defItem('cocoa_beans','Kakao Çekirdeği',{icon:IC.raw('#8a4a20')});
 defItem('melon_seeds','Karpuz Tohumu',{icon:IC.dust('#d8d8a8')});
 defItem('pumpkin_seeds','Balkabağı Tohumu',{icon:IC.dust('#e8e0b0')});
+/* ================= EŞYA SİLÜETLERİ =================
+   Aynı şekli paylaşan eşyalara kendi biçimlerini ver (alet/zırh kademeleri
+   Minecraft'ta da aynı şekildedir, onlar bilerek ortak kaldı). */
+const S = {
+  bottle: (c,liq) => (x,y) => { const cc=hex(c);
+    if (y<3 && Math.abs(x-8)<2) return hex('#c8d8e0');                       // boyun
+    if (y>=3 && y<5 && Math.abs(x-8)<3) return hex('#c8d8e0');
+    const w = 5.2 - Math.max(0, (6-y))*0.5;
+    if (y>=5 && y<15 && Math.abs(x-8)<w) return (y>7 && liq!==false) ? cc : hex('#dfeaf2');
+    return null; },
+  eye: (c) => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>5.4) return null;
+    if (Math.abs(x-8)<1.2 && Math.abs(y-8)<3.4) return hex('#101018');       // dikey yarık
+    return hex(d<3 ? mixHex(c,'#ffffff',0.4) : c); },
+  fireball: (c) => (x,y) => { const d=Math.hypot(x-8,y-9);
+    if (d<4.6) return hex(d<2 ? '#fff0b0' : c);
+    if (y<7 && Math.abs(x-8)<4 && hash2(x*5,y*3)<0.5) return hex('#e8621a'); return null; },
+  bucket: (c,fill) => (x,y) => {
+    if (y<4 && Math.abs(Math.abs(x-8)-4.5)<1 ) return hex('#8a8a92');        // sap
+    if (y>=4) { const w = 5.6 - (y-4)*0.22;
+      if (Math.abs(x-8)<w) { if (Math.abs(x-8)>w-1.4 || y>13) return hex('#9a9aa4');
+        return fill ? hex(c) : hex('#b6b6c0'); } }
+    return null; },
+  bone: () => (x,y) => { const k=hex('#e8e6dc');
+    if (Math.abs((15-y)-x)<1.6 && x>3 && x<12) return k;
+    for (const [cx,cy] of [[3,12],[12,3]]) { if (Math.hypot(x-cx,y-cy)<2.6) return k; }
+    return null; },
+  paper: () => (x,y) => { if (x<3||x>13||y<2||y>14) return null;
+    if (x>10 && y<5) return null;                                            // kıvrık köşe
+    return hex((x+y)%7===0 ? '#d0d0c8' : '#f2f2ea'); },
+  brick: (c) => (x,y) => { if (y<5||y>11||x<2||x>14) return null;
+    return hex(y===8 ? mixHex(c,'#000000',0.3) : c); },
+  book: (c) => (x,y) => { if (x<3||x>13||y<2||y>14) return null;
+    if (x<5) return hex(c);                                                  // sırt
+    return hex(y%3===0 ? '#d8d4c4' : '#f4f0e2'); },
+  nameTag: () => (x,y) => { if (y<5||y>11||x<2||x>14) return null;
+    if (Math.hypot(x-4,y-8)<1.2) return null;                                // delik
+    return hex('#ded4b4'); },
+  map: () => (x,y) => { if (x<2||x>14||y<2||y>14) return null;
+    if (x<4||x>12||y<4||y>12) return hex('#b09060');
+    return hex(hash2(x*3,y*5)<0.2 ? '#c8a878' : '#efe4c4'); },
+  loaf: (c) => (x,y) => { const d=Math.hypot((x-8)/6.2,(y-9)/4.2); if (d>1) return null;
+    return hex((x+y*2)%6<1 && y<10 ? mixHex(c,'#000000',0.25) : c); },
+  chop: (c,ck) => (x,y) => { const d=Math.hypot((x-9)/5.4,(y-9)/4.6);
+    if (d<1) return hex((x*3+y*5)%9<3 ? mixHex(c,'#ffffff',0.25) : c);
+    if (Math.hypot(x-3.5,y-11)<2.2) return hex('#efe8d8');                   // kemik
+    return null; },
+  fish: (c,c2) => (x,y) => { const d=Math.hypot((x-9)/5.2,(y-8)/3.4);
+    if (d<1) { if (Math.hypot(x-11,y-7)<0.9) return hex('#101018');          // göz
+      return hex(c2 && (x+y)%5<2 ? c2 : c); }
+    if (x<5 && Math.abs(y-8) < (5-x)*1.3) return hex(c);                     // kuyruk
+    return null; },
+  egg: () => (x,y) => { const d=Math.hypot((x-8)/4.4,(y-8.5)/5.6); if (d>1) return null;
+    return hex(d<0.5 ? '#fffdf4' : '#eae0c8'); },
+  snowball: () => (x,y) => { const d=Math.hypot(x-8,y-9); if (d>5) return null;
+    return hex(hash2(x*7,y*7)<0.25 ? '#dfeaf6' : '#fbfeff'); },
+  carrot: () => (x,y) => {
+    if (y<5 && Math.abs(x-8)<3.4 && hash2(x*5,y*7)<0.8) return hex('#3f8f30');
+    const w = 3.4 - (y-5)*0.28;
+    if (y>=5 && Math.abs(x-8)<w) return hex((y%3===0) ? '#c05f10' : '#e07a18');
+    return null; },
+  potato: () => (x,y) => { const d=Math.hypot((x-8)/5,(y-8.5)/4.4); if (d>1) return null;
+    return hex(hash2(x*3,y*3)<0.18 ? '#8a6a30' : '#c8a24e'); },
+  berry: (c) => (x,y) => { for (const [cx,cy] of [[5.5,7],[10,6],[8,11]])
+      if (Math.hypot(x-cx,y-cy)<3) return hex(Math.hypot(x-cx,y-cy)<1.2 ? mixHex(c,'#ffffff',0.4) : c);
+    return null; },
+  feather: () => (x,y) => { const t=(15-y);
+    if (Math.abs(x-t*0.8-2)<0.9 && y>2) return hex('#c8c4b8');               // sap
+    if (y>1 && y<13 && Math.abs(x-t*0.8-2)<3.2 && hash2(x*3,y*5)<0.72) return hex('#f4f2ea');
+    return null; },
+  flint: () => (x,y) => { if (Math.abs(x-8)+Math.abs(y-9) > 6) return null;
+    if (x+y < 11) return hex('#5a5a62'); return hex('#33333a'); },
+  leather: () => (x,y) => { if (x<2||x>14) return null;
+    const top = 4 + Math.sin(x*0.7)*1.6, bot = 13 - Math.sin(x*0.9)*1.4;
+    if (y<top || y>bot) return null; return hex(hash2(x*3,y*3)<0.2 ? '#8a5c34' : '#a5764a'); },
+  saddle: () => (x,y) => { if (y<6||y>12) return null;
+    const w = 6.4 - Math.abs(y-9)*0.5;
+    if (Math.abs(x-8)>w) return null;
+    return hex(y<8 ? '#8a4a24' : (Math.abs(x-8)>w-1.5 ? '#5a2e14' : '#6b3a1c')); },
+  seeds: (c) => (x,y) => { for (const [cx,cy] of [[5,9],[9,6],[11,11]])
+      if (Math.hypot((x-cx)/1.7,(y-cy)/2.4)<1) return hex(c); return null; },
+  wheat: () => (x,y) => { if (Math.abs(x-8)<0.9 && y>3) return hex('#8a7028');
+    if (y<12 && Math.abs(x-8)<3.4 && (y+Math.abs(x-8)*2)%5<2) return hex('#e0c04a'); return null; },
+  string: () => (x,y) => { const d=Math.abs(Math.hypot(x-8,y-8)-4.5);
+    return d<1 ? hex('#eceff2') : null; },
+  arrow: () => (x,y) => { const on=Math.abs((15-y)-x)<1.1;
+    if (on && x>3 && x<12) return hex('#8a6a3a');                            // sap
+    if (x>10 && y<5 && (x-10)+(5-y)<5) return hex('#c8ccd2');                // uç
+    if (x<6 && y>10 && hash2(x*5,y*5)<0.7 && Math.abs((15-y)-x)<3.2) return hex('#f0f0e8');
+    return null; },
+  bow: () => (x,y) => { const d=Math.hypot(x-3,y-8);
+    if (d>5.2 && d<6.6 && x>2) return hex('#8a6a3a');                        // yay gövdesi
+    if (Math.abs(x-9)<0.7 && Math.abs(y-8)<6) return hex('#e8e8e0');         // kiriş
+    return null; },
+  shears: () => (x,y) => { if (Math.abs((15-y)-x)<1.2 && x>2 && x<13) return hex('#c0c4cc');
+    if (Math.abs(y-x)<1.2 && x>2 && x<13) return hex('#9aa0aa');
+    return null; },
+  rod: () => (x,y) => { if (Math.abs((15-y)-x)<1.3 && x>1 && x<11) return hex('#8a6a3a');
+    if (x>9 && Math.abs(y-(x-9)*2.4-2)<0.8) return hex('#dfe6ee'); return null; },
+  compass: () => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>6) return null;
+    if (d>4.6) return hex('#9aa0aa');
+    if (Math.abs(x-8)<1 && y<8) return hex('#d02a2a');                       // ibre
+    if (Math.abs(x-8)<1 && y>=8) return hex('#f0f0f0');
+    return hex('#22304a'); },
+  clock: () => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>6) return null;
+    if (d>4.6) return hex('#f6d038');
+    if (Math.abs(x-8)<0.9 && y>4 && y<9) return hex('#22242a');
+    if (Math.abs(y-8)<0.9 && x>8 && x<12) return hex('#22242a');
+    return hex('#dfe8f4'); },
+  star: (c) => (x,y) => { const dx=Math.abs(x-8), dy=Math.abs(y-8);
+    if (dx+dy < 6 || (dx<1.3 && dy<7) || (dy<1.3 && dx<7)) return hex(dx+dy<2.5 ? '#ffffff' : c);
+    return null; },
+  skull: () => (x,y) => { if (x<3||x>13||y<2||y>13) return null;
+    if (y>10 && (x<5||x>11)) return null;
+    if (y>5 && y<9 && (Math.abs(x-6)<1.6 || Math.abs(x-10)<1.6)) return hex('#101014');
+    if (y>11 && (x+y)%3===0) return hex('#101014');
+    return hex('#c8c4b4'); },
+  bowl: (c) => (x,y) => { if (y>7 && y<13 && Math.abs(x-8) < 6.2-(y-7)*0.7) return hex('#8a6a3a');
+    if (y>=6 && y<=8 && Math.abs(x-8)<6) return hex(c); return null; },
+  totem: () => (x,y) => { if (x<4||x>12||y<1||y>15) return null;
+    if (y<6 && Math.hypot(x-8,y-4)<3) return hex('#e8c860');
+    if (y>=6) return hex((x+y)%4<2 ? '#3a8f6a' : '#e8c860'); return null; },
+  nugget: (c) => (x,y) => { for (const [cx,cy] of [[6,7],[10,9],[7,11]])
+      if (Math.hypot(x-cx,y-cy)<2.4) return hex(Math.hypot(x-cx,y-cy)<1 ? mixHex(c,'#ffffff',0.45) : c);
+    return null; },
+  chunk: (c) => (x,y) => { const d=Math.abs(x-8)+Math.abs(y-9);
+    if (d>6.5) return null; return hex(hash2(x*5,y*3)<0.35 ? mixHex(c,'#000000',0.35) : c); },
+  slime: (c) => (x,y) => { const d=Math.hypot((x-8)/5.4,(y-9.5)/4.2); if (d>1) return null;
+    return [ ...hex(d<0.45 ? mixHex(c,'#ffffff',0.4) : c), 205 ]; },
+  pod: (c) => (x,y) => { const d=Math.hypot((x-8)/3.6,(y-8)/5.4); if (d>1) return null;
+    return hex((y%4<2) ? mixHex(c,'#000000',0.25) : c); },
+  cart: (c) => (x,y) => {
+    if (y>12 && (Math.hypot(x-5,y-13.5)<2 || Math.hypot(x-11,y-13.5)<2)) return hex('#3a3a42');  // tekerler
+    if (y>=5 && y<=12 && x>2 && x<14) { if (y<7 && x>4 && x<12) return null;                      // iç boşluk
+      return hex(c); }
+    return null; },
+  boat: (c) => (x,y) => {
+    if (y<7 || y>13) return null;
+    const w = 6.6 - Math.abs(y-10)*0.35;
+    if (Math.abs(x-8) > w) return null;
+    if (y<9 && Math.abs(x-8) < w-1.6) return null;                                                // oturak boşluğu
+    return hex(y>12 ? mixHex(c,'#000000',0.3) : c); },
+  shell: (c) => (x,y) => { const a2=Math.atan2(y-9,x-8), d=Math.hypot(x-8,y-9);
+    if (d>6.2) return null;
+    if (Math.abs(d - (2 + (a2+Math.PI)*0.62)) < 1.5) return hex(mixHex(c,'#000000',0.28));        // spiral
+    return hex(c); },
+  eyeball: (c) => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>5.2) return null;
+    if (d<1.8) return hex('#101014');
+    if (d<3) return hex(mixHex(c,'#000000',0.4));
+    return hex(c); },
+  sac: (c) => (x,y) => { const d=Math.hypot((x-8)/4.4,(y-9)/5); if (d>1) return null;
+    return hex(d<0.4 ? mixHex(c,'#ffffff',0.3) : c); },
+  tear: (c) => (x,y) => { if (y<3) return null;
+    const w = Math.min(4.6, (y-2)*0.85);
+    if (Math.abs(x-8) > w) return null;
+    return hex(Math.abs(x-7) < 1.4 && y < 9 ? mixHex(c,'#ffffff',0.5) : c); },
+  crystal: (c) => (x,y) => { const dx=Math.abs(x-8);
+    if (y<3 || y>13) return null;
+    if (dx > 4.4 - Math.abs(y-8)*0.42) return null;
+    return hex(x < 8 ? mixHex(c,'#ffffff',0.35) : c); },
+  paw: (c) => (x,y) => {
+    for (const [cx,cy,r] of [[5,6,1.7],[8,5,1.7],[11,6,1.7],[8,10.5,3.6]])
+      if (Math.hypot(x-cx,y-cy)<r) return hex(c);
+    return null; },
+  ball: (c) => (x,y) => { const d=Math.hypot(x-8,y-9); if (d>5) return null;
+    return hex(d<2 ? mixHex(c,'#ffffff',0.3) : c); },
+  shard: (c) => (x,y) => {
+    if (y<2 || y>14) return null;
+    if (Math.abs(x - 8 - (y-8)*0.35) > 3.6 - Math.abs(y-8)*0.2) return null;
+    return hex((x+y)%4<2 ? mixHex(c,'#ffffff',0.3) : c); },
+  splash: (c) => (x,y) => {                                                   // sıçrayan iksir: yan yatık şişe + damla
+    if (y>4 && y<13 && Math.abs(x-9)<4.4) return hex(y>7 ? c : '#dfeaf2');
+    if (y<=4 && Math.abs(x-9)<2) return hex('#c8d8e0');
+    if (y>12 && hash2(x*7,y*5)<0.45 && Math.abs(x-8)<6) return hex(c);        // sıçrayan damlalar
+    return null; },
+  wart: (c) => (x,y) => { if (y<5) return null;
+    if (Math.abs(x-8)<1.2) return hex(mixHex(c,'#000000',0.35));
+    for (const [cx,cy] of [[5,8],[11,9],[8,12]]) if (Math.hypot(x-cx,y-cy)<2.4) return hex(c);
+    return null; },
+};
+/* --- yeni silüetleri ata --- */
+const ICON_SHAPE = {
+  // şişeler & küreler
+  glass_bottle:S.bottle('#bfe0ef',false), water_bottle:S.bottle('#3a7ad8'), awkward_potion:S.bottle('#7a4ad8'),
+  ender_pearl:IC.pearl('#0d8a7a'), ender_eye:S.eye('#4ec89a'), fire_charge:S.fireball('#e8621a'),
+  experience_bottle:S.bottle('#8fe86a'), snowball:S.snowball(), egg:S.egg(),
+  compass:S.compass(), clock:S.clock(), map:S.map(), nether_star:S.star('#f0f0d0'),
+  // kovalar
+  bucket:S.bucket('#b0b0b8',false), water_bucket:S.bucket('#3a6ad8',true),
+  lava_bucket:S.bucket('#e06a10',true), milk_bucket:S.bucket('#f4f4f4',true),
+  // malzemeler
+  bone:S.bone(), paper:S.paper(), book:S.book('#8a5a2a'), written_book:S.book('#3a5a9a'),
+  brick:S.brick('#a5553f'), nether_brick:S.brick('#3a1e24'), name_tag:S.nameTag(),
+  feather:S.feather(), flint:S.flint(), leather:S.leather(), rabbit_hide:S.leather(),
+  saddle:S.saddle(), string:S.string(), slimeball:S.slime('#6ac05a'),
+  gold_nugget:S.nugget('#f6d038'), netherite_scrap:S.chunk('#7a5a4a'),
+  coal:S.chunk('#242424'), charcoal:S.chunk('#3a3230'),
+  raw_iron:S.chunk('#c9a284'), raw_copper:S.chunk('#9a5b3d'), raw_gold:S.chunk('#dcaa2e'),
+  clay_ball:S.chunk('#9aa2b0'), magma_cream:S.slime('#e06a30'), cocoa_beans:S.pod('#8a4a20'),
+  // araçlar
+  arrow:S.arrow(), bow:S.bow(), shears:S.shears(), fishing_rod:S.rod(), lead:S.string(),
+  // yiyecek
+  bread:S.loaf('#c89a4a'), apple:S.berry('#d02a2a'), golden_apple:S.berry('#f6d038'),
+  carrot:S.carrot(), golden_carrot:S.carrot(), potato:S.potato(), baked_potato:S.potato(),
+  poisonous_potato:S.potato(), sweet_berries:S.berry('#c02a3a'), glow_berries:S.berry('#f0a030'),
+  porkchop:S.chop('#f0a0a0'), cooked_porkchop:S.chop('#c07848'),
+  beef:S.chop('#c04040'), cooked_beef:S.chop('#8a4a28'),
+  chicken:S.chop('#f0d0a0'), cooked_chicken:S.chop('#c8a058'),
+  mutton:S.chop('#e08080'), cooked_mutton:S.chop('#a86038'),
+  rabbit:S.chop('#e8a8a0'), cooked_rabbit:S.chop('#c07848'),
+  rotten_flesh:S.chop('#6a7a4a'), cod:S.fish('#b0a070'), cooked_cod:S.fish('#c8a060'),
+  salmon:S.fish('#d05a4a'), cooked_salmon:S.fish('#e08050'),
+  pufferfish:S.fish('#e0c030','#f0e070'), tropical_fish:S.fish('#f07020','#40a0e0'),
+  mushroom_stew:S.bowl('#c8a878'), rabbit_stew:S.bowl('#b06848'), lentil_soup:S.bowl('#c8862a'),
+  bowl:S.bowl('#8a6a3a'), wheat:S.wheat(), wheat_seeds:S.seeds('#8fc85a'),
+  melon_seeds:S.seeds('#d8d8a8'), pumpkin_seeds:S.seeds('#e8e0b0'), lentil_seeds:S.seeds('#9ac83e'),
+  bone_meal:S.nugget('#e8e8dc'), totem_of_undying:S.totem(), wither_skeleton_skull:S.skull(),
+  // araç, kabuk, göz, kristal…
+  minecart:S.cart('#8a8a94'), oak_boat:S.boat('#a8763e'),
+  nautilus_shell:S.shell('#e0d0b0'), heart_of_the_sea:S.ball('#4a9a9a'),
+  spider_eye:S.eyeball('#8a2a2a'), fermented_spider_eye:S.eyeball('#5a3a7a'),
+  ink_sac:S.sac('#1a1a22'), glow_ink_sac:S.sac('#2a8a9a'),
+  ghast_tear:S.tear('#e8e8f0'), rabbit_foot:S.paw('#c8b8a0'),
+  prismarine_shard:S.shard('#8fc8b8'), prismarine_crystals:S.crystal('#c8f0e0'),
+  clay_ball:S.ball('#9aa2b0'), flint:S.shard('#4a4a52'),
+  nether_wart:S.wart('#a02a3a'), turtle_scute:S.shell('#6aaa4a'),
+  sugar:S.seeds('#f0f0f0'), lentil:S.seeds('#9ac83e'), quartz:S.crystal('#e6e0d8'),
+  blaze_rod:S.crystal('#f6b020'), blaze_powder:S.nugget('#f6a030'),
+  dragon_egg:S.egg(), gunpowder:S.nugget('#4a4a52'),
+};
+
 
 
 /* ================= ÜRETİM & ERİTME ================= */
@@ -5667,6 +5897,15 @@ function frame(now) {
     (isCreative()?'Yaratıcı':'Hayatta Kalma')+(dim!=='overworld'?(dim==='nether'?'  🔥Nether':'  🌌End'):'');
 }
 requestAnimationFrame(frame);
+/* --- eşya silüetlerini uygula (tüm defItem'lardan SONRA) --- */
+for (const id in ICON_SHAPE) if (ITEMS[id]) ITEMS[id].icon = ICON_SHAPE[id];
+for (const p in POTIONS) {                      // iksirler: etki rengiyle şişe / sıçrayan
+  const col = POTIONS[p][4];
+  if (ITEMS['potion_'+p]) ITEMS['potion_'+p].icon = S.bottle(col);
+  if (ITEMS['splash_potion_'+p]) ITEMS['splash_potion_'+p].icon = S.splash(col);
+}
+const missShape = Object.keys(ICON_SHAPE).filter(k => !ITEMS[k]);
+if (missShape.length) console.warn('silüeti atanamayan eşya:', missShape.join(', '));
 bootDone = true;
 window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, MOBS, ents, armor:()=>armorInv,
   cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, dim:()=>dim, setDim,
@@ -5681,6 +5920,7 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   cropSet, CROP_BY_ID, cropTickNow:(n)=>{ for(let i=0;i<n;i++) cropTick(99); },
   dropPointerTest:(id)=>activePointers.delete(id),
   OPT, damagePlayerTest:damagePlayer, applyOptTest:applyOpt,
+  uiIconTest:uiIcon,
   placeVariantTest:placeVariant, toggleShapedTest:toggleShaped, shapeOfTest:shapeOf,
   pistonPushTest:pistonPush, aabbHitTest:aabbHit, SHAPE_FAMILY,
   blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },

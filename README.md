@@ -77,7 +77,8 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - ✨ **Partiküller**: blok kırma (blok renginde), patlama, mob ölümü, enderman/portal, yeme, kritik vuruş
 - 🎮 **Çok Oyunculu Co-op (6 haneli oda kodu)**: "Oda Kur" → 6 haneli kod → arkadaş kodu girip **aynı dünyaya katılır**; hareket, blok kır/koy, item düşür/al, sohbet ve **skin** senkronize; oyuncu çıkıp girse de oda bozulmaz; aracı sunucu engellenirse manuel kod yedeği
 - 🧍 **Skin yükleme**: kendi PNG skinini yükle (Java 64×64 / eski 64×32 uyumlu), doğru bölgelere maplenir, **ince/kalın kol** seçeneği; hatalıysa özgün varsayılan skin
-- 🎨 **Doku paketi**: kendi PNG'lerini veya **ZIP**'ini yükle (stone.png, oak_planks.png…); eksik doku varsa varsayılan kalır, çökmez, oyun içinden sıfırlanır
+- 🎨 **Doku paketi**: Ayarlar → **🎨 Kaynaklar** sekmesinden Minecraft `.zip` paketi veya tek tek PNG yükle; eksik doku varsa varsayılan kalır, çökmez, oyun içinden sıfırlanır
+- 🖼️ **Ayrı eşya silüetleri**: kova, kemik, kâğıt, kitap, harita, tüy, çakmaktaşı, deri, eyer, ip, ok, yay, makas, olta, pusula, saat, vagon, tekne, deniz kabuğu, göz, gözyaşı, kristal, ekmek, balık, et, havuç, patates, şişe… her biri kendi şeklinde (alet ve zırh kademeleri Minecraft'taki gibi bilerek ortak şekil)
 - 💾 Dünya + envanter + sandıklar + ayarlar otomatik kaydedilir
 
 ### 🌟 Efektler (/effect)
@@ -93,6 +94,8 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - **♿ Erişilebilirlik**: Hasar Eğimi, Bozulma Efektleri, **Yüksek Kontrast**, Altyazılar
 - **🎲 Oyun**: **Zorluk** (Barışçıl/Kolay/Normal/Zor — hasarı 0/×0.5/×1/×1.5 ölçekler, Barışçıl'da düşman doğmaz), **Koordinatları Göster**, Çok Oyunculu, Yeni Dünya
 - **🎨 Kaynaklar**: Skin yükle + kol tipi, Minecraft doku paketi (.zip) yükle & sıfırla
+
+> Sekmeler dar ekranda alt satıra sarar — hepsi görünür, hiçbiri kaydırma arkasında kalmaz.
 
 ### 💬 Komut sistemi
 `/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
