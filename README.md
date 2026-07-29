@@ -22,6 +22,7 @@ Tek bir `index.html` dosyası — kütüphane yok, bağımlılık yok, telifli m
 | Blok kırma | Basılı tut | Sol tık (basılı tut) |
 | Zıplama / uçuş (yaratıcı) | ⤒ / çift dokun | `Boşluk` / çift bas |
 | Koşu kilidi (sürekli koşu aç/kapa) | Sol üstte 🏃 tuşu | Sol üstte 🏃 tuşu |
+| Ayarlar | ☰ (7 sekmeli Minecraft düzeni) | ☰ |
 | Envanter & Üretim | 🎒 | `E` |
 | Sohbet & Komutlar | 💬 | `T` veya `/` |
 | Blok seçme | Envanter çubuğuna dokun | `1`–`9` |
@@ -82,15 +83,16 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### 🌟 Efektler (/effect)
 30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
 
-### ⚙️ Ayarlar
-- Görüş mesafesi **2 → 24 chunk (Dehşet Ultra)** + **Otomatik mod** (FPS/ısınmaya göre chunk mesafesini kendisi ayarlar); parça parça chunk üretimi (takılmaz). Otomatik optimizasyon isteğe bağlı — kapalıyken ayarlar sabit kalır
-- 👁 **Görüş açısı (FOV) 50–110**, **hasar sarsıntısı (damage tilt) aç/kapa**, **görüş efektleri (baş sallanması/bulantı) aç/kapa**
-- 🏃 **Koşu kilidi**: sol üstteki tuşla sürekli koşuyu aç/kapa (hızı ~%35 artırır, koşarken FOV genişler) — ayar kaydedilir
-- Gölgelendirici aç/kapa (sis + dinamik ışık + partiküller), **ses seviyesi**, **tam ekran** butonu (mobil + PC)
-- 🎛 **Tuşları Taşı**: kontrolleri ve eşya çubuğunu sürükleyip istediğin yere koy — kaydedilir
-- 🧍 Skin yükle (ince/kalın kol) · 🎨 **Minecraft doku paketi (.zip) yükle & sıfırla** (aşağıda ayrıntı) · 🎮 Çok oyunculu paneli
-- 📱 Klavye/fare kullanınca mobil tuşlar gizlenir, dokununca geri gelir
-- 🍏 **Apple/Safari & iPhone/iPad uyumu**: WebKit ön ekli tam ekran + fare kilidi yedekleri, sesi kullanıcı dokunuşunda başlatma (`AudioContext.resume`). M1/M2/M3 çip GPU'ları güçlüdür — ek performans sorunu yok, yalnızca Safari API uyumu eklendi
+### ⚙️ Ayarlar — Minecraft düzeninde
+☰ tuşu **Minecraft'ın ayar ekranıyla aynı yapıda**, 7 sekmeli tam ekran bir panel açar (arayüz modernleştirildi). Her seçenek gerçekten bir şeyi değiştirir:
+
+- **🎬 Grafik**: Grafikler (Hızlı/Güzel/Muhteşem), Görüş Mesafesi (2–24 chunk + Otomatik), **Simülasyon Mesafesi**, **Azami Kare Hızı**, **Parlaklık**, **Arayüz Ölçeği**, **Yumuşak Işıklandırma**, Bulutlar, **Partiküller** (Tümü/Azaltılmış/En Az), **Varlık Gölgeleri**, **Varlık Görüş Mesafesi**, Görüş Alanı (FOV), Görüş Sallanması, Tam Ekran, Otomatik Optimizasyon
+- **🔊 Ses**: Ana Ses, Müzik, Bloklar, Düşman Canlılar, Dost Canlılar, Ortam, Altyazılar — Minecraft'taki ses kanallarının aynısı
+- **🎮 Kontroller**: **Fare Hassasiyeti**, **Dokunmatik Hassasiyeti**, **Dikey Ekseni Ters Çevir**, **Otomatik Zıplama**, Koşu Kilidi, Tuşları Taşı
+- **💬 Sohbet**: Sohbet aç/kapa, **Yazı Boyutu**, **Arka Plan Saydamlığı**
+- **♿ Erişilebilirlik**: Hasar Eğimi, Bozulma Efektleri, **Yüksek Kontrast**, Altyazılar
+- **🎲 Oyun**: **Zorluk** (Barışçıl/Kolay/Normal/Zor — hasarı 0/×0.5/×1/×1.5 ölçekler, Barışçıl'da düşman doğmaz), **Koordinatları Göster**, Çok Oyunculu, Yeni Dünya
+- **🎨 Kaynaklar**: Skin yükle + kol tipi, Minecraft doku paketi (.zip) yükle & sıfırla
 
 ### 💬 Komut sistemi
 `/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`

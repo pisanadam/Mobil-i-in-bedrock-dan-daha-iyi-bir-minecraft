@@ -100,13 +100,40 @@
     flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center; }
   #deathscreen h1 { font-size:36px; text-shadow:2px 2px 0 #000; margin-bottom:16px; }
   #deathscreen button { padding:14px 40px; font-size:18px; border:none; border-radius:12px; background:#57a832; color:#fff; }
-  #menu { display:none; position:fixed; right:14px; top:66px; background:rgba(20,24,34,.92); color:#eee; padding:14px;
-    border-radius:12px; z-index:20; width:230px; font-size:14px; }
-  #menu h3 { margin-bottom:10px; font-size:15px; }
-  #menu label { display:block; margin:8px 0 4px; opacity:.8; font-size:12px; }
-  #menu select,#menu button { width:100%; padding:8px; border-radius:8px; border:none; margin-top:4px;
+  /* ===== Ayarlar (Minecraft düzeni, modern arayüz) ===== */
+  #menu { display:none; position:fixed; inset:0; z-index:40; background:rgba(8,10,16,.82);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); color:#eaeef6;
+    flex-direction:column; font-size:14px; }
+  #menu.open { display:flex; }
+  #mhead { display:flex; align-items:center; gap:10px; padding:14px 16px 10px; }
+  #mhead h3 { font-size:19px; letter-spacing:.5px; flex:1; }
+  #mhead .x { background:#8a3030; border:none; color:#fff; border-radius:10px; width:38px; height:38px; font-size:17px; }
+  #mtabs { display:flex; gap:6px; overflow-x:auto; padding:0 12px 10px; scrollbar-width:none; }
+  #mtabs::-webkit-scrollbar { display:none; }
+  #mtabs button { flex:0 0 auto; padding:9px 14px; border:none; border-radius:10px; font-size:13px;
+    background:rgba(255,255,255,.09); color:#cdd6e4; white-space:nowrap; }
+  #mtabs button.sel { background:#4a7ec4; color:#fff; font-weight:600; }
+  #mbody { flex:1; overflow-y:auto; padding:4px 14px 22px; -webkit-overflow-scrolling:touch; }
+  #mbody .grp { max-width:620px; margin:0 auto; }
+  .opt { background:rgba(255,255,255,.055); border-radius:12px; padding:11px 13px; margin-bottom:9px; }
+  .opt .t { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .opt .nm { font-size:14px; }
+  .opt .val { font-size:13px; color:#8fc0ff; font-variant-numeric:tabular-nums; }
+  .opt .hint { font-size:11px; opacity:.55; margin-top:3px; line-height:1.4; }
+  .opt select { width:100%; margin-top:8px; padding:9px; border-radius:9px; border:none;
+    background:#26314a; color:#fff; font-size:14px; }
+  .opt input[type=range] { width:100%; margin-top:9px; accent-color:#4a7ec4; }
+  .opt input[type=file] { width:100%; margin-top:8px; font-size:11px; color:#b9c4d4; }
+  .opt.sw .t { cursor:pointer; }
+  .sw .knob { width:46px; height:26px; border-radius:14px; background:#444f66; position:relative; flex:0 0 auto; transition:background .15s; }
+  .sw .knob i { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%;
+    background:#fff; transition:transform .15s; }
+  .sw.on .knob { background:#4a8f3c; }
+  .sw.on .knob i { transform:translateX(20px); }
+  #mbody button.act { width:100%; padding:11px; border-radius:10px; border:none; margin-top:8px;
     background:#2e3b52; color:#fff; font-size:14px; }
-  #menu button.danger { background:#8a3030; }
+  #mbody button.act.danger { background:#8a3030; }
+  #mbody h4 { font-size:12px; text-transform:uppercase; letter-spacing:1px; opacity:.5; margin:14px 0 7px; }
   #splash { position:fixed; inset:0; z-index:50; background:linear-gradient(#2a4d1e,#152a0e); display:flex; flex-direction:column;
     align-items:center; justify-content:center; color:#fff; text-align:center; padding:20px; }
   #splash h1 { font-size:42px; letter-spacing:2px; text-shadow:3px 3px 0 #000; margin-bottom:8px; }
@@ -201,49 +228,10 @@
   <h1>☠️ Öldün!</h1>
   <button id="respawnbtn">Yeniden Doğ</button>
 </div>
-<div class="hud" id="menu">
-  <h3>Ayarlar</h3>
-  <label>Görüş mesafesi (chunk)</label>
-  <select id="rdist">
-    <option value="auto">🌡️ Otomatik (Adaptif) — cihaza göre ayarlar</option>
-    <option value="2">2 — Yakın (hızlı)</option>
-    <option value="3" selected>3 — Normal</option>
-    <option value="4">4 — Uzak</option>
-    <option value="5">5 — Çok Uzak</option>
-    <option value="6">6 — Maksimum</option>
-    <option value="8">8 — Uzak+ (güçlü cihaz)</option>
-    <option value="10">10 — Ultra (çok güçlü cihaz!)</option>
-    <option value="12">12 — Aşırı</option>
-    <option value="16">16 — Devasa</option>
-    <option value="20">20 — Efsanevi</option>
-    <option value="24">24 — 🔥 DEHŞET ULTRA (çok güçlü cihaz, bol RAM!)</option>
-  </select>
-  <label>Görüş açısı (FOV): <span id="fovlabel">70</span>°</label>
-  <input id="fovslider" type="range" min="50" max="110" value="70" style="width:100%">
-  <label>Görüş efektleri (yürüme sallanması, koşu/su FOV, bulantı)</label>
-  <select id="veffsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
-  <label>Hasar eğimi (vurulunca kamera yalpalar)</label>
-  <select id="tiltsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
-  <label>Gölgelendirici (sis + dinamik ışık + partikül)</label>
-  <select id="shadersel"><option value="1" selected>Açık</option><option value="0">Kapalı (hızlı)</option></select>
-  <label>Otomatik optimizasyon (FPS düşünce görüşü azalt)</label>
-  <select id="autooptsel"><option value="0" selected>Kapalı — ayarlar sabit kalır</option><option value="1">Açık</option></select>
-  <label>Ses</label>
-  <select id="sndsel"><option value="1" selected>Açık</option><option value="0">Kapalı</option></select>
-  <label>Ses seviyesi: <span id="vollabel">100</span>%</label>
-  <input id="volslider" type="range" min="0" max="100" value="100" style="width:100%">
-  <button id="fsbtn" style="margin-top:10px">⛶ Tam Ekran Aç/Kapat</button>
-  <label>Karakter görünümü (PNG skin, 64×64)</label>
-  <input type="file" id="skinfile" accept="image/png" style="width:100%;font-size:11px;color:#ccc">
-  <select id="skinarms"><option value="classic">Kalın kol (klasik)</option><option value="slim">İnce kol (slim)</option></select>
-  <label>Doku paketi (ZIP veya klasör: stone.png, oak_planks.png…)</label>
-  <input type="file" id="tpfile" accept=".zip,image/png" multiple style="width:100%;font-size:11px;color:#ccc">
-  <button id="tpreset" style="margin-top:4px">🎨 Varsayılan Dokulara Dön</button>
-  <button id="uibtn" style="margin-top:10px">🎛 Tuşları Taşı</button>
-  <button id="uireset">↩ Tuş Yerlerini Sıfırla</button>
-  <button id="mpbtn" style="margin-top:10px">🎮 Çok Oyunculu</button>
-  <button id="newworld" class="danger" style="margin-top:8px">🌍 Yeni Dünya (siler!)</button>
-  <button id="closemenu" style="margin-top:8px">Kapat</button>
+<div id="menu">
+  <div id="mhead"><h3>⚙️ Ayarlar</h3><button class="x" id="closemenu">✕</button></div>
+  <div id="mtabs"></div>
+  <div id="mbody"></div>
 </div>
 <div class="hud" id="splash">
   <h1>CepKraft</h1>
@@ -265,6 +253,134 @@ const gl = canvas.getContext('webgl', { antialias:false });
 let seed = parseInt(localStorage.getItem('ck_seed') || '0');
 if (!seed) { seed = (Math.random()*2e9)|0; localStorage.setItem('ck_seed', seed); }
 const $ = id => document.getElementById(id);
+
+/* ================= AYARLAR PANELİ (Minecraft düzeni) =================
+   Sekmeler ve seçenek adları Minecraft'ın ayar ekranıyla birebir aynı;
+   arayüz modernleştirildi. Her seçenek gerçekten bir şeyi değiştirir. */
+let bootDone = false;            // açılışta dünya henüz hazır değil
+const OPT = {                    // varsayılanlar (Minecraft varsayılanlarına yakın)
+  graphics:1, rdist:3, simDist:4, maxFps:0, brightness:50, guiScale:0,
+  smoothLight:1, clouds:1, particles:0, entShadows:1, entDist:100, biomeBlend:1,
+  fov:70, bobbing:1, distortion:1, damageTilt:1, autoOpt:0,
+  volMaster:100, volMusic:60, volBlocks:100, volHostile:100, volFriendly:100, volAmbient:100, subtitles:0,
+  sens:75, invertY:0, autoJump:0, sprintLock:0, touchSens:75,
+  chatOn:1, chatScale:100, chatOpacity:80,
+  difficulty:2, showCoords:0, highContrast:0,
+};
+const TABS = [
+  ['video','🎬 Grafik'], ['sound','🔊 Ses'], ['controls','🎮 Kontroller'],
+  ['chat','💬 Sohbet'], ['access','♿ Erişilebilirlik'], ['game','🎲 Oyun'], ['res','🎨 Kaynaklar'],
+];
+let curTab = 'video';
+const OPT_DEFS = {
+video: [
+  ['sel','graphics','Grafikler','Fancy: sis, dinamik ışık ve partiküller açık',[[0,'Hızlı'],[1,'Güzel'],[2,'Muhteşem']]],
+  ['sel','rdist','Görüş Mesafesi','Yüklenen chunk yarıçapı',
+    [['auto','Otomatik (cihaza göre)'],[2,'2 chunk'],[3,'3 chunk'],[4,'4 chunk'],[5,'5 chunk'],[6,'6 chunk'],
+     [8,'8 chunk'],[10,'10 chunk'],[12,'12 chunk'],[16,'16 chunk'],[20,'20 chunk'],[24,'24 chunk — Dehşet Ultra']]],
+  ['rng','simDist','Simülasyon Mesafesi','Canlıların ve mekaniklerin işlendiği uzaklık',2,12,1,v=>v+' chunk'],
+  ['rng','maxFps','Azami Kare Hızı','Pili korur; Sınırsız = ekran hızı',0,120,10,v=>v?v+' FPS':'Sınırsız'],
+  ['rng','brightness','Parlaklık','Karanlık yerleri aydınlatır',0,100,1,v=>v<=0?'Kasvetli':v>=100?'Parlak':'%'+v],
+  ['sel','guiScale','Arayüz Ölçeği','Tuş ve panellerin büyüklüğü',[[0,'Otomatik'],[1,'Küçük'],[2,'Orta'],[3,'Büyük']]],
+  ['sw','smoothLight','Yumuşak Işıklandırma','Köşelerde yumuşak gölge geçişi'],
+  ['sel','clouds','Bulutlar','Gökyüzünde hareketli bulut katmanı',[[0,'Kapalı'],[1,'Hızlı'],[2,'Güzel']]],
+  ['sel','particles','Partiküller','Kırma, patlama ve efekt parçacıkları',[[0,'Tümü'],[1,'Azaltılmış'],[2,'En Az']]],
+  ['sw','entShadows','Varlık Gölgeleri','Canlıların altında gölge'],
+  ['rng','entDist','Varlık Görüş Mesafesi','Canlıların çizildiği uzaklık',50,200,10,v=>'%'+v],
+  ['rng','fov','Görüş Alanı (FOV)','',50,110,1,v=>v+'°'],
+  ['sw','bobbing','Görüş Sallanması','Yürürken kamera salınımı'],
+  ['btn','fsbtn','⛶ Tam Ekran Aç/Kapat'],
+  ['sw','autoOpt','Otomatik Optimizasyon','FPS düşerse görüş mesafesini kendisi azaltır'],
+],
+sound: [
+  ['rng','volMaster','Ana Ses','',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['rng','volMusic','Müzik','',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['rng','volBlocks','Bloklar','Kırma, koyma, adım sesleri',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['rng','volHostile','Düşman Canlılar','',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['rng','volFriendly','Dost Canlılar','',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['rng','volAmbient','Ortam / Çevre','Portal, su, ateş',0,100,1,v=>v?'%'+v:'KAPALI'],
+  ['sw','subtitles','Altyazılar','Sesleri yazıyla göster'],
+],
+controls: [
+  ['rng','sens','Fare Hassasiyeti','',10,200,5,v=>'%'+v],
+  ['rng','touchSens','Dokunmatik Hassasiyeti','',10,200,5,v=>'%'+v],
+  ['sw','invertY','Dikey Ekseni Ters Çevir',''],
+  ['sw','autoJump','Otomatik Zıplama','Tam bloklara yürüyünce kendiliğinden zıplar'],
+  ['sw','sprintLock','Koşu Kilidi','Sürekli koşu (sol üstteki 🏃 tuşuyla aynı)'],
+  ['btn','uibtn','🎛 Tuşları Taşı'],
+  ['btn','uireset','↩ Tuş Yerlerini Sıfırla'],
+],
+chat: [
+  ['sw','chatOn','Sohbet','Sohbet ve komut penceresi'],
+  ['rng','chatScale','Yazı Boyutu','',70,160,5,v=>'%'+v],
+  ['rng','chatOpacity','Arka Plan Saydamlığı','',0,100,5,v=>'%'+v],
+],
+access: [
+  ['sw','damageTilt','Hasar Eğimi','Vurulunca kamera yalpalar'],
+  ['sw','distortion','Bozulma Efektleri','Bulantı ve portal dalgalanması'],
+  ['sw','highContrast','Yüksek Kontrast','Arayüz metinlerini belirginleştirir'],
+  ['sw','subtitles','Altyazılar','Sesleri yazıyla göster'],
+],
+game: [
+  ['sel','difficulty','Zorluk','Barışçıl: düşman canlı doğmaz',[[0,'Barışçıl'],[1,'Kolay'],[2,'Normal'],[3,'Zor']]],
+  ['sw','showCoords','Koordinatları Göster','Üst bilgi çubuğunda konum'],
+  ['btn','mpbtn','🎮 Çok Oyunculu'],
+  ['btn','newworld','🌍 Yeni Dünya (siler!)','danger'],
+],
+res: [
+  ['file','skinfile','Karakter Görünümü (PNG skin)','image/png',0],
+  ['sel','skinarms','Kol Tipi','',[['classic','Kalın kol (klasik)'],['slim','İnce kol (slim)']]],
+  ['file','tpfile','Doku Paketi (Minecraft .zip veya PNG)','.zip,image/png',1],
+  ['btn','tpreset','🎨 Varsayılan Dokulara Dön'],
+],
+};
+function optRow(d) {
+  const [kind, id, label, hint] = d;
+  if (kind === 'btn') return '<button class="act'+(d[3]==='danger'?' danger':'')+'" id="'+id+'">'+label+'</button>';
+  if (kind === 'file') return '<div class="opt"><div class="t"><span class="nm">'+label+'</span></div>'+
+    '<input type="file" id="'+id+'" accept="'+hint+'"'+(d[4]?' multiple':'')+'></div>';
+  if (kind === 'sel') return '<div class="opt"><div class="t"><span class="nm">'+label+'</span></div>'+
+    (hint?'<div class="hint">'+hint+'</div>':'')+
+    '<select id="'+id+'">'+d[4].map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select></div>';
+  if (kind === 'rng') return '<div class="opt"><div class="t"><span class="nm">'+label+'</span>'+
+    '<span class="val" id="v_'+id+'"></span></div>'+(hint?'<div class="hint">'+hint+'</div>':'')+
+    '<input type="range" id="'+id+'" min="'+d[4]+'" max="'+d[5]+'" step="'+d[6]+'"></div>';
+  return '<div class="opt sw" id="sw_'+id+'"><div class="t"><div><div class="nm">'+label+'</div>'+
+    (hint?'<div class="hint">'+hint+'</div>':'')+'</div><div class="knob"><i></i></div></div></div>';
+}
+function renderTab() {
+  const defs = OPT_DEFS[curTab] || [];
+  $('mbody').innerHTML = '<div class="grp">' + defs.map(optRow).join('') + '</div>';
+  for (const d of defs) {
+    const [kind, id] = d;
+    const el = $(id);
+    if (kind === 'sw') {
+      const row = $('sw_'+id);
+      row.classList.toggle('on', !!OPT[id]);
+      row.addEventListener('click', () => { OPT[id] = OPT[id] ? 0 : 1; row.classList.toggle('on', !!OPT[id]); applyOpt(id); saveOpts(); });
+    } else if (kind === 'sel' && el) {
+      el.value = String(OPT[id] !== undefined ? OPT[id] : el.value);
+      el.addEventListener('change', () => { if (OPT[id] !== undefined) OPT[id] = isNaN(+el.value) ? el.value : +el.value; applyOpt(id); saveOpts(); });
+    } else if (kind === 'rng' && el) {
+      const lab = $('v_'+id), fmt = d[7] || (v=>v);
+      el.value = OPT[id]; lab.textContent = fmt(OPT[id]);
+      el.addEventListener('input', () => { OPT[id] = +el.value; lab.textContent = fmt(OPT[id]); applyOpt(id); });
+      el.addEventListener('change', saveOpts);
+    }
+  }
+  if (typeof bindMenuActions === 'function') bindMenuActions();
+}
+function buildMenu() {
+  $('mtabs').innerHTML = TABS.map(([k,n])=>'<button data-t="'+k+'"'+(k===curTab?' class="sel"':'')+'>'+n+'</button>').join('');
+  for (const b of $('mtabs').children)
+    b.addEventListener('click', () => {
+      curTab = b.dataset.t;
+      for (const o of $('mtabs').children) o.classList.toggle('sel', o === b);
+      renderTab();
+    });
+  renderTab();
+}
+
 const clamp = (v,a,b) => v<a?a:v>b?b:v;
 const hex = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
 
@@ -2010,8 +2126,8 @@ function buildMesh(cx, cz) {
         const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
         const arr = (def.water || def.trans) ? wat : opq;
         const yTop = (!shaped && def.water && getBlock(wx, y+1, wz) !== b) ? 0.88 : 1;
-        const L = def.light ? def.light :
-          lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6);
+        const L = def.light ? def.light : (OPT.smoothLight
+          ? lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6) : 0);
         for (const vi of [0,1,2,0,2,3]) {
           const co = f.c[vi];
           const lx = X0 + co[0]*(X1-X0), lz = Z0 + co[2]*(Z1-Z0);
@@ -2051,6 +2167,8 @@ const P = { x:8.5, y:40, z:8.5, vx:0, vy:0, vz:0, yaw:0, pitch:0,
   hp:20, maxhp:20, absorb:0, hunger:20, air:10, dead:false, fallD:0, riding:null };
 let gamemode = 'creative';
 const RULES = { keepInventory:true, mobSpawning:true, daylightCycle:true };
+const DIFF_DMG = [0, 0.5, 1, 1.5];            // Barışçıl / Kolay / Normal / Zor
+function diffMul() { const m = DIFF_DMG[OPT.difficulty]; return m === undefined ? 1 : m; }  // 0 meşru değer (Barışçıl)
 let timeOfDay = 0.3;
 const DAY_LEN = 480;
 let inv = Array(36).fill(null);
@@ -2194,6 +2312,11 @@ function aabbHit(x, y, z, w, h, axis, dir) {
   return best;
 }
 const STEP_H = 0.6;   // yarım blok / merdiven / kar katmanına zıplamadan çıkılır
+function autoJumpTry(e, n) {   // Otomatik Zıplama ayarı: tam bloğa yürüyünce kendiliğinden zıpla
+  if (!OPT.autoJump || e !== P || !e.onGround || e.vy > 0.1) return;
+  const rise = n.y1 - e.y;
+  if (rise > 0.001 && rise <= 1.05 && !aabbHit(e.x, n.y1 + 0.05, e.z, e.w, e.hgt)) e.vy = 8;
+}
 function tryStepUp(e, n) {
   if (e.stepless || !(e.onGround || e.wasGround) || e.vy > 0.1) return false;
   const rise = n.y1 - e.y;
@@ -2214,14 +2337,14 @@ function moveEnt(e, dt) { // e: x,y,z,vx,vy,vz,w,hgt + onGround
   if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'x',e.vx))) {
     if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
       if (e.vx > 0) e.x = n.x0-e.w-0.001; else if (e.vx < 0) e.x = n.x1+e.w+0.001;
-      e.vx = 0; e.blocked = true;
+      e.vx = 0; e.blocked = true; autoJumpTry(e, n);
     }
   } else e.blocked = false;
   e.z += e.vz*dt;
   if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'z',e.vz))) {
     if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
       if (e.vz > 0) e.z = n.z0-e.w-0.001; else if (e.vz < 0) e.z = n.z1+e.w+0.001;
-      e.vz = 0; e.blocked = true;
+      e.vz = 0; e.blocked = true; autoJumpTry(e, n);
     }
   }
   e.onGround = false;
@@ -2300,6 +2423,8 @@ function physics(dt) {
   if (P.y < Y_MIN-6) { if (isCreative()) { P.y = 120; P.vy = 0; } else damagePlayer(100, 'boşluk'); }
 }
 function damagePlayer(d, src) {
+  d = d * diffMul();                       // Zorluk ayarı (Barışçıl'da hasar yok)
+  if (d <= 0) return;
   if (isCreative() || P.dead || d <= 0) return;
   // zırh koruması + zırh yıpranması
   const pts = armorInv.reduce((a,s)=>a+(s?(ITEMS[s.id].armor||0):0), 0);
@@ -2486,7 +2611,7 @@ function trySpawns(dt, light) {
           : [['cod',0.3],['salmon',0.25],['squid',0.2],['dolphin',0.12],['glow_squid',0.08],['turtle',0.05]];
         spawnMob(pick(list), bx+0.5, wy, bz+0.5);
       }
-      if (ents.filter(e=>e.def.hostile).length < 6 && RULES.mobSpawning && !isCreative() && Math.random()<0.3)
+      if (ents.filter(e=>e.def.hostile).length < 6 && RULES.mobSpawning && OPT.difficulty > 0 && !isCreative() && Math.random()<0.3)
         spawnMob(bdo.deep && Math.random()<0.3 ? 'guardian' : 'drowned', bx+0.5, wy, bz+0.5);
       return;
     }
@@ -2496,7 +2621,7 @@ function trySpawns(dt, light) {
     if (isSolid(getBlock(bx,y,bz)) && getBlock(bx,y+1,bz)===0 && getBlock(bx,y+2,bz)===0) { gy = y+1; break; }
   if (gy < 0) return;
   if (dim === 'nether') {
-    if (hostile < 9 && RULES.mobSpawning && !isCreative())
+    if (hostile < 9 && RULES.mobSpawning && OPT.difficulty > 0 && !isCreative())
       spawnMob(pick([['zombie',0.28],['wither_skeleton',0.22],['blaze',0.18],['piglin',0.2],['skeleton',0.12]]), bx+0.5, gy, bz+0.5);
     return;
   }
@@ -2550,6 +2675,7 @@ function updateMobs(dt, light) {
   for (let i=ents.length-1; i>=0; i--) {
     const e = ents[i];
     const dx = P.x-e.x, dz = P.z-e.z, dist = Math.hypot(dx,dz);
+    if (!e.def.boss && dist > OPT.simDist*CH) continue;   // Simülasyon Mesafesi ayarı
     if (e.def.boss) { // Ender Ejderhası: uçan boss YZ
       boss = e;
       e.hurtT = Math.max(0, e.hurtT-dt);
@@ -2872,6 +2998,7 @@ function throwItem(id, n) { // envanterden dışarı atma
 /* ================= PARTİKÜLLER ================= */
 let parts = [];
 function emitParts(x, y, z, rgb, n, spd, life) {
+  n = Math.max(1, Math.round(n * [1, 0.45, 0.15][OPT.particles || 0]));   // Partiküller ayarı
   if (!shaderOn) return;
   for (let i=0; i<n && parts.length<300; i++)
     parts.push({ x, y, z, vx:(Math.random()-0.5)*spd, vy:Math.random()*spd*0.9, vz:(Math.random()-0.5)*spd,
@@ -2930,6 +3057,19 @@ function drawEnts(proj, view, now) {
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
   setAttribs();
   const pv = mmul(proj, view);
+  const entMaxD = RDIST*CH*(OPT.entDist/100);   // Varlık Görüş Mesafesi ayarı
+  function drawShadow(e) {                      // Varlık Gölgeleri ayarı
+    if (!OPT.entShadows) return;
+    let gy = null;
+    for (let y=Math.floor(e.y); y>e.y-4; y--) if (isSolid(getBlock(Math.floor(e.x), y, Math.floor(e.z)))) { gy = y+1; break; }
+    if (gy === null) return;
+    const r = e.w*1.6, fade = Math.max(0.15, 1-(e.y-gy)/4);
+    gl.uniform3fv(loc.uColor, [0,0,0]);
+    gl.uniform1f(loc.uAlpha, 0.32*fade);
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pv, mmul(mtrans(e.x, gy+0.02, e.z), mscale(r, 0.01, r))));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+    gl.uniform1f(loc.uAlpha, 1);
+  }
   function drawModel(e, def, flash) {
     const col = b => { const c = hex(b); return flash ? [1, 0.4, 0.4] : [c[0]/255, c[1]/255, c[2]/255]; };
     const base = mmul(mtrans(e.x, e.y, e.z), mrotY(-e.yaw));
@@ -3029,7 +3169,9 @@ function drawEnts(proj, view, now) {
     }
   }
   for (const e of ents) {
+    if (!e.def.boss && Math.hypot(e.x-P.x, e.z-P.z) > entMaxD) continue;  // Varlık Görüş Mesafesi
     const flash = e.hurtT > 0 || (e.fuse >= 0 && (e.fuse*8|0)%2===0);
+    drawShadow(e);
     drawModel(e, e.def, flash);
   }
   // uzak oyuncular (co-op) — kendi skinleriyle
@@ -3670,6 +3812,7 @@ function noiseSfx(freq, dur, vol) { // gürültü tabanlı: cam, yaprak, toprak,
   } catch(e) {}
 }
 function blockSound(def, place) {
+  if (!OPT.volBlocks) return;             // Bloklar ses kanalı
   const id = def.id || '';
   const p = place ? 1.3 : 1, r = 0.9+Math.random()*0.2;
   if (id.includes('glass') || id === 'ice') { // cam
@@ -3831,7 +3974,9 @@ function closePanels() {
   for (const id of ['invpanel','furnpanel','chestpanel','mppanel','brewpanel']) $(id).style.display = 'none';
   $('chatpanel').style.display = 'none';
 }
-document.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => $(b.dataset.close).style.display='none'));
+document.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.close && $(b.dataset.close); if (t) t.style.display = 'none';   // #closemenu'da data-close yok
+}));
 let invTab = 'bag', pickSlot = -1, openChestKey = null;
 // envanterden dışarı sürükleyerek yere atma
 function attachDrag(el, slotIdx) {
@@ -4239,12 +4384,28 @@ function inputVec() {
 }
 const joyBase = $('joybase'), joyKnob = $('joyknob');
 let joyId = null, joyOX = 0, joyOY = 0;
+/* Joystick takılmasına karşı: hangi parmakların gerçekten basılı olduğunu izle.
+   pointerup/cancel bir şekilde kaçırılırsa (panel açılması, tarayıcı araya girmesi,
+   sekme değişimi) joystick asılı kalıp oyuncuyu sonsuza dek yürütüyordu. */
+const activePointers = new Set();
+function resetJoy() {
+  joyId = null; input.f = 0; input.r = 0;
+  joyBase.style.display = joyKnob.style.display = 'none';
+}
+function resetLook() { clearTimeout(holdTimer); stopBreaking(); lookId = null; }
+function resetTouch() { resetJoy(); resetLook(); activePointers.clear(); }
+function joyWatchdog() {   // her karede: basılı olmayan bir parmağa bağlıysa bırak
+  if (joyId !== null && !activePointers.has(joyId)) resetJoy();
+  if (lookId !== null && !activePointers.has(lookId)) resetLook();
+  if (joyId !== null && (P.dead || uiOpen())) resetJoy();
+}
 let lookId = null, lookLX = 0, lookLY = 0, lookMoved = 0, lookT0 = 0;
 let holdTimer = null, breaking = false;
 const breakbar = $('breakbar');
 function startBreaking() { breaking = true; breakSt = null; breakbar.style.display = 'block'; }
 function stopBreaking() { breaking = false; breakSt = null; breakbar.style.display = 'none'; breakbar.firstElementChild.style.width = '0%'; }
 window.addEventListener('pointerdown', (e) => {
+  activePointers.add(e.pointerId);
   if (uiEdit) {
     if (e.target && e.target.closest && e.target.closest('#uidone')) return;
     for (const id of MOVABLE) {
@@ -4273,10 +4434,13 @@ window.addEventListener('pointerdown', (e) => {
   }
   const lx = e.clientX, ly = e.clientY;
   if (joyId === null && lx < innerWidth*0.45 && ly > innerHeight*0.35) {
-    joyId = e.pointerId; joyOX = lx; joyOY = ly;
+    // taban dairesi ekrandan taşmasın (alt kenarda yarısı kesiliyordu)
+    joyOX = Math.max(58, Math.min(innerWidth-58, lx));
+    joyOY = Math.max(58, Math.min(innerHeight-58, ly));
+    joyId = e.pointerId;
     joyBase.style.display = joyKnob.style.display = 'block';
-    joyBase.style.left = (lx-55)+'px'; joyBase.style.top = (ly-55)+'px';
-    joyKnob.style.left = (lx-24)+'px'; joyKnob.style.top = (ly-24)+'px';
+    joyBase.style.left = (joyOX-55)+'px'; joyBase.style.top = (joyOY-55)+'px';
+    joyKnob.style.left = (joyOX-24)+'px'; joyKnob.style.top = (joyOY-24)+'px';
   } else if (lookId === null) {
     lookId = e.pointerId; lookLX = lx; lookLY = ly; lookMoved = 0; lookT0 = performance.now();
     clearTimeout(holdTimer);
@@ -4300,7 +4464,8 @@ window.addEventListener('pointermove', (e) => {
   } else if (e.pointerId === lookId) {
     const dx = e.clientX-lookLX, dy = e.clientY-lookLY;
     lookMoved += Math.abs(dx)+Math.abs(dy);
-    P.yaw += dx*0.0075; P.pitch += dy*0.0075;
+    const ts = 0.0075*(OPT.touchSens/75), iy = OPT.invertY ? -1 : 1;
+    P.yaw += dx*ts; P.pitch += dy*ts*iy;
     P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch));
     lookLX = e.clientX; lookLY = e.clientY;
     if (breaking && lookMoved > 60) stopBreaking();
@@ -4319,14 +4484,22 @@ function endPointer(e) {
   }
 }
 window.addEventListener('pointerup', (e) => {
-  if (uiEdit) { if (uiDrag) { uiSavePos(); uiDrag = null; } return; }
+  activePointers.delete(e.pointerId);
+  if (uiEdit) { if (uiDrag) { uiSavePos(); uiDrag = null; } endPointer(e); return; }
   if (e.pointerType === 'mouse') { if (breaking) stopBreaking(); }
   endPointer(e);
 });
-window.addEventListener('pointercancel', endPointer);
+function cancelPointer(e) { activePointers.delete(e.pointerId); endPointer(e); }
+window.addEventListener('pointercancel', cancelPointer);
+window.addEventListener('lostpointercapture', cancelPointer);
+window.addEventListener('pointerout', (e) => { if (e.pointerType !== 'mouse') cancelPointer(e); });
+// sekme/pencere değişince veya oyun duraklayınca parmaklar "basılı" kalmasın
+window.addEventListener('blur', resetTouch);
+document.addEventListener('visibilitychange', () => { if (document.hidden) resetTouch(); });
 window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === canvas) {
-    P.yaw += e.movementX*0.0028; P.pitch += e.movementY*0.0028;
+    const ms = 0.0028*(OPT.sens/75), iy2 = OPT.invertY ? -1 : 1;
+    P.yaw += e.movementX*ms; P.pitch += e.movementY*ms*iy2;
     P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch));
   }
 });
@@ -4498,14 +4671,6 @@ function applySkin(dataURL, slim, silent) {
   img.onerror = () => { if (!silent) toast('⚠️ PNG okunamadı, varsayılan skin kullanılıyor'); };
   img.src = dataURL;
 }
-$('skinfile').addEventListener('change', (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => applySkin(rd.result, $('skinarms').value === 'slim');
-  rd.readAsDataURL(f);
-});
-$('skinarms').addEventListener('change', () => { if (skinURL) applySkin(skinURL, $('skinarms').value === 'slim', true); else skinSlim = $('skinarms').value === 'slim'; });
 defaultSkinTex = skinToTex(makeDefaultSkin());
 try { const sk0 = JSON.parse(localStorage.getItem('ck2_skin')||'null'); if (sk0 && sk0.url) applySkin(sk0.url, sk0.slim, true); } catch(e) {}
 
@@ -4878,7 +5043,7 @@ async function applyTexturePNGs(entries) { // {yol → Uint8Array|Blob}
   refreshAtlas();
   return applied;
 }
-$('tpfile').addEventListener('change', async (e) => {
+async function onTexPackFile(e) {
   const files = [...e.target.files];
   if (!files.length) return;
   toast('🎨 Doku paketi okunuyor…');
@@ -4893,14 +5058,7 @@ $('tpfile').addEventListener('change', async (e) => {
                 : '⚠️ Eşleşen doku yok. Minecraft paketi (assets/minecraft/textures/…) veya stone.png gibi adlar gerekir');
   } catch(err) { toast('⚠️ Paket okunamadı: ' + err.message); }
   e.target.value = '';
-});
-$('tpreset').addEventListener('click', () => {
-  resizeAtlas(16);                                  // HD atlastan normale dön
-  for (let ti=0; ti<tilePainters.length; ti++) if (tilePainters[ti]) paintTile(ti, tilePainters[ti]);
-  for (const k in iconOverride) delete iconOverride[k];
-  refreshAtlas();
-  toast('🎨 Varsayılan dokular geri yüklendi');
-});
+}
 
 /* ================= ÇOK OYUNCULU (WebRTC P2P + 6 haneli oda kodu) ================= */
 // MP.peer: en az bir bağlantı var mı? MP.conns: peerId -> {pc,ch,open}. MP.remotes: peerId -> pozisyon+skin
@@ -5096,33 +5254,18 @@ $('mpgo').addEventListener('click', async () => {
     }
   } catch(e) { mpStatus('✖ Kod çözülemedi.'); }
 });
-$('mpbtn').addEventListener('click', () => { menu.style.display='none'; closePanels(); $('mppanel').style.display='flex'; });
+function openMP() { menu.classList.remove('open'); closePanels(); $('mppanel').style.display='flex'; }
 
 /* ================= MENÜ & KAYIT ================= */
 const menu = $('menu');
 $('menubtn').addEventListener('pointerdown', (e) => {
-  e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  e.stopPropagation(); menu.classList.toggle('open'); resetTouch();
 });
-$('closemenu').addEventListener('click', () => menu.style.display = 'none');
+$('closemenu').addEventListener('click', () => { menu.classList.remove('open'); saveOpts(); });
 let shaderOn = true, autoOpt = false, chunkAuto = false, adaptT = 0, adaptFps = 60;
 let sprintOn = false;
 let fovDeg = 70, damageTiltOn = true, viewEffects = true, tiltT = 0, tiltDir = 1, bobPhase = 0;
-function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify({ rdist:chunkAuto?'auto':RDIST, shader:shaderOn, snd:sndOn, vol:sndVol, auto:autoOpt, fov:fovDeg, veff:viewEffects, tilt:damageTiltOn, sprint:sprintOn })); } catch(e) {} }
-$('fovslider').addEventListener('input', (e) => { fovDeg = +e.target.value; $('fovlabel').textContent = e.target.value; saveOpts(); });
-$('veffsel').addEventListener('change', (e) => { viewEffects = e.target.value === '1'; saveOpts(); });
-$('tiltsel').addEventListener('change', (e) => { damageTiltOn = e.target.value === '1'; saveOpts(); });
-$('rdist').addEventListener('change', (e) => {
-  if (e.target.value === 'auto') { chunkAuto = true; RDIST = Math.min(RDIST, 5); adaptT = 0; adaptFps = 60;
-    toast('🌡️ Adaptif mod: cihazına göre görüş mesafesini ayarlayacak'); }
-  else { chunkAuto = false; RDIST = +e.target.value;
-    if (RDIST >= 12) toast('⚠️ '+RDIST+' chunk çok fazla RAM/işlemci ister — cihazın güçlü değilse takılabilir'); }
-  saveOpts();
-});
-$('autooptsel').addEventListener('change', (e) => { autoOpt = e.target.value === '1'; lowFpsT = 0; saveOpts();
-  toast(autoOpt ? '⚡ Otomatik optimizasyon açık' : '🔒 Ayarlar sabit kalacak'); });
-$('sndsel').addEventListener('change', (e) => { sndOn = e.target.value === '1'; saveOpts(); });
-$('shadersel').addEventListener('change', (e) => { shaderOn = e.target.value === '1'; saveOpts(); });
-$('volslider').addEventListener('input', (e) => { sndVol = e.target.value/100; $('vollabel').textContent = e.target.value; saveOpts(); });
+function saveOpts() { try { localStorage.setItem('ck2_opts', JSON.stringify(OPT)); } catch(e) {} }
 /* --- tam ekran (Safari/iOS webkit yedekli) --- */
 function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
 function reqFullscreen(el) {
@@ -5135,19 +5278,87 @@ function exitFullscreen() {
   const fn = document.exitFullscreen || document.webkitExitFullscreen;
   if (fn) try { const r = fn.call(document); if (r && r.catch) r.catch(()=>{}); } catch(e) {}
 }
-$('fsbtn').addEventListener('click', () => {
-  if (fsElement()) exitFullscreen();
-  else reqFullscreen(document.documentElement).catch(()=>toast('Tarayıcı/iOS tam ekrana izin vermedi'));
-});
-/* --- koşu kilidi (sprint on/off) --- */
+/* --- koşu kilidi (sol üstteki 🏃 tuşu) --- */
 function applySprintBtn() { const b = $('sprintbtn'); if (b) b.classList.toggle('on', sprintOn); }
 $('sprintbtn').addEventListener('click', (e) => {
   e.preventDefault();
-  sprintOn = !sprintOn;
-  applySprintBtn();
-  saveOpts();
+  sprintOn = !sprintOn; OPT.sprintLock = sprintOn ? 1 : 0;
+  applySprintBtn(); saveOpts();
   toast(sprintOn ? '🏃 Koşu kilidi AÇIK' : '🚶 Koşu kilidi kapalı');
 });
+/* --- menü aksiyon tuşları: sekme her çizildiğinde yeniden bağlanır --- */
+function bindMenuActions() {
+  const on = (id, ev, fn) => { const el = $(id); if (el && !el._b) { el._b = 1; el.addEventListener(ev, fn); } };
+  on('fsbtn', 'click', () => {
+    if (fsElement()) exitFullscreen();
+    else reqFullscreen(document.documentElement).catch(()=>toast('Tarayıcı/iOS tam ekrana izin vermedi'));
+  });
+  on('uibtn', 'click', startUiEdit);
+  on('uireset', 'click', () => { localStorage.removeItem('ck2_ui'); location.reload(); });
+  on('mpbtn', 'click', openMP);
+  on('newworld', 'click', () => {
+    if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
+    localStorage.removeItem('ck2_edits_'+seed); localStorage.removeItem('ck2_state_'+seed);
+    localStorage.removeItem('ck_seed'); location.reload();
+  });
+  on('tpreset', 'click', () => {
+    resizeAtlas(16);
+    for (let ti=0; ti<tilePainters.length; ti++) if (tilePainters[ti]) paintTile(ti, tilePainters[ti]);
+    for (const k in iconOverride) delete iconOverride[k];
+    refreshAtlas(); toast('🎨 Varsayılan dokular geri yüklendi');
+  });
+  on('skinfile', 'change', (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => applySkin(rd.result, $('skinarms') && $('skinarms').value === 'slim');
+    rd.readAsDataURL(f);
+  });
+  on('skinarms', 'change', () => { if (skinURL) applySkin(skinURL, $('skinarms').value === 'slim', true); else skinSlim = $('skinarms').value === 'slim'; });
+  on('tpfile', 'change', onTexPackFile);
+}
+/* --- OPT değerlerini oyuna uygula --- */
+function applyOpt(id) {
+  switch (id) {
+    case 'graphics': shaderOn = OPT.graphics > 0; break;
+    case 'rdist':
+      if (OPT.rdist === 'auto') { chunkAuto = true; RDIST = Math.min(RDIST||4, 5); }
+      else { chunkAuto = false; RDIST = +OPT.rdist; }
+      if (bootDone) ensureChunks();
+      break;
+    case 'autoOpt': autoOpt = !!OPT.autoOpt; break;
+    case 'fov': fovDeg = OPT.fov; break;
+    case 'bobbing': case 'distortion': viewEffects = !!(OPT.bobbing || OPT.distortion); break;
+    case 'damageTilt': damageTiltOn = !!OPT.damageTilt; break;
+    case 'sprintLock': sprintOn = !!OPT.sprintLock; applySprintBtn(); break;
+    case 'volMaster': sndVol = OPT.volMaster/100; sndOn = OPT.volMaster > 0; break;
+    case 'guiScale': applyGuiScale(); break;
+    case 'chatScale': case 'chatOpacity': case 'chatOn': applyChatOpt(); break;
+    case 'highContrast': document.body.classList.toggle('hicon', !!OPT.highContrast); break;
+    case 'difficulty': RULES.mobSpawning = OPT.difficulty > 0; break;
+  }
+}
+function applyAllOpts() { for (const k in OPT) applyOpt(k); }
+function applyGuiScale() {
+  const auto = Math.min(1.35, Math.max(0.85, innerWidth/430));
+  const s = [auto, 0.85, 1.05, 1.3][OPT.guiScale] || auto;
+  document.documentElement.style.setProperty('--gui', s);
+  for (const id of ['hotbar','jumpbtn','downbtn','invbtn','chatbtn','menubtn','sprintbtn'])
+    { const el = $(id); if (el) el.style.zoom = s; }
+}
+function applyChatOpt() {
+  const cb = $('chatbtn'); if (cb) cb.style.display = OPT.chatOn ? '' : 'none';
+  const cp = $('chatpanel');
+  if (cp) { cp.style.fontSize = (13*OPT.chatScale/100).toFixed(1)+'px';
+            cp.style.background = 'rgba(10,14,22,'+(OPT.chatOpacity/100).toFixed(2)+')'; }
+}
+function startUiEdit() {
+  menu.classList.remove('open'); closePanels();
+  uiEdit = true;
+  $('uidone').style.display = 'flex';
+  $('downbtn').style.display = 'flex';
+  MOVABLE.forEach(id => { const el = $(id); el.style.pointerEvents = 'none'; el.style.outline = '2px dashed #ffd24a'; });
+  toast('🎛 Tuşları sürükle, bitince ✔ Bitti\'ye bas');
+}
 /* --- tuş yerlerini taşıma --- */
 const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','hotbar'];
 let uiEdit = false, uiDrag = null, uiOffX = 0, uiOffY = 0;
@@ -5164,14 +5375,6 @@ function uiSavePos() {
   if (uiDrag) { const r = uiDrag.getBoundingClientRect(); o[uiDrag.id] = [Math.round(r.left), Math.round(r.top)]; }
   try { localStorage.setItem('ck2_ui', JSON.stringify(o)); } catch(e) {}
 }
-$('uibtn').addEventListener('click', () => {
-  menu.style.display = 'none'; closePanels();
-  uiEdit = true;
-  $('uidone').style.display = 'flex';
-  $('downbtn').style.display = 'flex';
-  MOVABLE.forEach(id => { const el = $(id); el.style.pointerEvents = 'none'; el.style.outline = '2px dashed #ffd24a'; });
-  toast('🎛 Tuşları sürükle, bitince ✔ Bitti\'ye bas');
-});
 $('uidone').addEventListener('click', () => {
   uiEdit = false; uiDrag = null;
   $('uidone').style.display = 'none';
@@ -5179,32 +5382,23 @@ $('uidone').addEventListener('click', () => {
   MOVABLE.forEach(id => { const el = $(id); el.style.pointerEvents = ''; el.style.outline = ''; });
   toast('✔ Tuş yerleri kaydedildi');
 });
-$('uireset').addEventListener('click', () => { localStorage.removeItem('ck2_ui'); location.reload(); });
 (function loadOpts() {
   try {
     const o = JSON.parse(localStorage.getItem('ck2_opts')||'{}');
-    if (o.rdist) { RDIST = o.rdist; $('rdist').value = o.rdist; }
-    if (o.shader !== undefined) { shaderOn = !!o.shader; $('shadersel').value = o.shader ? '1' : '0'; }
-    if (o.snd !== undefined) { sndOn = !!o.snd; $('sndsel').value = o.snd ? '1' : '0'; }
-    if (o.vol !== undefined) { sndVol = o.vol; $('volslider').value = Math.round(o.vol*100); $('vollabel').textContent = Math.round(o.vol*100); }
-    if (o.auto !== undefined) { autoOpt = !!o.auto; $('autooptsel').value = o.auto ? '1' : '0'; }
-    if (o.rdist === 'auto') { chunkAuto = true; $('rdist').value = 'auto'; RDIST = Math.min(RDIST||4, 5); }
-    else if (o.rdist) { chunkAuto = false; RDIST = o.rdist; $('rdist').value = String(o.rdist); }
-    if (o.fov !== undefined) { fovDeg = o.fov; $('fovslider').value = o.fov; $('fovlabel').textContent = o.fov; }
-    if (o.veff !== undefined) { viewEffects = !!o.veff; $('veffsel').value = o.veff ? '1' : '0'; }
-    if (o.tilt !== undefined) { damageTiltOn = !!o.tilt; $('tiltsel').value = o.tilt ? '1' : '0'; }
-    if (o.sprint !== undefined) { sprintOn = !!o.sprint; }
+    for (const k in o) if (k in OPT) OPT[k] = o[k];
+    // eski sürüm anahtarlarını taşı
+    if (o.shader !== undefined) OPT.graphics = o.shader ? 1 : 0;
+    if (o.vol !== undefined) OPT.volMaster = Math.round(o.vol*100);
+    if (o.veff !== undefined) { OPT.bobbing = o.veff?1:0; OPT.distortion = o.veff?1:0; }
+    if (o.tilt !== undefined) OPT.damageTilt = o.tilt?1:0;
+    if (o.sprint !== undefined) OPT.sprintLock = o.sprint?1:0;
+    if (o.auto !== undefined) OPT.autoOpt = o.auto?1:0;
   } catch(e) {}
+  applyAllOpts();
   applySprintBtn();
+  buildMenu();
   uiApply();
 })();
-$('newworld').addEventListener('click', () => {
-  if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
-  localStorage.removeItem('ck2_edits_'+seed);
-  localStorage.removeItem('ck2_state_'+seed);
-  localStorage.removeItem('ck_seed');
-  location.reload();
-});
 function saveState() {
   try {
     localStorage.setItem('ck2_state_'+seed, JSON.stringify({
@@ -5328,8 +5522,14 @@ let tickScale = 1, tickFrozen = false, lowFpsT = 0;
 let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
+let fpsGate = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  if (OPT.maxFps > 0) {                       // Azami Kare Hızı ayarı
+    const minMs = 1000/OPT.maxFps;
+    if (now - fpsGate < minMs - 0.5) return;
+    fpsGate = now;
+  }
   const dt = Math.min(0.05, (now-last)/1000);
   last = now;
   const sdt = tickFrozen ? 0 : dt * tickScale; // /tick oyun hızı
@@ -5358,6 +5558,7 @@ function frame(now) {
   const cx = Math.floor(P.x/CH), cz = Math.floor(P.z/CH);
   boundaryT++;
   if (cx !== lastCX || cz !== lastCZ || boundaryT > 90) { lastCX=cx; lastCZ=cz; boundaryT=0; ensureChunks(); }
+  joyWatchdog();                       // takılı kalan joystick'i bırak
   processGen(genQueue.length > 30 ? 4 : 2);
   let meshBudget = 2;
   while (meshBudget-- > 0 && meshQueue.length) {
@@ -5367,7 +5568,8 @@ function frame(now) {
   }
   if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
-  const light = dim==='nether' ? 0.55 : dim==='end' ? 0.5 : 0.25 + 0.75*Math.min(1, sun);
+  let light = dim==='nether' ? 0.55 : dim==='end' ? 0.5 : 0.25 + 0.75*Math.min(1, sun);
+  light = Math.min(1.6, light * (0.72 + OPT.brightness/100*0.75));   // Parlaklık ayarı
   physics(dt);
   checkPortal(dt);
   stepBreaking(dt);
@@ -5460,11 +5662,12 @@ function frame(now) {
   waterOv.style.background = hb === BID.lava ? 'rgba(220,80,10,.5)' : 'rgba(20,60,160,.3)';
   if (!handEl.classList.contains('swing'))
     handEl.style.bottom = (-6 + Math.sin(now/210)*(Math.hypot(P.vx,P.vz)>1.5?4:1)) + 'px';
-  infoEl.textContent = fps+' FPS  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0)+
+  infoEl.textContent = fps+' FPS'+(OPT.showCoords ? '  x:'+(P.x|0)+' y:'+(P.y|0)+' z:'+(P.z|0) : '')+
     '  '+(chunkAuto?'🌡️'+RDIST:'👁'+RDIST)+'ch  '+
     (isCreative()?'Yaratıcı':'Hayatta Kalma')+(dim!=='overworld'?(dim==='nether'?'  🔥Nether':'  🌌End'):'');
 }
 requestAnimationFrame(frame);
+bootDone = true;
 window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, MOBS, ents, armor:()=>armorInv,
   cmd:runCmd, addItem, inv:()=>inv, mode:()=>gamemode, dim:()=>dim, setDim,
   offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
@@ -5476,6 +5679,8 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   hasDefaultSkin:()=>!!defaultSkinTex, applyTexturePNGsTest:applyTexturePNGs, ensureChunksNow,
   atlasInfo:()=>({N:ATLAS_N, TSZ, canvas:atlasCanvas}), iconOv:()=>iconOverride, MCTEX, MCITEM,
   cropSet, CROP_BY_ID, cropTickNow:(n)=>{ for(let i=0;i<n;i++) cropTick(99); },
+  dropPointerTest:(id)=>activePointers.delete(id),
+  OPT, damagePlayerTest:damagePlayer, applyOptTest:applyOpt,
   placeVariantTest:placeVariant, toggleShapedTest:toggleShaped, shapeOfTest:shapeOf,
   pistonPushTest:pistonPush, aabbHitTest:aabbHit, SHAPE_FAMILY,
   blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },
