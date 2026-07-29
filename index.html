@@ -249,7 +249,15 @@
 const CH = 16, Y_MIN = -64, H = 384, WATER_Y = 62; // dünya -64..319 (Minecraft gibi)
 const Y_MAX = Y_MIN + H - 1; // 319 (yerleştirilebilir en yüksek)
 const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl', { antialias:false });
+// GPU'yu açıkça iste: ayrık/yüksek performanslı adaptör, gereksiz tamponlar kapalı.
+// WebGL2 varsa o kullanılır (VAO çekirdekte, sürücü yolu daha iyi optimize).
+const GLOPT = { antialias:false, depth:true, stencil:false, alpha:false,
+  premultipliedAlpha:false, preserveDrawingBuffer:false,
+  powerPreference:'high-performance', desynchronized:true, failIfMajorPerformanceCaveat:false };
+let glVer = 2;
+let gl = canvas.getContext('webgl2', GLOPT);
+if (!gl) { glVer = 1; gl = canvas.getContext('webgl', GLOPT); }
+if (!gl) { glVer = 1; gl = canvas.getContext('experimental-webgl', GLOPT); }
 let seed = parseInt(localStorage.getItem('ck_seed') || '0');
 if (!seed) { seed = (Math.random()*2e9)|0; localStorage.setItem('ck_seed', seed); }
 const $ = id => document.getElementById(id);
@@ -275,6 +283,7 @@ const TABS = [
 let curTab = 'video';
 const OPT_DEFS = {
 video: [
+  ['info','gpuname','Grafik İşlemci (GPU)','Oyun donanım hızlandırmalı WebGL ile çiziliyor'],
   ['sel','graphics','Grafikler','Fancy: sis, dinamik ışık ve partiküller açık',[[0,'Hızlı'],[1,'Güzel'],[2,'Muhteşem']]],
   ['sel','rdist','Görüş Mesafesi','Yüklenen chunk yarıçapı',
     [['auto','Otomatik (cihaza göre)'],[2,'2 chunk'],[3,'3 chunk'],[4,'4 chunk'],[5,'5 chunk'],[6,'6 chunk'],
@@ -340,6 +349,8 @@ res: [
 };
 function optRow(d) {
   const [kind, id, label, hint] = d;
+  if (kind === 'info') return '<div class="opt"><div class="t"><span class="nm">'+label+'</span>'+
+    '<span class="val" id="'+id+'"></span></div>'+(hint?'<div class="hint">'+hint+'</div>':'')+'</div>';
   if (kind === 'btn') return '<button class="act'+(d[3]==='danger'?' danger':'')+'" id="'+id+'">'+label+'</button>';
   if (kind === 'file') return '<div class="opt"><div class="t"><span class="nm">'+label+'</span></div>'+
     '<input type="file" id="'+id+'" accept="'+hint+'"'+(d[4]?' multiple':'')+'></div>';
@@ -371,6 +382,11 @@ function renderTab() {
       el.addEventListener('input', () => { OPT[id] = +el.value; lab.textContent = fmt(OPT[id]); applyOpt(id); });
       el.addEventListener('change', saveOpts);
     }
+  }
+  const gn = $('gpuname');
+  if (gn && typeof gpuInfo !== 'undefined') {
+    const short = gpuInfo.name.replace(/^ANGLE \(|\)$/g,'').split(',')[0].slice(0,34);
+    gn.textContent = gpuInfo.api + ' · ' + short;
   }
   if (typeof bindMenuActions === 'function') bindMenuActions();
 }
@@ -2225,8 +2241,20 @@ function setAttribs() {
   gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 28, 20);
   gl.vertexAttribPointer(loc.aLight, 1, gl.FLOAT, false, 28, 24);
 }
-// WebGL1'de VAO uzantısı: chunk başına vertexAttribPointer tekrarını ortadan kaldırır
-const vaoExt = gl.getExtension('OES_vertex_array_object');
+// VAO: WebGL2'de çekirdek, WebGL1'de uzantı — chunk başına öznitelik kurulumunu kaldırır
+const vaoExt = (glVer === 2)
+  ? { createVertexArrayOES:()=>gl.createVertexArray(),
+      bindVertexArrayOES:(v)=>gl.bindVertexArray(v),
+      deleteVertexArrayOES:(v)=>gl.deleteVertexArray(v) }
+  : gl.getExtension('OES_vertex_array_object');
+// hangi GPU'da çalıştığımızı ayarlar ekranında göstermek için
+const gpuInfo = (() => {
+  try {
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return { api:'WebGL'+glVer, name: String(name||'bilinmiyor') };
+  } catch(e) { return { api:'WebGL'+glVer, name:'bilinmiyor' }; }
+})();
 const tex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, tex);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
@@ -2281,12 +2309,14 @@ function boxInFrustum(x0,y0,z0, x1,y1,z1) {
   return true;
 }
 /* ================= MESH ================= */
+// Tüm yüzler dışarıdan bakınca CCW: -x, -y ve +z'nin köşe sırası ters çevrildi.
+// Böylece gl.CULL_FACE açılabiliyor (GPU blokların iç yüzlerini hiç işlemiyor).
 const FACES = [
   { d:[ 1,0,0], s:0.70, c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
-  { d:[-1,0,0], s:0.70, c:[[0,0,0],[0,1,0],[0,1,1],[0,0,1]] },
+  { d:[-1,0,0], s:0.70, c:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
   { d:[0, 1,0], s:1.00, c:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]] },
-  { d:[0,-1,0], s:0.55, c:[[0,0,0],[0,0,1],[1,0,1],[1,0,0]] },
-  { d:[0,0, 1], s:0.82, c:[[0,0,1],[0,1,1],[1,1,1],[1,0,1]] },
+  { d:[0,-1,0], s:0.55, c:[[1,0,0],[1,0,1],[0,0,1],[0,0,0]] },
+  { d:[0,0, 1], s:0.82, c:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]] },
   { d:[0,0,-1], s:0.82, c:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]] },
 ];
 const CROSSQ = [ [[0.08,0,0.08],[0.08,1,0.08],[0.92,1,0.92],[0.92,0,0.92]],
@@ -2375,7 +2405,8 @@ function buildMesh(cx, cz) {
     if (def.cross) {
       const t = def.t[1];
       const L = Math.max(def.light||0, lightAt(wx+0.5, y+0.5, wz+0.5));
-      for (const q of CROSSQ) for (const vi of [0,1,2,0,2,3]) {
+      // arka yüz kırpması açık olduğu için çapraz quad'lar çift taraflı basılır
+      for (const q of CROSSQ) for (const vi of [0,1,2,0,2,3, 2,1,0,3,2,0]) {
         const co = q[vi];
         const uv = tileUV(t, co[0], 1-co[1]);
         opq.push(wx+co[0], y+co[1], wz+co[2], uv[0], uv[1], 0.95, L);
@@ -5826,6 +5857,7 @@ let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
 const drawStats = { drawn:0, culled:0 };
+let lastCullState = false;
 const pixProbe = { want:false, result:null };
 let fpsGate = 0;
 function frame(now) {
@@ -5949,6 +5981,10 @@ function frame(now) {
   gl.uniform1f(loc.uAlpha, 1);
   gl.disable(gl.BLEND);
   gl.depthMask(true);
+  // Blok yüzü kırpma: bloğun sana bakmayan yüzleri GPU'da hiç rasterleştirilmez.
+  // Yalnızca chunk geçişinde açık — canlı modelleri ve su iki taraftan görünmeli.
+  gl.enable(gl.CULL_FACE); gl.frontFace(gl.CCW); gl.cullFace(gl.BACK);
+  lastCullState = gl.isEnabled(gl.CULL_FACE);
   const waterList = [];
   updateFrustum(mvp);
   const farD = RDIST*CH + CH*1.5, farD2 = farD*farD;
@@ -5966,6 +6002,7 @@ function frame(now) {
     if (c.vboW) waterList.push(c);
   }
   drawStats.drawn = drawn; drawStats.culled = culled;
+  gl.disable(gl.CULL_FACE);
   drawEnts(proj, view, now);
   drawVehicles(mmul(proj, view), now);
   gl.enable(gl.BLEND);
@@ -6026,6 +6063,10 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   boxInFrustumTest:boxInFrustum, frustumTest:()=>frustum, chunkAt:(a,b)=>chunks.get(ckey(a,b)),
   vaoExtTest:()=>!!vaoExt,
   probeAsk:()=>{ pixProbe.want=true; pixProbe.result=null; }, probeGet:()=>pixProbe.result,
+  gpuInfoTest:()=>gpuInfo, glVerTest:()=>glVer,
+  glStateTest:()=>({ cullEnabledDuringChunks:lastCullState, frontFace:gl.getParameter(gl.FRONT_FACE),
+    cullFace:gl.getParameter(gl.CULL_FACE_MODE), CCW:gl.CCW, BACK:gl.BACK }),
+  crossVertsTest:()=>({ perQuad:12 }),
   heldCubeTiles:(def)=>{ const t = def.cross ? def.t[1] : def.t;
     const pick = (dy)=> Array.isArray(t) ? (dy>0?t[0]:dy<0?t[2]:t[1]) : t;
     return { top:pick(1), side:pick(0), bottom:pick(-1) }; },

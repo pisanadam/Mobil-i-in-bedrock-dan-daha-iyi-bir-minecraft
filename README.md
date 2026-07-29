@@ -136,6 +136,9 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### ⚡ 24 chunk performansı
 Uzak görüşte asıl yük chunk **sayısı** değil, kare başına yapılan iş ve çizim çağrısıdır. Bunlar için:
 
+- 🖥️ **GPU (donanım hızlandırma)**: bağlam **WebGL2** olarak ve `powerPreference: high-performance` ile alınır (yoksa WebGL1'e düşer). Ayarlar → Grafik'te çalıştığın **GPU adı ve API sürümü** görünür
+- 🧊 **Blok yüzü kırpma (GPU `CULL_FACE`)**: bloğun sana bakmayan yüzleri GPU'da hiç rasterleştirilmez. Bunun için altı yüzün sarım yönü tutarlı hale getirildi (dışarıdan CCW); bitkiler çift taraflı basılır, su ve canlılar kırpma dışı tutulur
+- 🚫 **Komşu yüz kırpma (CPU)**: iki tam küp arasındaki gizli yüzler mesh'e hiç girmez (şekilli bloklar komşusunun yüzünü kapatmaz)
 - 👁 **Görüş piramidi (frustum) kırpma**: kameranın görmediği chunk'lar hiç çizilmez. Ölçüm: 24 chunk'ta **438 → 63 çizim çağrısı (%86 azalma)**
 - ⭕ **Daire biçimli mesafe kırpma**: sisin arkasında kalan köşe chunk'ları atlanır
 - 🧵 **VAO (vertex array object)**: chunk başına 4 öznitelik çağrısı yerine tek bağlama
