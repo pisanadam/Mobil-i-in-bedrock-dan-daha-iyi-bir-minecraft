@@ -261,9 +261,10 @@ let bootDone = false;            // açılışta dünya henüz hazır değil
 const OPT = {                    // varsayılanlar (Minecraft varsayılanlarına yakın)
   graphics:1, rdist:3, simDist:4, maxFps:0, brightness:50, guiScale:0,
   smoothLight:1, clouds:1, particles:0, entShadows:1, entDist:100, biomeBlend:1,
+  cores:0, frustumCull:1,   // cores:0 = otomatik (cihazın çekirdek sayısı)
   fov:70, bobbing:1, distortion:1, damageTilt:1, autoOpt:0,
   volMaster:100, volMusic:60, volBlocks:100, volHostile:100, volFriendly:100, volAmbient:100, subtitles:0,
-  sens:75, invertY:0, autoJump:0, sprintLock:0, touchSens:75,
+  sens:75, invertY:0, autoJump:1, sprintLock:0, touchSens:75,
   chatOn:1, chatScale:100, chatOpacity:80,
   difficulty:2, showCoords:0, highContrast:0,
 };
@@ -290,6 +291,9 @@ video: [
   ['rng','fov','Görüş Alanı (FOV)','',50,110,1,v=>v+'°'],
   ['sw','bobbing','Görüş Sallanması','Yürürken kamera salınımı'],
   ['btn','fsbtn','⛶ Tam Ekran Aç/Kapat'],
+  ['sel','cores','İşlem Çekirdeği','Chunk üretimi ve güncellemesi için kare başına ayrılan iş bütçesi',
+    [[0,'Otomatik (cihaza göre)'],[1,'1 — en tasarruflu'],[2,'2'],[3,'3'],[4,'4'],[6,'6'],[8,'8 — en hızlı yükleme']]],
+  ['sw','frustumCull','Görüş Dışını Atla','Kameranın görmediği chunk\'lar çizilmez (24 chunk\'ta şart)'],
   ['sw','autoOpt','Otomatik Optimizasyon','FPS düşerse görüş mesafesini kendisi azaltır'],
 ],
 sound: [
@@ -2217,6 +2221,8 @@ function setAttribs() {
   gl.vertexAttribPointer(loc.aShade, 1, gl.FLOAT, false, 28, 20);
   gl.vertexAttribPointer(loc.aLight, 1, gl.FLOAT, false, 28, 24);
 }
+// WebGL1'de VAO uzantısı: chunk başına vertexAttribPointer tekrarını ortadan kaldırır
+const vaoExt = gl.getExtension('OES_vertex_array_object');
 const tex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, tex);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
@@ -2245,6 +2251,31 @@ function mrotZ(a){ const c=Math.cos(a),s=Math.sin(a);
 function mtrans(x,y,z){ return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]); }
 function mscale(x,y,z){ return new Float32Array([x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1]); }
 
+/* ================= GÖRÜŞ PİRAMİDİ (FRUSTUM) KIRPMA =================
+   24 chunk'ta ~2400 chunk yükleniyor; hepsini çizmek yerine yalnızca
+   kameranın gördüklerini çiziyoruz. Draw call sayısını ~3 kat düşürür. */
+const frustum = [new Float32Array(4), new Float32Array(4), new Float32Array(4),
+                 new Float32Array(4), new Float32Array(4), new Float32Array(4)];
+function updateFrustum(m) {           // m: column-major MVP, m[col*4+row]
+  const r0=[m[0],m[4],m[8],m[12]], r1=[m[1],m[5],m[9],m[13]],
+        r2=[m[2],m[6],m[10],m[14]], r3=[m[3],m[7],m[11],m[15]];
+  const set = (i, a, b, s) => { const p = frustum[i];
+    for (let k=0;k<4;k++) p[k] = a[k] + s*b[k];
+    const l = Math.hypot(p[0],p[1],p[2]) || 1;
+    p[0]/=l; p[1]/=l; p[2]/=l; p[3]/=l; };
+  set(0, r3, r0,  1); set(1, r3, r0, -1);   // sol / sağ
+  set(2, r3, r1,  1); set(3, r3, r1, -1);   // alt / üst
+  set(4, r3, r2,  1); set(5, r3, r2, -1);   // yakın / uzak
+}
+function boxInFrustum(x0,y0,z0, x1,y1,z1) {
+  for (let i=0;i<6;i++) {
+    const p = frustum[i];
+    // kutunun plana en yakın köşesi bile dışarıdaysa kutu görünmez
+    const px = p[0] > 0 ? x1 : x0, py = p[1] > 0 ? y1 : y0, pz = p[2] > 0 ? z1 : z0;
+    if (p[0]*px + p[1]*py + p[2]*pz + p[3] < 0) return false;
+  }
+  return true;
+}
 /* ================= MESH ================= */
 const FACES = [
   { d:[ 1,0,0], s:0.70, c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
@@ -2266,9 +2297,16 @@ let EPS = 0.5/(ATLAS_N*TSZ);              // karo kenarı sızıntısını önle
 function tileUV(t, u, v) { return [(t%ATLAS_N)*TS + EPS + u*(TS-2*EPS), ((t/ATLAS_N)|0)*TS + EPS + v*(TS-2*EPS)]; }
 const meshQueue = [];
 const queued = new Set();
+let meshSortT = 0;
 function queueMesh(cx, cz) {
   const k = ckey(cx,cz);
   if (chunks.has(k) && !queued.has(k)) { queued.add(k); meshQueue.push([cx,cz]); }
+}
+function sortQueuesByDistance() {      // önce oyuncunun çevresi işlensin
+  const pcx = Math.floor(P.x/CH), pcz = Math.floor(P.z/CH);
+  const d2 = (a) => { const dx=a[0]-pcx, dz=a[1]-pcz; return dx*dx+dz*dz; };
+  if (meshQueue.length > 1) meshQueue.sort((a,b) => d2(a)-d2(b));
+  if (genQueue.length > 1) genQueue.sort((a,b) => d2(a)-d2(b));
 }
 function chunkMaxY(c) { // dolu en üst worldY (üstteki hava taranmaz → perf)
   if (c.maxY !== undefined) return c.maxY;
@@ -2370,16 +2408,26 @@ function buildMesh(cx, cz) {
       }
     }
   }
-  function upload(arr, oldVbo) {
+  function upload(arr, oldVbo, oldVao) {
     if (oldVbo) gl.deleteBuffer(oldVbo);
-    if (!arr.length) return [null, 0];
+    if (oldVao && vaoExt) vaoExt.deleteVertexArrayOES(oldVao);
+    if (!arr.length) return [null, 0, null];
     const vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
-    return [vbo, arr.length/7];
+    let vao = null;
+    if (vaoExt) {                       // öznitelik düzenini bir kez kaydet
+      vao = vaoExt.createVertexArrayOES();
+      vaoExt.bindVertexArrayOES(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      setAttribs();
+      vaoExt.bindVertexArrayOES(null);
+    }
+    return [vbo, arr.length/7, vao];
   }
-  [c.vboO, c.cntO] = upload(opq, c.vboO);
-  [c.vboW, c.cntW] = upload(wat, c.vboW);
+  c.minY = Y_MIN; c.maxYd = chunkMaxY(c) + 1;   // frustum kutusu için dikey sınır
+  [c.vboO, c.cntO, c.vaoO] = upload(opq, c.vboO, c.vaoO);
+  [c.vboW, c.cntW, c.vaoW] = upload(wat, c.vboW, c.vaoW);
   c.meshed = true;
 }
 /* birim küp (canlılar için), merkez tabanda */
@@ -2542,11 +2590,6 @@ function aabbHit(x, y, z, w, h, axis, dir) {
   return best;
 }
 const STEP_H = 0.6;   // yarım blok / merdiven / kar katmanına zıplamadan çıkılır
-function autoJumpTry(e, n) {   // Otomatik Zıplama ayarı: tam bloğa yürüyünce kendiliğinden zıpla
-  if (!OPT.autoJump || e !== P || !e.onGround || e.vy > 0.1) return;
-  const rise = n.y1 - e.y;
-  if (rise > 0.001 && rise <= 1.05 && !aabbHit(e.x, n.y1 + 0.05, e.z, e.w, e.hgt)) e.vy = 8;
-}
 function tryStepUp(e, n) {
   if (e.stepless || !(e.onGround || e.wasGround) || e.vy > 0.1) return false;
   const rise = n.y1 - e.y;
@@ -2567,14 +2610,14 @@ function moveEnt(e, dt) { // e: x,y,z,vx,vy,vz,w,hgt + onGround
   if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'x',e.vx))) {
     if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
       if (e.vx > 0) e.x = n.x0-e.w-0.001; else if (e.vx < 0) e.x = n.x1+e.w+0.001;
-      e.vx = 0; e.blocked = true; autoJumpTry(e, n);
+      e.vx = 0; e.blocked = true;
     }
   } else e.blocked = false;
   e.z += e.vz*dt;
   if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'z',e.vz))) {
     if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
       if (e.vz > 0) e.z = n.z0-e.w-0.001; else if (e.vz < 0) e.z = n.z1+e.w+0.001;
-      e.vz = 0; e.blocked = true; autoJumpTry(e, n);
+      e.vz = 0; e.blocked = true;
     }
   }
   e.onGround = false;
@@ -2625,8 +2668,16 @@ function physics(dt) {
     if (hsp > 1.2) {
       const ax = P.x + (P.vx/hsp)*(P.w+0.4), az = P.z + (P.vz/hsp)*(P.w+0.4);
       const bx = Math.floor(ax), bz = Math.floor(az), fy = Math.floor(P.y+0.1);
-      if (isSolid(getBlock(bx,fy,bz)) && !isSolid(getBlock(bx,fy+1,bz)) && !isSolid(getBlock(bx,fy+2,bz)))
-        P.vy = 8.4;
+      // Yalnız basamakla çıkılamayan engelde zıpla: yarım blok/merdiven/halı zaten
+      // otomatik basamakla aşılıyor, onlarda zıplamak gereksiz sıçrama yapıyordu.
+      if (OPT.autoJump) {
+        const bs = collBoxes(getBlock(bx,fy,bz), bx, fy, bz);
+        let top = -Infinity;
+        if (bs) for (const q of bs) { const t = fy + q[4]; if (t > top) top = t; }
+        const rise = top - P.y;
+        if (rise > STEP_H && rise <= 1.3 && !isSolid(getBlock(bx,fy+1,bz)) && !isSolid(getBlock(bx,fy+2,bz)))
+          P.vy = 8.4;
+      }
     }
   }
   const wasVy = P.vy;
@@ -5666,12 +5717,23 @@ window.addEventListener('beforeunload', saveState);
 /* ================= CHUNK YÖNETİMİ ================= */
 const genQueue = [];
 const genQueued = new Set();
-function processGen(n) { // kare başına sınırlı chunk üretimi (takılmayı önler)
-  while (n-- > 0 && genQueue.length) {
+/* Kare bütçeli chunk işi: kaç chunk değil, kaç MİLİSANİYE harcanacağı sınırlanır.
+   Böylece uzak görüşte chunk'lar geç gelir ama kare hızı düşmez (takılma olmaz). */
+const HW_CORES = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 4)));
+function coreCount() { return OPT.cores > 0 ? OPT.cores : Math.max(2, HW_CORES - 1); }
+function genBudgetMs() { return 2.2 * coreCount(); }    // çekirdek başına ~2.2 ms
+function meshBudgetMs() { return 1.8 * coreCount(); }
+function processGen(maxMs) {
+  const t0 = performance.now();
+  let n = 0;
+  while (genQueue.length) {
     const [cx,cz] = genQueue.shift();
     genQueued.delete(ckey(cx,cz));
     if (!chunks.has(ckey(cx,cz))) chunks.set(ckey(cx,cz), genChunk(cx,cz));
+    n++;
+    if (performance.now() - t0 >= maxMs) break;        // bütçe doldu: kalanı sonraki kareye
   }
+  return n;
 }
 function ensureChunksNow(bx, bz, r) { // ışınlanma/doğma için anında üretim
   const pcx = Math.floor(bx/CH), pcz = Math.floor(bz/CH);
@@ -5700,6 +5762,7 @@ function ensureChunks() {
     if (Math.max(Math.abs(cx-pcx), Math.abs(cz-pcz)) > G+2) {
       if (c.vboO) gl.deleteBuffer(c.vboO);
       if (c.vboW) gl.deleteBuffer(c.vboW);
+      if (vaoExt) { if (c.vaoO) vaoExt.deleteVertexArrayOES(c.vaoO); if (c.vaoW) vaoExt.deleteVertexArrayOES(c.vaoW); }
       chunks.delete(k);
     }
   }
@@ -5752,6 +5815,7 @@ let tickScale = 1, tickFrozen = false, lowFpsT = 0;
 let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
+const drawStats = { drawn:0, culled:0 };
 let fpsGate = 0;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -5789,12 +5853,15 @@ function frame(now) {
   boundaryT++;
   if (cx !== lastCX || cz !== lastCZ || boundaryT > 90) { lastCX=cx; lastCZ=cz; boundaryT=0; ensureChunks(); }
   joyWatchdog();                       // takılı kalan joystick'i bırak
-  processGen(genQueue.length > 30 ? 4 : 2);
-  let meshBudget = 2;
-  while (meshBudget-- > 0 && meshQueue.length) {
+  meshSortT -= dt;
+  if (meshSortT <= 0) { meshSortT = 0.5; sortQueuesByDistance(); }
+  processGen(genBudgetMs());
+  const mt0 = performance.now(), mBudget = meshBudgetMs();
+  while (meshQueue.length) {
     const [mx,mz] = meshQueue.shift();
     queued.delete(ckey(mx,mz));
     buildMesh(mx,mz);
+    if (performance.now() - mt0 >= mBudget) break;     // bütçe doldu
   }
   if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
@@ -5862,7 +5929,8 @@ function frame(now) {
   gl.uniform1f(loc.uUseTex, 1);
   gl.uniform3f(loc.uColor, 1, 1, 1);
   gl.bindTexture(gl.TEXTURE_2D, tex);
-  function bindDraw(vbo, cnt) {
+  function bindDraw(vbo, cnt, vao) {
+    if (vao && vaoExt) { vaoExt.bindVertexArrayOES(vao); gl.drawArrays(gl.TRIANGLES, 0, cnt); vaoExt.bindVertexArrayOES(null); return; }
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     setAttribs();
     gl.drawArrays(gl.TRIANGLES, 0, cnt);
@@ -5871,11 +5939,22 @@ function frame(now) {
   gl.disable(gl.BLEND);
   gl.depthMask(true);
   const waterList = [];
+  updateFrustum(mvp);
+  const farD = RDIST*CH + CH*1.5, farD2 = farD*farD;
+  let drawn = 0, culled = 0;
   for (const [k,c] of chunks) {
-    if (!c.meshed) continue;
-    if (c.vboO) bindDraw(c.vboO, c.cntO);
+    if (!c.meshed || (!c.vboO && !c.vboW)) continue;
+    const ci = k.indexOf(','), cx2 = +k.slice(0,ci), cz2 = +k.slice(ci+1);
+    const x0 = cx2*CH, z0 = cz2*CH;
+    // daire biçiminde mesafe kırpma (sis zaten gizliyor)
+    const ddx = x0+8-P.x, ddz = z0+8-P.z;
+    if (ddx*ddx + ddz*ddz > farD2) { culled++; continue; }
+    if (OPT.frustumCull && !boxInFrustum(x0, c.minY||Y_MIN, z0, x0+CH, c.maxYd||Y_MAX, z0+CH)) { culled++; continue; }
+    drawn++;
+    if (c.vboO) bindDraw(c.vboO, c.cntO, c.vaoO);
     if (c.vboW) waterList.push(c);
   }
+  drawStats.drawn = drawn; drawStats.culled = culled;
   drawEnts(proj, view, now);
   drawVehicles(mmul(proj, view), now);
   gl.enable(gl.BLEND);
@@ -5883,7 +5962,7 @@ function frame(now) {
   gl.depthMask(false);
   gl.uniform1f(loc.uAlpha, 0.85);
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
-  for (const c of waterList) bindDraw(c.vboW, c.cntW);
+  for (const c of waterList) bindDraw(c.vboW, c.cntW, c.vaoW);
   gl.depthMask(true);
   drawHeld(proj, now);
   $('burnoverlay').style.display = P.burnT > 0 ? 'block' : 'none';
@@ -5921,6 +6000,8 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   dropPointerTest:(id)=>activePointers.delete(id),
   OPT, damagePlayerTest:damagePlayer, applyOptTest:applyOpt,
   uiIconTest:uiIcon,
+  drawStatsTest:()=>drawStats, chunkCountTest:()=>chunks.size, fpsTest:()=>fps,
+  coreCountTest:coreCount, genQueueLen:()=>genQueue.length, meshQueueLen:()=>meshQueue.length,
   placeVariantTest:placeVariant, toggleShapedTest:toggleShaped, shapeOfTest:shapeOf,
   pistonPushTest:pistonPush, aabbHitTest:aabbHit, SHAPE_FAMILY,
   blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },

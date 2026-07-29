@@ -87,7 +87,7 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### ⚙️ Ayarlar — Minecraft düzeninde
 ☰ tuşu **Minecraft'ın ayar ekranıyla aynı yapıda**, 7 sekmeli tam ekran bir panel açar (arayüz modernleştirildi). Her seçenek gerçekten bir şeyi değiştirir:
 
-- **🎬 Grafik**: Grafikler (Hızlı/Güzel/Muhteşem), Görüş Mesafesi (2–24 chunk + Otomatik), **Simülasyon Mesafesi**, **Azami Kare Hızı**, **Parlaklık**, **Arayüz Ölçeği**, **Yumuşak Işıklandırma**, Bulutlar, **Partiküller** (Tümü/Azaltılmış/En Az), **Varlık Gölgeleri**, **Varlık Görüş Mesafesi**, Görüş Alanı (FOV), Görüş Sallanması, Tam Ekran, Otomatik Optimizasyon
+- **🎬 Grafik**: Grafikler (Hızlı/Güzel/Muhteşem), Görüş Mesafesi (2–24 chunk + Otomatik), **Simülasyon Mesafesi**, **Azami Kare Hızı**, **Parlaklık**, **Arayüz Ölçeği**, **Yumuşak Işıklandırma**, Bulutlar, **Partiküller** (Tümü/Azaltılmış/En Az), **Varlık Gölgeleri**, **Varlık Görüş Mesafesi**, Görüş Alanı (FOV), Görüş Sallanması, **İşlem Çekirdeği**, **Görüş Dışını Atla**, Tam Ekran, Otomatik Optimizasyon
 - **🔊 Ses**: Ana Ses, Müzik, Bloklar, Düşman Canlılar, Dost Canlılar, Ortam, Altyazılar — Minecraft'taki ses kanallarının aynısı
 - **🎮 Kontroller**: **Fare Hassasiyeti**, **Dokunmatik Hassasiyeti**, **Dikey Ekseni Ters Çevir**, **Otomatik Zıplama**, Koşu Kilidi, Tuşları Taşı
 - **💬 Sohbet**: Sohbet aç/kapa, **Yazı Boyutu**, **Arka Plan Saydamlığı**
@@ -132,6 +132,17 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - **Gerçek ekinler**: buğday, havuç, patates (tohum → dikim → olgunlaşma → hasat); mercimek de aynı sisteme taşındı
 - **Canlılar (18)**: tavşan, mantar inek, yaban kedisi, yarasa, at, eşek, katır, zombi köylü, mağara örümceği, gümüş böceği, ender böceği, magma küpü, cadı, ghast, demir golem, kar golemi, yaşlı muhafız, **Wither**
 - **Eşyalar (36)**: yay, kova/su/lav/süt kovası, makas, olta, kar topu, yumurta, kemik tozu, kase, mantar çorbası, tavşan güveci, kâğıt, kitap, pusula, saat, harita, eyer, tasma, isim etiketi, kil topu, tuğla, tecrübe şişesi ve daha fazlası — tarifleriyle birlikte
+
+### ⚡ 24 chunk performansı
+Uzak görüşte asıl yük chunk **sayısı** değil, kare başına yapılan iş ve çizim çağrısıdır. Bunlar için:
+
+- 👁 **Görüş piramidi (frustum) kırpma**: kameranın görmediği chunk'lar hiç çizilmez. Ölçüm: 24 chunk'ta **438 → 63 çizim çağrısı (%86 azalma)**
+- ⭕ **Daire biçimli mesafe kırpma**: sisin arkasında kalan köşe chunk'ları atlanır
+- 🧵 **VAO (vertex array object)**: chunk başına 4 öznitelik çağrısı yerine tek bağlama
+- ⏱️ **Kare bütçeli chunk işi**: "kaç chunk" yerine "kaç milisaniye" sınırlanır — chunk'lar geç gelebilir ama **kare hızı düşmez, takılma olmaz**
+- 📍 **Mesafeye göre sıralı kuyruk**: önce oyuncunun çevresi üretilip örülür
+- ⚙️ **İşlem Çekirdeği ayarı** (Ayarlar → Grafik): chunk üretimi ve güncellemesi için kare başına ayrılan iş bütçesini belirler. *Otomatik* cihazın çekirdek sayısına göre seçer. Ölçüm: 1 çekirdek 127 chunk / 4 sn, 8 çekirdek 257 chunk / 4 sn
+- 🚶 Otomatik zıplama artık yalnızca **basamakla aşılamayan** engelde tetikleniyor (yarım blok/merdiven/halıda gereksiz sıçrama yoktu)
 
 ### 📐 Şekil & çarpışma sistemi
 Küp olmayan bloklar için tam bir **kutu (AABB) sistemi** eklendi: her blok `[x0,y0,z0,x1,y1,z1]` kutularıyla tanımlanır, mesh üreticisi ve çarpışma aynı kutuları kullanır.
