@@ -88,7 +88,7 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 🏃 **Koşu kilidi**: sol üstteki tuşla sürekli koşuyu aç/kapa (hızı ~%35 artırır, koşarken FOV genişler) — ayar kaydedilir
 - Gölgelendirici aç/kapa (sis + dinamik ışık + partiküller), **ses seviyesi**, **tam ekran** butonu (mobil + PC)
 - 🎛 **Tuşları Taşı**: kontrolleri ve eşya çubuğunu sürükleyip istediğin yere koy — kaydedilir
-- 🧍 Skin yükle (ince/kalın kol) · 🎨 Doku paketi (PNG/ZIP) yükle & sıfırla · 🎮 Çok oyunculu paneli
+- 🧍 Skin yükle (ince/kalın kol) · 🎨 **Minecraft doku paketi (.zip) yükle & sıfırla** (aşağıda ayrıntı) · 🎮 Çok oyunculu paneli
 - 📱 Klavye/fare kullanınca mobil tuşlar gizlenir, dokununca geri gelir
 - 🍏 **Apple/Safari & iPhone/iPad uyumu**: WebKit ön ekli tam ekran + fare kilidi yedekleri, sesi kullanıcı dokunuşunda başlatma (`AudioContext.resume`). M1/M2/M3 çip GPU'ları güçlüdür — ek performans sorunu yok, yalnızca Safari API uyumu eklendi
 
@@ -119,6 +119,19 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### 🎮 Çok oyunculu — mob senkronu
 - Artık **canlılar da senkronize**: ev sahibi otoriter (mob yapay zekasını çalıştırır ve durumlarını yayınlar), misafirler aynı mobları görür; misafir bir mob'a vurunca ev sahibine iletilir. Araçlar da senkron
 - **Oda kodu dayanıklılığı**: birden çok ücretsiz sinyal aynası (biri engellenirse diğeri), teklif yeniden yayını; ağ tamamen engelliyse manuel kod yedeği
+
+### 🎨 Doku paketi (Minecraft resource pack uyumlu)
+Ayarlar → *Doku paketi*'nden **kendi** Minecraft doku paketini (`.zip`) doğrudan yükleyebilirsin.
+
+- 📦 **Standart klasör yapısı okunur**: `assets/minecraft/textures/block/…` ve `…/item/…` (1.13 öncesi `blocks/` + `items/` çoğul adları da desteklenir). `gui/`, `entity/`, `painting/` gibi klasörler yoksayılır
+- 🏷️ **Blok ve eşya kimlikleri Minecraft ile birebir aynı** (`grass_block`, `oak_log`, `crimson_stem`, `nether_wart_block`, `diamond_pickaxe`, `ender_eye` …) — paketteki dosya adları doğrudan tutar
+- 🧩 **Yüz eşlemesi doğru yapılır**: Minecraft'ta dosya adı çoğu zaman blok adından farklıdır. `grass_block` → üst `grass_block_top`, yan `grass_block_side`, alt `dirt`; `oak_log` → yan `oak_log`, üst `oak_log_top`; `furnace` → `furnace_front`/`furnace_side`/`furnace_top`; ayrıca `snow`→kar bloğu, `magma`→magma bloğu, `redstone_dust_line0`→kızıltaş teli gibi ad farkları çözülür
+- 🎞️ **Animasyonlu dokular**: `water_still`, `lava_still`, `fire_0`, `nether_portal` gibi dikey şeritlerden **ilk kare** otomatik alınır (şerit ezilmez)
+- 🔍 **HD paket desteği**: 32x / 64x / 128x paketlerde atlas otomatik olarak o çözünürlüğe çıkar — doku kalitesi düşmez. Pakette olmayan bloklar prosedürel görünümünü korur
+- ♻️ *Sıfırla* ile her şey varsayılan prosedürel dokulara döner
+- 🖼️ Tek tek `.png` de yükleyebilirsin (dosya adı blok/eşya kimliği olmalı, örn. `stone.png`)
+
+> Oyun hiçbir Minecraft dosyası ile gelmez; yüklediğin paket yalnızca senin cihazında kullanılır.
 
 ## 🚫 Henüz olmayanlar
 Zırh süsleme şablonları, deneyim/büyü masası, gelişmiş köylü ticareti, tam gökkubbe (güneş/ay sprite'ı), sesli sohbet. Temel mekaniklerin çoğu artık mevcut.
