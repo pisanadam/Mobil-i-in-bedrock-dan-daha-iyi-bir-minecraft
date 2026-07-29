@@ -534,12 +534,84 @@ defBlock('farmland_moist','Nemli Tarım Toprağı', [tFarmWet, tDirt, tDirt], {h
 defBlock('fire','Ateş', stone3(tile((x,y,r)=>{ const h2 = 15 - Math.abs(x-8)*1.2 - hash2(x*7+1,3)*4;
   if (y > h2 && r() < 0.85) return y > h2+4 ? nzc(hex('#e8442a'),40,r) : nzc(hex('#f8c838'),40,r);
   return [0,0,0,0]; })), {cross:1, cutout:1, hard:0.01, drop:null, light:0.9, fireB:1, noitem:1});
+/* --- 1.8.9 klasiği katı bloklar --- */
+defBlock('polished_granite','Cilalı Granit', stone3(tile(T.flat('#9a6b58',9))), {hard:1.5, tool:'pick', tier:1});
+defBlock('polished_diorite','Cilalı Diyorit', stone3(tile(T.flat('#cfcfd0',7))), {hard:1.5, tool:'pick', tier:1});
+defBlock('polished_andesite','Cilalı Andezit', stone3(tile(T.flat('#7f8184',7))), {hard:1.5, tool:'pick', tier:1});
+defBlock('red_sandstone','Kırmızı Kumtaşı', [tile(T.flat('#c8621f',13)), tile(T.stone('#b45a1e')), tile(T.flat('#a84e18',11))], {hard:0.8, tool:'pick', tier:1});
+defBlock('packed_ice','Sıkışmış Buz', stone3(tile(T.flat('#8ab6f0',9))), {hard:0.5, tool:'pick', tier:1});
+defBlock('wet_sponge','Islak Sünger', stone3(tile((x,y,r)=>{ if (cell(x,y,13)<0.2) return nzc(hex('#697a26'),16,r); return nzc(hex('#8a9438'),18,r); })), {hard:0.5});
+defBlock('slime_block','Balçık Bloku', stone3(tile((x,y,r)=>{ const e=((x%8)<1||(y%8)<1)?-30:0; return [112+e,200+e,102+e,190]; })), {hard:0.1, trans:1, bouncy:1});
+defBlock('chiseled_quartz_block','Yontma Kuvars', [tile(T.flat('#e6e0d8',8)), tile((x,y,r)=>{ const b=(x>2&&x<13&&y>2&&y<13)?-16:0; return nzc([230+b,224+b,216+b],9,r); }), tile(T.flat('#e6e0d8',8))], {hard:0.8, tool:'pick', tier:1});
+defBlock('quartz_pillar','Kuvars Sütun', [tile(T.flat('#e6e0d8',8)), tile((x,y,r)=>nzc(hex(x%5===0?'#d2ccc4':'#e8e2da'),9,r)), tile(T.flat('#e6e0d8',8))], {hard:0.8, tool:'pick', tier:1});
+defBlock('brown_mushroom_block','Kahverengi Mantar Bloku', stone3(tile((x,y,r)=>{ if (cell(x,y,7)<0.35) return nzc(hex('#8f6a4a'),14,r); return nzc(hex('#a57d59'),14,r); })), {hard:0.2, tool:'axe', drop:'brown_mushroom', dropN:[1,2]});
+defBlock('red_mushroom_block','Kırmızı Mantar Bloku', stone3(tile((x,y,r)=>{ if (cell(x,y,9)<0.3) return nzc(hex('#f0f0e8'),12,r); return nzc(hex('#c03028'),16,r); })), {hard:0.2, tool:'axe', drop:'red_mushroom', dropN:[1,2]});
+defBlock('mushroom_stem','Mantar Sapı', stone3(tile(T.flat('#e0dcd0',12))), {hard:0.2, tool:'axe'});
+defBlock('infested_stone','Böcekli Taş', stone3(tile(T.stone('#7c7c84'))), {hard:0.75, tool:'pick', tier:1, infested:1, drop:null});
+defBlock('barrier','Bariyer', stone3(tile((x,y,r)=>[0,0,0,0])), {cutout:1, hard:-1, unbreakable:1, drop:null});
+defBlock('command_block','Komut Bloku', stone3(tile((x,y,r)=>{ const d=(Math.abs(x-8)+Math.abs(y-8)); return nzc(hex(d<4?'#d8a05a':'#b6774a'),14,r); })), {hard:-1, unbreakable:1, drop:null});
+defBlock('note_block', 'Nota Bloku', stone3(tile((x,y,r)=>{ if (Math.hypot(x-8,y-8)<3) return nzc(hex('#2a1a12'),10,r); return nzc(hex('#6b4a2e'),16,r); })), {hard:0.8, tool:'axe', noteblock:1});
+defBlock('jukebox','Müzik Kutusu', [tile((x,y,r)=>{ if (Math.hypot(x-8,y-8)<3.4) return nzc(hex('#3a2a1e'),10,r); return nzc(hex('#6b4a2e'),16,r); }), tile(T.plank('#6b4a2e')), tile(T.plank('#5a3e26'))], {hard:2, tool:'axe'});
+defBlock('enchanting_table','Büyü Masası', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#c02a2a'),20,r); return nzc(hex('#1e1a2a'),14,r); }), tile(T.stone('#2a2438')), tile(T.stone('#1a1622'))], {hard:5, tool:'pick', tier:1, light:0.35, inter:'craft'});
+defBlock('anvil','Örs', [tile(T.flat('#43434a',14)), tile((x,y,r)=>{ if (y<5||y>11) return nzc(hex('#3a3a42'),12,r); return (x>4&&x<12)?nzc(hex('#4d4d55'),12,r):[0,0,0,0]; }), tile(T.flat('#3a3a42',12))], {hard:5, tool:'pick', tier:1, cutout:1});
+defBlock('beacon','İşaret Feneri', stone3(tile((x,y,r)=>{ const d=Math.max(Math.abs(x-8),Math.abs(y-8)); if (d<3) return nzc(hex('#8ff0e8'),24,r); return [90,200,196,200]; })), {hard:3, light:1, trans:1});
+defBlock('cauldron','Kazan', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#2a2a30'),10,r); return nzc(hex('#4a4a52'),12,r); }), tile(T.stone('#46464e')), tile(T.stone('#3a3a42'))], {hard:2, tool:'pick', tier:1});
+defBlock('ender_chest','Ender Sandığı', [tile(T.flat('#1c2a2e',12)), tile((x,y,r)=>{ if (y>6&&y<10&&x>6&&x<10) return nzc(hex('#4ec89a'),36,r); return nzc(hex('#22333a'),14,r); }), tile(T.flat('#16242a',12))], {hard:22, tool:'pick', tier:1, light:0.4, inter:'chest'});
+defBlock('trapped_chest','Tuzaklı Sandık', [tile(T.flat('#6b4a2e',14)), tile((x,y,r)=>{ if (y>6&&y<10&&x>6&&x<10) return nzc(hex('#b02a2a'),20,r); return nzc(hex('#7a5836'),16,r); }), tile(T.flat('#5a3e26',14))], {hard:2.5, tool:'axe', inter:'chest', rsSrc:1});
+defBlock('hopper','Huni', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#26262c'),8,r); return nzc(hex('#42424a'),12,r); }), tile((x,y,r)=>nzc(hex(y<6?'#42424a':'#2e2e34'),12,r)), tile(T.flat('#2a2a30',10))], {hard:3, tool:'pick', tier:1});
+defBlock('dispenser','Fırlatıcı', [tile(T.cobble('#6e6e6e')), tile((x,y,r)=>{ if (Math.hypot(x-8,y-8)<3.2) return nzc(hex('#2a2a2e'),10,r); return nzc(hex('#6e6e6e'),16,r); }), tile(T.cobble('#6e6e6e'))], {hard:3.5, tool:'pick', tier:1});
+defBlock('dropper','Bırakıcı', [tile(T.cobble('#6e6e6e')), tile((x,y,r)=>{ if (Math.abs(x-8)<2.4&&Math.abs(y-8)<2.4) return nzc(hex('#2a2a2e'),10,r); return nzc(hex('#6e6e6e'),16,r); }), tile(T.cobble('#6e6e6e'))], {hard:3.5, tool:'pick', tier:1});
+defBlock('piston','Piston', [tile(T.plank('#b8a070')), tile((x,y,r)=>nzc(hex(y<4?'#8a8a92':'#7a6a4a'),14,r)), tile(T.stone('#7a7a82'))], {hard:1.5});
+defBlock('sticky_piston','Yapışkan Piston', [tile(T.flat('#8ab04a',16)), tile((x,y,r)=>nzc(hex(y<4?'#8ab04a':'#7a6a4a'),14,r)), tile(T.stone('#7a7a82'))], {hard:1.5});
+defBlock('daylight_detector','Gün Işığı Sensörü', [tile((x,y,r)=>{ if (y>3&&y<12&&x>3&&x<12) return nzc(hex('#2a3a52'),16,r); return nzc(hex('#8a6a44'),14,r); }), tile(T.plank('#8a6a44')), tile(T.plank('#6a5030'))], {hard:0.2, tool:'axe', rsSrc:1});
 /* --- çapraz (bitki) bloklar --- */
 function defCross(id, name, painter, opts={}) { defBlock(id, name, stone3(tile(painter)), Object.assign({cross:1, cutout:1, hard:0.05}, opts)); }
 defCross('short_grass','Kısa Çim', T.cross_grass('#5a9a30'), {drop:'lentil_seeds', dropP:0.3});
 defCross('lentil_crop_0','Mercimek Filizi', T.cross_grass('#7ec850'), {drop:'lentil_seeds', noitem:1});
 defCross('lentil_crop_1','Mercimek Bitkisi', (x,y,r)=>{ if (y>5 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#4e9a34'),30,r); return [0,0,0,0]; }, {drop:'lentil_seeds', noitem:1});
 defCross('lentil_crop_2','Olgun Mercimek', (x,y,r)=>{ if (y>3 && Math.abs((x%5)-2)<1.5 && r()<0.9) { if (r()<0.25 && y<10) return nzc(hex('#c8862a'),24,r); return nzc(hex('#3e8a2c'),26,r); } return [0,0,0,0]; }, {drops:[['lentil',2,4],['lentil_seeds',1,2]], noitem:1});
+/* --- 1.8.9 bitkileri --- */
+defCross('cobweb','Örümcek Ağı', (x,y,r)=>{ const d=Math.min(Math.abs(x-y), Math.abs(15-x-y), Math.abs(x-8), Math.abs(y-8));
+  if (d<0.9) return [235,238,242,255]; return [0,0,0,0]; }, {hard:4, web:1, drop:'string'});
+defCross('vine','Sarmaşık', (x,y,r)=>{ if (((x*3+y*5)%7)<3 && r()<0.8) return nzc(hex('#3c6f26'),26,r); return [0,0,0,0]; }, {drop:null});
+defCross('ladder','Merdiven', (x,y,r)=>{ if (Math.abs(x-4)<1.2||Math.abs(x-11)<1.2) return nzc(hex('#a5804a'),16,r);
+  if (y%5<1.3 && x>3 && x<12) return nzc(hex('#96733f'),16,r); return [0,0,0,0]; }, {hard:0.4, tool:'axe', climb:1});
+defCross('lily_pad','Nilüfer', (x,y,r)=>{ if (Math.hypot(x-8,y-8)<6.4) return nzc(hex('#2e7d32'),18,r); return [0,0,0,0]; }, {hard:0.1});
+defCross('tall_grass','Uzun Ot', T.cross_grass('#4f9a2c'), {drop:'wheat_seeds', dropP:0.35});
+defCross('large_fern','Büyük Eğreltiotu', T.cross_grass('#3f8a3c'), {drop:'wheat_seeds', dropP:0.25});
+defCross('sunflower','Ayçiçeği', (x,y,r)=>{ if (y<6 && Math.hypot(x-8,y-4)<4) return nzc(hex(Math.hypot(x-8,y-4)<2?'#6b4a1e':'#f2c218'),22,r);
+  if (y>=6 && Math.abs(x-8)<1.3) return nzc(hex('#3a6a2a'),22,r); return [0,0,0,0]; });
+defCross('lilac','Leylak', T.cross_flower('#3a6a2a','#c39ad8'));
+defCross('rose_bush','Gül Çalısı', T.cross_flower('#3a6a2a','#b41f26'));
+defCross('peony','Şakayık', T.cross_flower('#3a6a2a','#e8b8dc'));
+/* --- gerçek Minecraft ekinleri (buğday / havuç / patates) --- */
+const CROP_BY_ID = {};
+function regCrop(ids, seed) { const c = {ids, seed}; for (const b of ids) CROP_BY_ID[b] = c; return c; }
+function defCropSet(base, nm, seed, young, mid, ripe) {
+  defCross(base+'_stage0', nm+' Filizi', young, {drop:seed, noitem:1});
+  defCross(base+'_stage1', nm+' Bitkisi', mid, {drop:seed, noitem:1});
+  defCross(base+'_stage2', 'Olgun '+nm, ripe.paint, {drops:ripe.drops, noitem:1});
+  regCrop([BID[base+'_stage0'], BID[base+'_stage1'], BID[base+'_stage2']], seed);
+}
+defCropSet('wheat','Buğday','wheat_seeds',
+  T.cross_grass('#8fc85a'),
+  (x,y,r)=>{ if (y>5 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#7cb43e'),28,r); return [0,0,0,0]; },
+  {paint:(x,y,r)=>{ if (y>3 && Math.abs((x%5)-2)<1.5 && r()<0.9) return nzc(hex(y<8?'#d8b53c':'#b39432'),24,r); return [0,0,0,0]; },
+   drops:[['wheat',1,1],['wheat_seeds',1,3]]});
+defCropSet('carrots','Havuç','carrot',
+  T.cross_grass('#5fa83c'),
+  (x,y,r)=>{ if (y>5 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#3f8f30'),26,r); return [0,0,0,0]; },
+  {paint:(x,y,r)=>{ if (y>10 && Math.abs((x%5)-2)<1.6 && r()<0.9) return nzc(hex('#e07a18'),24,r);
+     if (y>3 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#3f8f30'),26,r); return [0,0,0,0]; },
+   drops:[['carrot',1,3]]});
+defCropSet('potatoes','Patates','potato',
+  T.cross_grass('#5a9a3c'),
+  (x,y,r)=>{ if (y>5 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#4a8f36'),26,r); return [0,0,0,0]; },
+  {paint:(x,y,r)=>{ if (y>10 && Math.abs((x%5)-2)<1.6 && r()<0.9) return nzc(hex('#c8a24e'),22,r);
+     if (y>3 && Math.abs((x%5)-2)<1.4 && r()<0.85) return nzc(hex('#4a8f36'),26,r); return [0,0,0,0]; },
+   drops:[['potato',1,3]]});
+regCrop([BID.lentil_crop_0, BID.lentil_crop_1, BID.lentil_crop_2], 'lentil_seeds');
+
 defCross('dead_bush','Kuru Çalı', T.cross_grass('#8a6a3a'), {drop:null});
 defCross('poppy','Gelincik', T.cross_flower('#3a6a2a','#c22020'));
 defCross('dandelion','Karahindiba', T.cross_flower('#3a6a2a','#e8d838'));
@@ -697,6 +769,44 @@ const FOODS = { apple:['Elma',4,'#c83030','#e8e0c8'], golden_apple:['Altın Elma
   rotten_flesh:['Çürük Et',2,'#7a5a2e',null], sweet_berries:['Tatlı Meyveler',2,'#c02848',null],
   glow_berries:['Parlayan Meyveler',3,'#e8a838',null] };
 for (const f in FOODS) { const [nm,heal,c,c2] = FOODS[f]; defItem(f, nm, {icon:IC.food(c,c2), food:heal}); }
+/* --- 1.8.9 eşyaları --- */
+defItem('wheat','Buğday',{icon:IC.dust('#d8b53c')});
+defItem('wheat_seeds','Buğday Tohumu',{icon:IC.dust('#8fc85a'), plant:'wheat_stage0'});
+defItem('carrot','Havuç',{icon:IC.food('#e07a18','#3f8f30'), food:3, plant:'carrots_stage0'});
+defItem('potato','Patates',{icon:IC.food('#c8a24e'), food:1, plant:'potatoes_stage0'});
+defItem('poisonous_potato','Zehirli Patates',{icon:IC.food('#7aa83c'), food:2, poison:1});
+defItem('bowl','Kase',{icon:IC.food('#8a6a3a')});
+defItem('mushroom_stew','Mantar Çorbası',{icon:IC.food('#c8a878','#8f6a4a'), food:6, stack:1});
+defItem('rabbit','Çiğ Tavşan',{icon:IC.food('#e8a8a0'), food:3});
+defItem('cooked_rabbit','Pişmiş Tavşan',{icon:IC.food('#c07848'), food:5});
+defItem('rabbit_stew','Tavşan Güveci',{icon:IC.food('#b06848','#e07a18'), food:10, stack:1});
+defItem('rabbit_hide','Tavşan Derisi',{icon:IC.raw('#c8a882')});
+defItem('clay_ball','Kil Topu',{icon:IC.raw('#9aa2b0')});
+defItem('brick','Tuğla',{icon:IC.ingot('#a5553f')});
+defItem('nether_brick','Nether Tuğlası',{icon:IC.ingot('#3a1e24')});
+defItem('paper','Kâğıt',{icon:IC.ingot('#e8e8e0')});
+defItem('book','Kitap',{icon:IC.food('#8a5a2a','#e8e8e0')});
+defItem('bone_meal','Kemik Tozu',{icon:IC.dust('#e8e8dc'), bonemeal:1});
+defItem('snowball','Kar Topu',{icon:IC.pearl('#f0f6ff'), stack:16, throwable:'snow'});
+defItem('egg','Yumurta',{icon:IC.pearl('#e8e0c8'), stack:16, throwable:'egg'});
+defItem('bow','Yay',{icon:IC.tool('hoe','#8a6a3a'), stack:1, dur:384, bow:1});
+defItem('bucket','Kova',{icon:IC.ingot('#b0b0b8'), stack:16, bucket:0});
+defItem('water_bucket','Su Kovası',{icon:IC.ingot('#3a6ad8'), stack:1, bucket:'water'});
+defItem('lava_bucket','Lav Kovası',{icon:IC.ingot('#e06a10'), stack:1, bucket:'lava'});
+defItem('milk_bucket','Süt Kovası',{icon:IC.ingot('#f0f0f0'), stack:1, milk:1});
+defItem('shears','Makas',{icon:IC.tool('hoe','#c0c0c8'), stack:1, dur:238, shears:1});
+defItem('fishing_rod','Olta',{icon:IC.stick(), stack:1, dur:64});
+defItem('saddle','Eyer',{icon:IC.raw('#6b4a2e'), stack:1});
+defItem('name_tag','İsim Etiketi',{icon:IC.ingot('#d8d0b8'), stack:1});
+defItem('lead','Tasma',{icon:IC.stick()});
+defItem('compass','Pusula',{icon:IC.pearl('#c8c8d0'), stack:1});
+defItem('clock','Saat',{icon:IC.pearl('#f6d038'), stack:1});
+defItem('map','Harita',{icon:IC.ingot('#e0d8b8'), stack:1});
+defItem('experience_bottle','Tecrübe Şişesi',{icon:IC.pearl('#8fe86a'), stack:16});
+defItem('cocoa_beans','Kakao Çekirdeği',{icon:IC.raw('#8a4a20')});
+defItem('melon_seeds','Karpuz Tohumu',{icon:IC.dust('#d8d8a8')});
+defItem('pumpkin_seeds','Balkabağı Tohumu',{icon:IC.dust('#e8e0b0')});
+
 
 /* ================= ÜRETİM & ERİTME ================= */
 const RECIPES = [];
@@ -741,6 +851,47 @@ for (const m in ARMOR_MATS) {
 // End: stronghold'daki Kadim Çerçeve halkasına 12 Kadim Göz tak
 defRecipe('white_wool', 1, [['string',4]]);
 defRecipe('arrow', 4, [['stick',1],['string',1],['gravel',1]]);
+/* --- 1.8.9 tarifleri --- */
+defRecipe('polished_granite', 4, [['granite',4]]);
+defRecipe('polished_diorite', 4, [['diorite',4]]);
+defRecipe('polished_andesite', 4, [['andesite',4]]);
+defRecipe('red_sandstone', 1, [['red_sand',4]]);
+defRecipe('slime_block', 1, [['slimeball',9]]);
+defRecipe('chiseled_quartz_block', 1, [['quartz_block',2]]);
+defRecipe('quartz_pillar', 2, [['quartz_block',2]]);
+defRecipe('note_block', 1, [['oak_planks',8],['redstone',1]], 1);
+defRecipe('jukebox', 1, [['oak_planks',8],['diamond',1]], 1);
+defRecipe('enchanting_table', 1, [['obsidian',4],['diamond',2],['book',1]], 1);
+defRecipe('anvil', 1, [['iron_block',3],['iron_ingot',4]], 1);
+defRecipe('beacon', 1, [['glass',5],['obsidian',3],['nether_star',1]], 1);
+defRecipe('cauldron', 1, [['iron_ingot',7]], 1);
+defRecipe('ender_chest', 1, [['obsidian',8],['ender_eye',1]], 1);
+defRecipe('trapped_chest', 1, [['chest',1],['redstone',1]]);
+defRecipe('hopper', 1, [['iron_ingot',5],['chest',1]], 1);
+defRecipe('dispenser', 1, [['cobblestone',7],['bow',1],['redstone',1]], 1);
+defRecipe('dropper', 1, [['cobblestone',7],['redstone',1]], 1);
+defRecipe('piston', 1, [['oak_planks',3],['cobblestone',4],['iron_ingot',1],['redstone',1]], 1);
+defRecipe('sticky_piston', 1, [['piston',1],['slimeball',1]]);
+defRecipe('bow', 1, [['stick',3],['string',3]], 1);
+defRecipe('bucket', 1, [['iron_ingot',3]], 1);
+defRecipe('shears', 1, [['iron_ingot',2]], 1);
+defRecipe('fishing_rod', 1, [['stick',3],['string',2]], 1);
+defRecipe('bowl', 4, [['oak_planks',3]]);
+defRecipe('mushroom_stew', 1, [['bowl',1],['brown_mushroom',1],['red_mushroom',1]]);
+defRecipe('rabbit_stew', 1, [['bowl',1],['cooked_rabbit',1],['carrot',1],['potato',1],['brown_mushroom',1]]);
+defRecipe('bread', 1, [['wheat',3]]);
+defRecipe('paper', 3, [['sugar_cane',3]]);
+defRecipe('book', 1, [['paper',3],['leather',1]]);
+defRecipe('bone_meal', 3, [['bone',1]]);
+defRecipe('clay', 1, [['clay_ball',4]]);
+defRecipe('bricks', 1, [['brick',4]]);
+defRecipe('nether_bricks', 1, [['nether_brick',4]]);
+defRecipe('snowball', 4, [['snow_block',1]]);
+defRecipe('compass', 1, [['iron_ingot',4],['redstone',1]], 1);
+defRecipe('clock', 1, [['gold_ingot',4],['redstone',1]], 1);
+defRecipe('map', 1, [['paper',8],['compass',1]], 1);
+defRecipe('golden_carrot', 1, [['carrot',1],['gold_nugget',8]], 1);
+
 defRecipe('flint', 1, [['gravel',3]]);
 defRecipe('glass_bottle', 3, [['glass',3]]);
 defRecipe('water_bottle', 1, [['glass_bottle',1]]);
@@ -1014,7 +1165,7 @@ function genChunk(cx, cz) {
 }
 const NB = Y_MIN, NT = Y_MIN + 128; // Nether penceresi: worldY -64..63
 function genNether(cx, cz) {
-  const data = new Uint8Array(CH*H*CH);
+  const data = new Uint16Array(CH*H*CH); // 255+ blok kimliği taşmasın
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
     const wx = x0+x, wz = z0+z;
@@ -1138,7 +1289,7 @@ function genNetherStructures(data, cx, cz) {
   return { spawners, netMobs };
 }
 function genEnd(cx, cz) {
-  const data = new Uint8Array(CH*H*CH);
+  const data = new Uint16Array(CH*H*CH); // 255+ blok kimliği taşmasın
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
     const wx = x0+x, wz = z0+z, d = Math.hypot(wx, wz);
@@ -1168,7 +1319,7 @@ function genEnd(cx, cz) {
   return { data, vboO:null, cntO:0, vboW:null, cntW:0, meshed:false };
 }
 function genOverworld(cx, cz) {
-  const data = new Uint8Array(CH*H*CH);
+  const data = new Uint16Array(CH*H*CH); // 255+ blok kimliği taşmasın
   const x0 = cx*CH, z0 = cz*CH;
   for (let z=0; z<CH; z++) for (let x=0; x<CH; x++) {
     const wx = x0+x, wz = z0+z, h = heightAt(wx,wz);
@@ -1492,7 +1643,7 @@ function setBlock(wx, wy, wz, b) {
   saveEdits();
   if (typeof MP !== 'undefined' && MP.peer && !MP.applying) mpSend({ t:'set', d:dim, x:wx, y:wy, z:wz, b });
   if (b === BID.fire) fireList.push({x:wx, y:wy, z:wz});
-  if (b >= BID.lentil_crop_0 && b <= BID.lentil_crop_2) cropSet.add(wx+','+wy+','+wz);
+  if (CROP_BY_ID[b]) cropSet.add(wx+','+wy+','+wz);   // her ekin türü (buğday/havuç/patates/mercimek)
   if (BLOCKS[old].light || BLOCKS[b].light) { // ışık 7 blok yayılır: komşular da yeniden ışıklansın
     for (let dx=-1;dx<=1;dx++) for (let dz=-1;dz<=1;dz++) queueMesh(cx+dx, cz+dz);
   } else {
@@ -2039,6 +2190,24 @@ const MOBS = {
   dolphin:  {name:'Yunus', w:0.45, hgt:0.6, hp:10, sp:2.6, body:'#8aa0b8', head:'#9ab0c8', model:'fish', aquatic:1, neutral:1, dmg:3, drops:[]},
   turtle:   {name:'Deniz Kaplumbağası', w:0.5, hgt:0.5, hp:30, sp:0.7, body:'#5a9a4a', head:'#8ab86a', model:'quad', amphibious:1, drops:[['seagrass',1,2]]},
   guardian: {name:'Muhafız', w:0.5, hgt:0.85, hp:30, sp:1.6, body:'#6a9a8a', head:'#8ababa', eye:'#e85838', model:'guardian', aquatic:1, hostile:1, ranged:'laser', drops:[['prismarine_shard',1,2]]},
+  rabbit: {name:'Tavşan', w:0.25, hgt:0.5, hp:3, sp:1.9, body:'#b8a086', head:'#c8b096', model:'quad', drops:[['rabbit',0,1],['rabbit_hide',0,1]]},
+  mooshroom:{name:'Mantar İnek', w:0.45, hgt:1.3, hp:10, sp:1.0, body:'#a02a1e', head:'#b03a2a', model:'quad', drops:[['beef',1,2],['red_mushroom',1,2]]},
+  ocelot: {name:'Yaban Kedisi', w:0.3, hgt:0.7, hp:10, sp:2.2, body:'#e8c86a', head:'#f0d47a', model:'quad', drops:[]},
+  bat:    {name:'Yarasa', w:0.25, hgt:0.5, hp:6, sp:1.6, body:'#4a3a2a', head:'#5a4a36', model:'quad', flying:1, drops:[]},
+  horse:  {name:'At', w:0.55, hgt:1.6, hp:22, sp:2.4, body:'#c8a068', head:'#d8b078', model:'quad', drops:[['leather',0,2]]},
+  donkey: {name:'Eşek', w:0.5, hgt:1.5, hp:20, sp:2.0, body:'#8a7060', head:'#9a8070', model:'quad', drops:[['leather',0,2]]},
+  mule:   {name:'Katır', w:0.5, hgt:1.5, hp:20, sp:2.1, body:'#6b4f3a', head:'#7b5f4a', model:'quad', drops:[['leather',0,2]]},
+  zombie_villager:{name:'Zombi Köylü', w:0.3, hgt:1.9, hp:20, sp:1.6, body:'#4a7a43', head:'#5a7a5a', model:'human', arms:'fwd', hostile:1, burns:1, dmg:3, drops:[['rotten_flesh',0,2]]},
+  cave_spider:{name:'Mağara Örümceği', w:0.35, hgt:0.6, hp:12, sp:2.5, body:'#1a3a3a', head:'#22484a', model:'spider', eye:'#c03030', hostile:1, dmg:2, poison:1, drops:[['string',0,2]]},
+  silverfish:{name:'Gümüş Böceği', w:0.2, hgt:0.35, hp:8, sp:1.8, body:'#8a8a92', head:'#9a9aa2', model:'spider', hostile:1, dmg:1, drops:[]},
+  endermite:{name:'Ender Böceği', w:0.2, hgt:0.35, hp:8, sp:1.9, body:'#2a2438', head:'#332c44', model:'spider', eye:'#c07ae8', hostile:1, dmg:2, drops:[]},
+  magma_cube:{name:'Magma Küpü', w:0.5, hgt:1.0, hp:16, sp:1.5, body:'#d83a10', head:'#f06a20', model:'slime', hostile:1, dmg:3, light:0.4, drops:[['magma_cream',0,1]]},
+  witch:  {name:'Cadı', w:0.3, hgt:1.9, hp:26, sp:1.4, body:'#3a2a4a', head:'#8a7a6a', model:'human', hostile:1, ranged:1, dmg:2, drops:[['glass_bottle',0,2],['redstone',0,2],['sugar',0,2]]},
+  ghast:  {name:'Ghast', w:0.9, hgt:1.8, hp:10, sp:0.9, body:'#e8e4e0', head:'#f0ecea', model:'squid', flying:1, hostile:1, ranged:'fire', drops:[['ghast_tear',0,1],['gunpowder',0,2]]},
+  iron_golem:{name:'Demir Golem', w:0.6, hgt:2.7, hp:100, sp:1.1, body:'#d0cec8', head:'#c8b8a8', model:'human', neutral:1, dmg:9, drops:[['iron_ingot',3,5]]},
+  snow_golem:{name:'Kar Golemi', w:0.35, hgt:1.9, hp:4, sp:1.2, body:'#f0f4f6', head:'#f6fafc', model:'human', drops:[['snowball',0,3]]},
+  elder_guardian:{name:'Yaşlı Muhafız', w:0.9, hgt:1.5, hp:80, sp:1.2, body:'#8a9a86', head:'#a8b8a8', eye:'#e85838', model:'guardian', aquatic:1, hostile:1, ranged:'laser', drops:[['prismarine_shard',2,4],['prismarine_crystals',1,2]]},
+  wither: {name:'Wither', w:0.7, hgt:3.0, hp:150, sp:1.6, body:'#22252a', head:'#33363c', eye:'#4a4a52', model:'human', flying:1, hostile:1, boss:1, ranged:1, dmg:6, wither:1, drops:[['nether_star',1,1]]},
   drowned:  {name:'Boğulmuş', w:0.3, hgt:1.9, hp:20, sp:1.4, body:'#3a6a6a', head:'#2a5a5a', model:'human', aquatic:1, amphibious:1, hostile:1, dmg:3, drops:[['rotten_flesh',0,2]]},
 };
 for (const [id,nm,c,food] of [['cod','Çiğ Morina','#c8a068',2],['salmon','Çiğ Somon','#c85a4a',2],
@@ -2828,18 +2997,19 @@ function cropTick(dt) {
     if (++i > 150) break;
     const [x,y,z] = key.split(',').map(Number);
     const b = getBlock(x, y, z);
-    if (b < BID.lentil_crop_0 || b > BID.lentil_crop_2) { cropSet.delete(key); continue; }
+    const crop = CROP_BY_ID[b];
+    if (!crop) { cropSet.delete(key); continue; }
     const below = getBlock(x, y-1, z);
     if (below !== BID.farmland && below !== BID.farmland_moist) {
-      setBlock(x, y, z, 0); spawnDrop('lentil_seeds', 1, x+0.5, y+0.3, z+0.5); cropSet.delete(key); continue;
+      setBlock(x, y, z, 0); spawnDrop(crop.seed, 1, x+0.5, y+0.3, z+0.5); cropSet.delete(key); continue;
     }
     let wet = false; // suya yakınsa nemli
     for (let dx=-4; dx<=4 && !wet; dx++) for (let dz=-4; dz<=4; dz++)
       if (getBlock(x+dx, y-1, z+dz) === BID.water) { wet = true; break; }
     if (wet && below === BID.farmland) setBlock(x, y-1, z, BID.farmland_moist);
     if (!wet && below === BID.farmland_moist) setBlock(x, y-1, z, BID.farmland);
-    if (b !== BID.lentil_crop_2 && Math.random() < (wet ? 0.45 : 0.18))
-      setBlock(x, y, z, b === BID.lentil_crop_0 ? BID.lentil_crop_1 : BID.lentil_crop_2);
+    if (b !== crop.ids[2] && Math.random() < (wet ? 0.45 : 0.18))
+      setBlock(x, y, z, b === crop.ids[0] ? crop.ids[1] : crop.ids[2]);
   }
 }
 function portalOpenFx(x, y, z) {
@@ -4116,6 +4286,41 @@ mall('bamboo_leaves', 'bamboo_large_leaves', 'bamboo_leaves');
 mall('lentil_crop_0', 'lentil_crop_0', 'wheat_stage0');
 mall('lentil_crop_1', 'lentil_crop_1', 'wheat_stage3');
 mall('lentil_crop_2', 'lentil_crop_2', 'wheat_stage7');
+// 1.8.9 klasiklerinin doku eşlemeleri
+mtex('red_sandstone', ['red_sandstone_top'], ['red_sandstone'], ['red_sandstone_bottom']);
+mcol('quartz_pillar', 'quartz_pillar_top', 'quartz_pillar');
+mcol('chiseled_quartz_block', 'chiseled_quartz_block_top', 'chiseled_quartz_block');
+mcol('hay_block', 'hay_block_top', 'hay_block_side');
+mtex('enchanting_table', ['enchanting_table_top'], ['enchanting_table_side'], ['enchanting_table_bottom']);
+mtex('anvil', ['anvil_top','anvil_top_damaged_0'], ['anvil'], ['anvil']);
+mtex('cauldron', ['cauldron_top'], ['cauldron_side'], ['cauldron_bottom']);
+mtex('hopper', ['hopper_top'], ['hopper_outside'], ['hopper_outside']);
+mtex('dispenser', ['dispenser_front','furnace_top'], ['dispenser_front_horizontal','dispenser_front'], ['furnace_top']);
+mtex('dropper', ['dropper_front','furnace_top'], ['dropper_front_horizontal','dropper_front'], ['furnace_top']);
+mtex('piston', ['piston_top','piston_top_normal'], ['piston_side'], ['piston_bottom']);
+mtex('sticky_piston', ['piston_top_sticky'], ['piston_side'], ['piston_bottom']);
+mtex('daylight_detector', ['daylight_detector_top'], ['daylight_detector_side'], ['oak_planks']);
+mtex('jukebox', ['jukebox_top'], ['jukebox_side'], ['jukebox_side']);
+mall('note_block', 'note_block', 'noteblock');
+mall('beacon', 'beacon');
+mall('command_block', 'command_block_front', 'command_block');
+mall('ender_chest', 'obsidian');          // MC'de varlık modeli
+mall('trapped_chest', 'oak_planks');
+mall('infested_stone', 'stone');
+mall('mushroom_stem', 'mushroom_block_skin_stem', 'mushroom_stem');
+mall('brown_mushroom_block', 'brown_mushroom_block', 'mushroom_block_skin_brown');
+mall('red_mushroom_block', 'red_mushroom_block', 'mushroom_block_skin_red');
+mall('cobweb', 'cobweb', 'web');
+mall('lily_pad', 'lily_pad', 'waterlily');
+mall('tall_grass', 'tall_grass_top', 'double_plant_grass_top');
+mall('large_fern', 'large_fern_top', 'double_plant_fern_top');
+mall('sunflower', 'sunflower_front', 'double_plant_sunflower_front');
+mall('lilac', 'lilac_top', 'double_plant_syringa_top');
+mall('rose_bush', 'rose_bush_top', 'double_plant_rose_top');
+mall('peony', 'peony_top', 'double_plant_paeonia_top');
+for (const [c, mc] of [['wheat','wheat'],['carrots','carrots'],['potatoes','potatoes']])
+  for (let s=0;s<3;s++) mall(c+'_stage'+s, mc+'_stage'+[0,3,7][s], mc+'_stage_'+[0,2,3][s], mc+'_stage'+[0,2,3][s]);
+
 // eşya ikonları: oyun kimliği → Minecraft dosya adı adayları
 const MCITEM = { turtle_scute:['turtle_scute','scute'], oak_boat:['oak_boat','boat_oak'],
   ender_eye:['ender_eye','eye_of_ender'], water_bottle:['potion','potion_bottle_drinkable'],
@@ -4916,6 +5121,7 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   checkEndPortalTest:checkEndPortal, tryNetherPortalTest:tryNetherPortal,
   hasDefaultSkin:()=>!!defaultSkinTex, applyTexturePNGsTest:applyTexturePNGs, ensureChunksNow,
   atlasInfo:()=>({N:ATLAS_N, TSZ, canvas:atlasCanvas}), iconOv:()=>iconOverride, MCTEX, MCITEM,
+  cropSet, CROP_BY_ID, cropTickNow:(n)=>{ for(let i=0;i<n;i++) cropTick(99); },
   blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },
   applySkinTest:applySkin, dropTest:()=>spawnDrop('diamond', 1, P.x, P.y+1, P.z),
   vehicles:()=>vehicles, spawnVehicle, rideVehicle, redstoneUpdate, toggleLever,

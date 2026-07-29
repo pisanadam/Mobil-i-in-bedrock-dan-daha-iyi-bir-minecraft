@@ -120,10 +120,21 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - Artık **canlılar da senkronize**: ev sahibi otoriter (mob yapay zekasını çalıştırır ve durumlarını yayınlar), misafirler aynı mobları görür; misafir bir mob'a vurunca ev sahibine iletilir. Araçlar da senkron
 - **Oda kodu dayanıklılığı**: birden çok ücretsiz sinyal aynası (biri engellenirse diğeri), teklif yeniden yayını; ağ tamamen engelliyse manuel kod yedeği
 
+### 🧱 1.8.9 klasikleri
+1.8.9'un simge içerikleri eklendi (mevcut 1.21 içeriğinin üstüne):
+- **Bloklar**: cilalı granit/diyorit/andezit, kırmızı kumtaşı, sıkışmış buz, balçık bloku, ıslak sünger, yontma kuvars & kuvars sütun, mantar blokları & sapı, böcekli taş, bariyer, komut bloku, nota bloku, müzik kutusu, büyü masası, örs, işaret feneri, kazan, ender sandığı, tuzaklı sandık, huni, fırlatıcı, bırakıcı, piston & yapışkan piston, gün ışığı sensörü
+- **Bitkiler**: örümcek ağı, sarmaşık, merdiven, nilüfer, uzun ot, büyük eğreltiotu, ayçiçeği, leylak, gül çalısı, şakayık
+- **Gerçek ekinler**: buğday, havuç, patates (tohum → dikim → olgunlaşma → hasat); mercimek de aynı sisteme taşındı
+- **Canlılar (18)**: tavşan, mantar inek, yaban kedisi, yarasa, at, eşek, katır, zombi köylü, mağara örümceği, gümüş böceği, ender böceği, magma küpü, cadı, ghast, demir golem, kar golemi, yaşlı muhafız, **Wither**
+- **Eşyalar (36)**: yay, kova/su/lav/süt kovası, makas, olta, kar topu, yumurta, kemik tozu, kase, mantar çorbası, tavşan güveci, kâğıt, kitap, pusula, saat, harita, eyer, tasma, isim etiketi, kil topu, tuğla, tecrübe şişesi ve daha fazlası — tarifleriyle birlikte
+
+> ⚠️ Yarım blok, merdiven, çit, kapı, kapak, korkuluk/cam panel, yatak, karo halı ve pistonların **itme mekaniği** henüz yok — bunlar özel geometri/mekanik gerektiriyor ve sıradaki adımda.
+
 ### 🎨 Doku paketi (Minecraft resource pack uyumlu)
 Ayarlar → *Doku paketi*'nden **kendi** Minecraft doku paketini (`.zip`) doğrudan yükleyebilirsin.
 
 - 📦 **Standart klasör yapısı okunur**: `assets/minecraft/textures/block/…` ve `…/item/…` (1.13 öncesi `blocks/` + `items/` çoğul adları da desteklenir). `gui/`, `entity/`, `painting/` gibi klasörler yoksayılır
+- 🕰️ **Sürüm gözetmez**: 1.13'te tüm doku dosyaları yeniden adlandırıldı. Hem **modern (1.13 → 26.2)** hem de **1.8.9 dönemi** adlar tanınır — `grass_top`/`grass_block_top`, `log_oak`/`oak_log`, `planks_oak`/`oak_planks`, `wool_colored_silver`/`light_gray_wool`, `porkchop_raw`/`porkchop`, `wood_sword`/`wooden_sword`, `dye_powder_blue`/`lapis_lazuli` … hangisi varsa o kullanılır
 - 🏷️ **Blok ve eşya kimlikleri Minecraft ile birebir aynı** (`grass_block`, `oak_log`, `crimson_stem`, `nether_wart_block`, `diamond_pickaxe`, `ender_eye` …) — paketteki dosya adları doğrudan tutar
 - 🧩 **Yüz eşlemesi doğru yapılır**: Minecraft'ta dosya adı çoğu zaman blok adından farklıdır. `grass_block` → üst `grass_block_top`, yan `grass_block_side`, alt `dirt`; `oak_log` → yan `oak_log`, üst `oak_log_top`; `furnace` → `furnace_front`/`furnace_side`/`furnace_top`; ayrıca `snow`→kar bloğu, `magma`→magma bloğu, `redstone_dust_line0`→kızıltaş teli gibi ad farkları çözülür
 - 🎞️ **Animasyonlu dokular**: `water_still`, `lava_still`, `fire_0`, `nether_portal` gibi dikey şeritlerden **ilk kare** otomatik alınır (şerit ezilmez)
