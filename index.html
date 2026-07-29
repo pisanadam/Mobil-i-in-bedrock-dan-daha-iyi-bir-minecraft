@@ -637,6 +637,151 @@ defCross('soul_torch','Ruh Meşalesi', T.torch('#48c8d8'));
 defCross('lantern','Fener', (x,y,r)=>{ if (y>=5&&y<=12&&x>=5&&x<=10) { if (y>=7&&y<=10&&x>=6&&x<=9) return nzc(hex('#f8c050'),30,r); return nzc(hex('#3a3a44'),12,r); } if (y===4&&x>=7&&x<=8) return nzc(hex('#3a3a44'),12,r); return [0,0,0,0]; });
 
 /* ================= EŞYALAR ================= */
+
+/* ================= ŞEKİLLİ BLOKLAR (yarım blok, merdiven, çit, panel, kapı...) ================= */
+const DIRS4 = ['n','e','s','w'];                     // -z, +x, +z, -x
+const DVEC = { n:[0,0,-1], e:[1,0,0], s:[0,0,1], w:[-1,0,0] };
+// merdiven basamak kutusu (üst yarıda; üst-yarı varyantında alta iner)
+const STAIR_STEP = { n:[0,0.5,0,1,1,0.5], s:[0,0.5,0.5,1,1,1], e:[0.5,0.5,0,1,1,1], w:[0,0.5,0,0.5,1,1] };
+const SLAB_LO = [[0,0,0,1,0.5,1]], SLAB_HI = [[0,0.5,0,1,1,1]];
+const SHAPE_FAMILY = {};   // temel kimlik → {kind, variants:{...}}
+
+function defSlabPair(mat, nm, tiles, opts) {
+  const o = Object.assign({hard:2, shape:'slab'}, opts);
+  defBlock(mat+'_slab', nm+' Yarım Blok', tiles, Object.assign({}, o, {boxes:SLAB_LO}));
+  defBlock(mat+'_slab_top', nm+' Yarım Blok (üst)', tiles, Object.assign({}, o, {boxes:SLAB_HI, noitem:1, drop:mat+'_slab'}));
+  SHAPE_FAMILY[mat+'_slab'] = {kind:'slab', lo:mat+'_slab', hi:mat+'_slab_top'};
+}
+function defStairSet(mat, nm, tiles, opts) {
+  const o = Object.assign({hard:2, shape:'stairs'}, opts);
+  const fam = {kind:'stairs', v:{}};
+  for (const d of DIRS4) for (const half of [0,1]) {
+    const id = mat+'_stairs' + (half?'_t':'') + (d==='n'&&!half ? '' : (half?'_'+d:'_'+d));
+    const step = STAIR_STEP[d];
+    const boxes = half
+      ? [[0,0.5,0,1,1,1], [step[0], step[1]-0.5, step[2], step[3], step[4]-0.5, step[5]]]
+      : [[0,0,0,1,0.5,1], step];
+    const isBase = (d==='n' && !half);
+    defBlock(id, nm+' Merdiveni', tiles, Object.assign({}, o, {boxes},
+      isBase ? {} : {noitem:1, drop:mat+'_stairs'}));
+    fam.v[(half?'t':'b')+d] = id;
+  }
+  SHAPE_FAMILY[mat+'_stairs'] = fam;
+}
+/* --- yarım bloklar & merdivenler --- */
+const SLAB_MATS = [
+  ['oak','Meşe','oak_planks','axe'], ['spruce','Ladin','spruce_planks','axe'], ['birch','Huş','birch_planks','axe'],
+  ['jungle','Orman','jungle_planks','axe'], ['acacia','Akasya','acacia_planks','axe'], ['dark_oak','Koyu Meşe','dark_oak_planks','axe'],
+  ['stone','Taş','stone','pick'], ['cobblestone','Parke Taşı','cobblestone','pick'], ['stone_brick','Taş Tuğlası','stone_bricks','pick'],
+  ['sandstone','Kumtaşı','sandstone','pick'], ['red_sandstone','Kırmızı Kumtaşı','red_sandstone','pick'],
+  ['brick','Tuğla','bricks','pick'], ['nether_brick','Nether Tuğlası','nether_bricks','pick'],
+  ['quartz','Kuvars','quartz_block','pick'], ['purpur','Purpur','purpur_block','pick'],
+];
+for (const [mat, nm, srcId, tool] of SLAB_MATS) {
+  const src = BLOCKS[BID[srcId]];
+  const o = {tool, tier: tool==='pick'?1:undefined, hard: src.hard||2};
+  defSlabPair(mat, nm, src.t.slice(), o);
+  defStairSet(mat, nm, src.t.slice(), o);
+}
+/* --- karo halı (16 renk) --- */
+const CARPET_BOX = [[0,0,0,1,0.0625,1]];
+for (const c in COLORS) {
+  const [nm, col] = COLORS[c];
+  defBlock(c+'_carpet', nm+' Halı', BLOCKS[BID[c+'_wool']].t.slice(), {hard:0.1, boxes:CARPET_BOX, shape:'carpet', flammable:1});
+}
+/* --- kar katmanı (8 kademe) --- */
+const tSnowL = tile(T.flat('#f0f4f6',12));
+for (let L=1; L<=8; L++) {
+  defBlock('snow'+(L===1?'':'_'+L), L===1?'Kar':'Kar ('+L+')', [tSnowL,tSnowL,tSnowL],
+    {hard:0.1, tool:'shovel', boxes:[[0,0,0,1,L/8,1]], shape:'snow', snowL:L,
+     drop:'snowball', dropN:[L,L], noitem: L>1 ? 1 : 0});
+}
+/* --- çit & çit kapısı (komşuya göre bağlanır) --- */
+const FENCE_POST = [0.375,0,0.375, 0.625,1.0,0.625];
+function fenceLike(id) { const d=BLOCKS[id]; return !!(d && (d.fence || d.fenceGate)); }
+function fenceBoxes(wx, wy, wz) {
+  const out = [FENCE_POST];
+  const link = (dx,dz) => { const n = getBlock(wx+dx, wy, wz+dz); return isFullCube(n) || fenceLike(n); };
+  if (link(0,-1)) out.push([0.4375,0.3125,0, 0.5625,0.9375,0.375]);
+  if (link(0, 1)) out.push([0.4375,0.3125,0.625, 0.5625,0.9375,1]);
+  if (link(-1,0)) out.push([0,0.3125,0.4375, 0.375,0.9375,0.5625]);
+  if (link( 1,0)) out.push([0.625,0.3125,0.4375, 1,0.9375,0.5625]);
+  return out;
+}
+const GATE_BOX_Z = [[0,0,0.4375, 1,1,0.5625]];     // x ekseni boyunca duvar
+const GATE_BOX_X = [[0.4375,0,0, 0.5625,1,1]];
+for (const w of ['oak','spruce','birch','jungle','acacia','dark_oak']) {
+  const nm = WOODS[w][0], tiles = BLOCKS[BID[w+'_planks']].t.slice();
+  defBlock(w+'_fence', nm+' Çiti', tiles, {hard:2, tool:'axe', boxes:fenceBoxes, fence:1, cutout:1, flammable:1});
+  defBlock(w+'_fence_gate', nm+' Çit Kapısı', tiles, {hard:2, tool:'axe', boxes:GATE_BOX_Z, fenceGate:1, cutout:1, flammable:1, toggle:w+'_fence_gate_open'});
+  defBlock(w+'_fence_gate_x', nm+' Çit Kapısı', tiles, {hard:2, tool:'axe', boxes:GATE_BOX_X, fenceGate:1, cutout:1, flammable:1, noitem:1, drop:w+'_fence_gate', toggle:w+'_fence_gate_x_open'});
+  defBlock(w+'_fence_gate_open', nm+' Çit Kapısı (açık)', tiles, {hard:2, tool:'axe', boxes:[], noclip:1, cutout:1, noitem:1, drop:w+'_fence_gate', toggle:w+'_fence_gate'});
+  defBlock(w+'_fence_gate_x_open', nm+' Çit Kapısı (açık)', tiles, {hard:2, tool:'axe', boxes:[], noclip:1, cutout:1, noitem:1, drop:w+'_fence_gate', toggle:w+'_fence_gate_x'});
+}
+defBlock('nether_brick_fence','Nether Tuğla Çiti', BLOCKS[BID.nether_bricks].t.slice(), {hard:2, tool:'pick', tier:1, boxes:fenceBoxes, fence:1, cutout:1});
+/* --- cam panel & demir korkuluk --- */
+const PANE_POST = [0.4375,0,0.4375, 0.5625,1,0.5625];
+function paneLike(id) { const d=BLOCKS[id]; return !!(d && d.pane); }
+function paneBoxes(wx, wy, wz) {
+  const out = [];
+  const link = (dx,dz) => { const n = getBlock(wx+dx, wy, wz+dz); return isFullCube(n) || paneLike(n); };
+  const n0=link(0,-1), s0=link(0,1), w0=link(-1,0), e0=link(1,0);
+  if (!(n0||s0||w0||e0)) return [PANE_POST];
+  if (n0) out.push([0.4375,0,0, 0.5625,1,0.5]);
+  if (s0) out.push([0.4375,0,0.5, 0.5625,1,1]);
+  if (w0) out.push([0,0,0.4375, 0.5,1,0.5625]);
+  if (e0) out.push([0.5,0,0.4375, 1,1,0.5625]);
+  return out;
+}
+defBlock('glass_pane','Cam Panel', BLOCKS[BID.glass].t.slice(), {hard:0.3, boxes:paneBoxes, pane:1, trans:1, drop:null});
+defBlock('iron_bars','Demir Korkuluk', stone3(tile((x,y,r)=>{ if (Math.abs(x-4)<1||Math.abs(x-11)<1||y<1||y>14) return nzc(hex('#3a3a42'),12,r); return [0,0,0,0]; })), {hard:5, tool:'pick', tier:1, boxes:paneBoxes, pane:1, cutout:1});
+for (const c in COLORS) {
+  const nm = COLORS[c][0];
+  defBlock(c+'_stained_glass_pane', nm+' Cam Panel', BLOCKS[BID[c+'_stained_glass']].t.slice(), {hard:0.3, boxes:paneBoxes, pane:1, trans:1, drop:null});
+}
+/* --- kapılar (alt/üst yarı, iki eksen, açık/kapalı) --- */
+const DOOR_BOX = { z:[[0,0,0,1,1,0.1875]], zo:[[0,0,0.8125,1,1,1]], x:[[0,0,0,0.1875,1,1]], xo:[[0.8125,0,0,1,1,1]] };
+function defDoor(mat, nm, tiles, opts) {
+  const o = Object.assign({hard:3, cutout:1, door:1}, opts);
+  for (const ax of ['z','x']) for (const half of ['', '_top']) for (const op of ['', '_open']) {
+    const id = mat+'_door'+(ax==='x'?'_x':'')+half+op;
+    const base = mat+'_door';
+    defBlock(id, nm+' Kapısı', tiles, Object.assign({}, o, {
+      boxes: DOOR_BOX[ax + (op?'o':'')],
+      doorAxis: ax, doorTop: half==='_top'?1:0, doorOpen: op?1:0,
+      toggle: mat+'_door'+(ax==='x'?'_x':'')+half+(op?'':'_open'),
+      noitem: (id===base) ? 0 : 1, drop: base }));
+  }
+}
+const tDoorW = tile((x,y,r)=>{ if (x<2||x>13) return nzc(hex('#8a6a3a'),14,r);
+  if (y>4&&y<11&&x>4&&x<11) return nzc(hex('#6a4a26'),12,r); return nzc(hex('#a5804a'),16,r); });
+const tDoorI = tile((x,y,r)=>{ if (x<2||x>13) return nzc(hex('#9a9aa2'),10,r);
+  if (y>4&&y<11&&x>4&&x<11) return nzc(hex('#70707a'),8,r); return nzc(hex('#b0b0b8'),12,r); });
+for (const w of ['oak','spruce','birch','jungle','acacia','dark_oak'])
+  defDoor(w, WOODS[w][0], [tDoorW,tDoorW,tDoorW], {tool:'axe', flammable:1});
+defDoor('iron', 'Demir', [tDoorI,tDoorI,tDoorI], {tool:'pick', tier:1, hard:5});
+/* --- kapaklar (trapdoor) --- */
+const TRAP_BOX = { b:[[0,0,0,1,0.1875,1]], t:[[0,0.8125,0,1,1,1]],
+                   on:[[0,0,0,1,1,0.1875]], os:[[0,0,0.8125,1,1,1]] };
+function defTrapdoor(mat, nm, tiles, opts) {
+  const o = Object.assign({hard:3, cutout:1, trapdoor:1}, opts);
+  const base = mat+'_trapdoor';
+  defBlock(base, nm+' Kapağı', tiles, Object.assign({}, o, {boxes:TRAP_BOX.b, toggle:base+'_open'}));
+  defBlock(base+'_top', nm+' Kapağı (üst)', tiles, Object.assign({}, o, {boxes:TRAP_BOX.t, noitem:1, drop:base, toggle:base+'_open'}));
+  defBlock(base+'_open', nm+' Kapağı (açık)', tiles, Object.assign({}, o, {boxes:TRAP_BOX.on, noitem:1, drop:base, toggle:base}));
+}
+const tTrapW = tile((x,y,r)=>{ if (y<2||y>13||x<2||x>13) return nzc(hex('#8a6a3a'),14,r);
+  if ((x+y)%6<2) return nzc(hex('#6a4a26'),12,r); return nzc(hex('#a5804a'),16,r); });
+for (const w of ['oak','spruce','birch','jungle','acacia','dark_oak'])
+  defTrapdoor(w, WOODS[w][0], [tTrapW,tTrapW,tTrapW], {tool:'axe', flammable:1});
+defTrapdoor('iron','Demir', [tDoorI,tDoorI,tDoorI], {tool:'pick', tier:1, hard:5});
+/* --- yatak --- */
+const BED_BOX = [[0,0,0,1,0.5625,1]];
+const tBedTop = tile((x,y,r)=>nzc(hex(y<3?'#e8e8e0':'#b02a2a'),14,r));
+const tBedSide = tile((x,y,r)=>nzc(hex(y>11?'#8a6a3a':(y<4?'#e8e8e0':'#b02a2a')),14,r));
+defBlock('red_bed','Yatak', [tBedTop,tBedSide,tile(T.plank('#8a6a3a'))], {hard:0.2, boxes:BED_BOX, shape:'bed', bed:1, flammable:1});
+defBlock('red_bed_head','Yatak (baş)', [tBedTop,tBedSide,tile(T.plank('#8a6a3a'))], {hard:0.2, boxes:BED_BOX, shape:'bed', bed:1, bedHead:1, noitem:1, drop:'red_bed', flammable:1});
+
 const IC = { // ikon boyacıları (16x16)
   ingot:c=>(x,y)=>{ const inY=y>5&&y<11, inX=x>2&&x<13; if (inY&&inX) return (y<8?hex(mixHex(c,'#ffffff',0.3)):hex(c)); return null; },
   raw:c=>(x,y)=>{ if (Math.hypot(x-8,y-8)<5.2) return hex(cell(x,y,3)<0.4?mixHex(c,'#000000',0.25):c); return null; },
@@ -891,6 +1036,29 @@ defRecipe('compass', 1, [['iron_ingot',4],['redstone',1]], 1);
 defRecipe('clock', 1, [['gold_ingot',4],['redstone',1]], 1);
 defRecipe('map', 1, [['paper',8],['compass',1]], 1);
 defRecipe('golden_carrot', 1, [['carrot',1],['gold_nugget',8]], 1);
+/* --- şekilli blok tarifleri (Minecraft oranları) --- */
+for (const [mat, nm, srcId] of SLAB_MATS) {
+  defRecipe(mat+'_slab', 6, [[srcId, 3]]);
+  defRecipe(mat+'_stairs', 4, [[srcId, 6]]);
+}
+for (const w of ['oak','spruce','birch','jungle','acacia','dark_oak']) {
+  defRecipe(w+'_fence', 3, [[w+'_planks',4],['stick',2]]);
+  defRecipe(w+'_fence_gate', 1, [[w+'_planks',2],['stick',4]]);
+  defRecipe(w+'_door', 3, [[w+'_planks',6]], 1);
+  defRecipe(w+'_trapdoor', 2, [[w+'_planks',6]], 1);
+}
+defRecipe('nether_brick_fence', 6, [['nether_bricks',6]]);
+defRecipe('iron_door', 3, [['iron_ingot',6]], 1);
+defRecipe('iron_trapdoor', 1, [['iron_ingot',4]], 1);
+defRecipe('glass_pane', 16, [['glass',6]]);
+defRecipe('iron_bars', 16, [['iron_ingot',6]], 1);
+for (const c in COLORS) {
+  defRecipe(c+'_carpet', 3, [[c+'_wool',2]]);
+  defRecipe(c+'_stained_glass_pane', 16, [[c+'_stained_glass',6]]);
+}
+defRecipe('red_bed', 1, [['red_wool',3],['oak_planks',3]], 1);
+defRecipe('snow', 6, [['snow_block',3]]);
+
 
 defRecipe('flint', 1, [['gravel',3]]);
 defRecipe('glass_bottle', 3, [['glass',3]]);
@@ -953,6 +1121,20 @@ for (const [lid, lv] of [['torch',0.95],['soul_torch',0.8],['lantern',1],['glows
   if (BID[lid] && lid !== 'lava') BLOCKS[BID[lid]].light = lv; // lav hariç (denizde binlerce kaynak olurdu)
 }
 const isTransp = b => { const d=BLOCKS[b]; return d && (d.water || d.cutout || d.cross || d.trans); };
+/* --- şekilli bloklar (yarım blok, merdiven, çit, panel...) ---
+   def.boxes: [[x0,y0,z0,x1,y1,z1], ...] birim küp içinde; fonksiyon ise komşuya göre hesaplanır. */
+const FULLBOX = [[0,0,0,1,1,1]];
+// komşunun yüzünü kapatan blok: yalnızca dolu, şekilsiz, saydam olmayan küp
+const isFullCube = b => { const d=BLOCKS[b]; return !!(d && d.solid && !d.boxes && !d.cutout && !d.cross && !d.trans && !d.water); };
+function shapeOf(b, wx, wy, wz) {          // çizim kutuları (katı olmayanlar da dahil)
+  const d = BLOCKS[b]; if (!d || !d.boxes) return null;
+  return (typeof d.boxes === 'function') ? d.boxes(wx, wy, wz) : d.boxes;
+}
+function collBoxes(b, wx, wy, wz) {        // çarpışma kutuları
+  const d = BLOCKS[b];
+  if (!d || !d.solid || d.noclip) return null;
+  return shapeOf(b, wx, wy, wz) || FULLBOX;
+}
 const isSolid  = b => b>0 && BLOCKS[b].solid;
 
 /* ================= GÜRÜLTÜ / ARAZİ ================= */
@@ -1812,20 +1994,33 @@ function buildMesh(cx, cz) {
       }
       continue;
     }
-    for (const f of FACES) {
-      const nb = getBlock(wx+f.d[0], y+f.d[1], wz+f.d[2]);
-      if (!(nb === 0 || (isTransp(nb) && nb !== b))) continue;
-      const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
-      const arr = (def.water || def.trans) ? wat : opq;
-      const yTop = def.water && getBlock(wx, y+1, wz) !== b ? 0.88 : 1;
-      const L = def.light ? def.light :
-        lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6);
-      for (const vi of [0,1,2,0,2,3]) {
-        const co = f.c[vi];
-        const cy = co[1] === 1 ? yTop : 0;
-        const u = faceUV(f, co);
-        const uv = tileUV(tileI, u[0], u[1]);
-        arr.push(wx+co[0], y+cy, wz+co[2], uv[0], uv[1], f.s, L);
+    const boxes = shapeOf(b, wx, y, wz) || FULLBOX;
+    const shaped = boxes !== FULLBOX;
+    for (const q of boxes) {
+      const X0=q[0], Y0=q[1], Z0=q[2], X1=q[3], Y1=q[4], Z1=q[5];
+      for (const f of FACES) {
+        // yüz birim küpün kenarındaysa komşuyla gizlenebilir; içerideyse hep çizilir
+        const atEdge = f.d[0] > 0 ? X1 >= 1 : f.d[0] < 0 ? X0 <= 0
+                     : f.d[1] > 0 ? Y1 >= 1 : f.d[1] < 0 ? Y0 <= 0
+                     : f.d[2] > 0 ? Z1 >= 1 : Z0 <= 0;
+        if (atEdge) {
+          const nb = getBlock(wx+f.d[0], y+f.d[1], wz+f.d[2]);
+          if (isFullCube(nb) || (nb === b && isTransp(nb) && !shaped)) continue;
+        }
+        const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
+        const arr = (def.water || def.trans) ? wat : opq;
+        const yTop = (!shaped && def.water && getBlock(wx, y+1, wz) !== b) ? 0.88 : 1;
+        const L = def.light ? def.light :
+          lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6);
+        for (const vi of [0,1,2,0,2,3]) {
+          const co = f.c[vi];
+          const lx = X0 + co[0]*(X1-X0), lz = Z0 + co[2]*(Z1-Z0);
+          let ly = Y0 + co[1]*(Y1-Y0);
+          if (!shaped && co[1] === 1) ly = yTop;
+          const u = faceUV(f, [lx, ly, lz]);
+          const uv = tileUV(tileI, u[0], u[1]);
+          arr.push(wx+lx, y+ly, wz+lz, uv[0], uv[1], f.s, L);
+        }
       }
     }
   }
@@ -1976,29 +2171,63 @@ function tickEffects(dt) {
   }
 }
 /* --- fizik --- */
-function aabbHit(x, y, z, w, h) {
-  const x1=Math.floor(x-w), x2=Math.floor(x+w), y1=Math.floor(y), y2=Math.floor(y+h), z1=Math.floor(z-w), z2=Math.floor(z+w);
-  for (let bx=x1;bx<=x2;bx++) for (let by=y1;by<=y2;by++) for (let bz=z1;bz<=z2;bz++)
-    if (isSolid(getBlock(bx,by,bz))) return {bx,by,bz};
-  return null;
+// axis/dir verilirse o eksende EN UYGUN kutu seçilir (yoksa ilk çarpışan).
+// Gerekli: aynı hücre yığınında hem taş (üst=201) hem halı (üst=201.0625) varsa
+// düşerken halının üstüne yaslanmalı, taşın üstüne değil.
+function aabbHit(x, y, z, w, h, axis, dir) {
+  const x1=Math.floor(x-w), x2=Math.floor(x+w), y1=Math.floor(y-0.001), y2=Math.floor(y+h), z1=Math.floor(z-w), z2=Math.floor(z+w);
+  let best = null;
+  for (let bx=x1;bx<=x2;bx++) for (let by=y1;by<=y2;by++) for (let bz=z1;bz<=z2;bz++) {
+    const bs = collBoxes(getBlock(bx,by,bz), bx, by, bz);
+    if (!bs) continue;
+    for (const q of bs) {
+      const qx0=bx+q[0], qy0=by+q[1], qz0=bz+q[2], qx1=bx+q[3], qy1=by+q[4], qz1=bz+q[5];
+      if (!(x+w > qx0 && x-w < qx1 && y+h > qy0 && y < qy1 && z+w > qz0 && z-w < qz1)) continue;
+      const box = {x0:qx0, y0:qy0, z0:qz0, x1:qx1, y1:qy1, z1:qz1, bx, by, bz};
+      if (!axis) return box;
+      if (!best) { best = box; continue; }
+      if (axis === 'y')      best = (dir <= 0) ? (box.y1 > best.y1 ? box : best) : (box.y0 < best.y0 ? box : best);
+      else if (axis === 'x') best = (dir >  0) ? (box.x0 < best.x0 ? box : best) : (box.x1 > best.x1 ? box : best);
+      else                   best = (dir >  0) ? (box.z0 < best.z0 ? box : best) : (box.z1 > best.z1 ? box : best);
+    }
+  }
+  return best;
+}
+const STEP_H = 0.6;   // yarım blok / merdiven / kar katmanına zıplamadan çıkılır
+function tryStepUp(e, n) {
+  if (e.stepless || !(e.onGround || e.wasGround) || e.vy > 0.1) return false;
+  const rise = n.y1 - e.y;
+  if (rise <= 0.001 || rise > STEP_H) return false;
+  const ny = n.y1 + 0.001;
+  if (aabbHit(e.x, ny, e.z, e.w, e.hgt)) return false;   // üstü kapalıysa çıkma
+  e.y = ny; e.onGround = true; return true;
 }
 function moveEnt(e, dt) { // e: x,y,z,vx,vy,vz,w,hgt + onGround
   let n;
-  if (aabbHit(e.x,e.y,e.z,e.w,e.hgt)) { let esc=0; while (aabbHit(e.x,e.y,e.z,e.w,e.hgt) && esc++<H) e.y += 1; e.vy = 0; }
+  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1))) {
+    e.y = n.y1;                                    // önce çarpılan en yüksek kutunun üstüne çık
+    let esc=0; while (aabbHit(e.x,e.y,e.z,e.w,e.hgt) && esc++<H) e.y += 1;
+    e.vy = 0;
+  }
+  e.wasGround = e.onGround;
   e.x += e.vx*dt;
-  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt))) {
-    if (e.vx > 0) e.x = n.bx-e.w-0.001; else if (e.vx < 0) e.x = n.bx+1+e.w+0.001;
-    e.vx = 0; e.blocked = true;
+  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'x',e.vx))) {
+    if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
+      if (e.vx > 0) e.x = n.x0-e.w-0.001; else if (e.vx < 0) e.x = n.x1+e.w+0.001;
+      e.vx = 0; e.blocked = true;
+    }
   } else e.blocked = false;
   e.z += e.vz*dt;
-  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt))) {
-    if (e.vz > 0) e.z = n.bz-e.w-0.001; else if (e.vz < 0) e.z = n.bz+1+e.w+0.001;
-    e.vz = 0; e.blocked = true;
+  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'z',e.vz))) {
+    if (!tryStepUp(e, aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',-1) || n)) {
+      if (e.vz > 0) e.z = n.z0-e.w-0.001; else if (e.vz < 0) e.z = n.z1+e.w+0.001;
+      e.vz = 0; e.blocked = true;
+    }
   }
   e.onGround = false;
   e.y += e.vy*dt;
-  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt))) {
-    if (e.vy <= 0) { e.y = n.by+1; e.onGround = true; } else { e.y = n.by-e.hgt-0.001; }
+  if ((n = aabbHit(e.x,e.y,e.z,e.w,e.hgt,'y',e.vy))) {
+    if (e.vy <= 0) { e.y = n.y1; e.onGround = true; } else { e.y = n.y0-e.hgt-0.001; }
     e.vy = 0;
   }
 }
@@ -3155,11 +3384,99 @@ function rsSet(x,y,z,b) { // kızıltaş güncellemesi (mesh yeniler, MP yaymaz 
   (edits[k]=edits[k]||{})[bidx(x-cx*CH,y,z-cz*CH)] = b;
   for (let dx2=-1;dx2<=1;dx2++) for (let dz2=-1;dz2<=1;dz2++) queueMesh(cx+dx2,cz+dz2);
 }
+
+/* --- şekilli blok yerleştirme: bakış yönü ve tıklanan yüze göre varyant seç --- */
+function facingOf() { return DIRS4[((Math.round(P.yaw / (Math.PI/2)) % 4) + 4) % 4]; }
+function placeVariant(bid, r) {
+  const d = BLOCKS[bid];
+  if (!d) return {id:bid, extra:[]};
+  const dy = r.py - r.y;                    // +1 üst yüze, -1 alt yüze tıklandı
+  const upper = dy < 0;                     // alt yüz → üst yarı varyantı
+  const f = facingOf();
+  if (d.shape === 'slab') {
+    const fam = SHAPE_FAMILY[d.id];
+    return {id: BID[upper ? fam.hi : fam.lo], extra:[]};
+  }
+  if (d.shape === 'stairs') {
+    const fam = SHAPE_FAMILY[d.id];
+    return {id: BID[fam.v[(upper?'t':'b') + f]], extra:[]};
+  }
+  if (d.fenceGate) return {id: BID[(f==='e'||f==='w') ? d.id.replace('_fence_gate','_fence_gate_x') : d.id], extra:[]};
+  if (d.trapdoor && upper) return {id: BID[d.id+'_top'] || bid, extra:[]};
+  if (d.door) {                              // iki blok yüksek: üst yarıya yer lazım
+    const ax = (f==='e'||f==='w') ? 'x' : 'z';
+    const lo = BID[d.id.replace('_door','_door')+''];
+    const baseId = d.id;                     // örn. oak_door
+    const loId = BID[baseId + (ax==='x' ? '_x' : '')];
+    const hiId = BID[baseId + (ax==='x' ? '_x' : '') + '_top'];
+    if (getBlock(r.px, r.py+1, r.pz) !== 0) return null;
+    return {id: loId, extra:[[r.px, r.py+1, r.pz, hiId]]};
+  }
+  if (d.bed) {                               // ayak + baş
+    const v = DVEC[f];
+    if (getBlock(r.px+v[0], r.py, r.pz+v[2]) !== 0) return null;
+    return {id: BID.red_bed, extra:[[r.px+v[0], r.py, r.pz+v[2], BID.red_bed_head]]};
+  }
+  return {id:bid, extra:[]};
+}
+/* --- kapı / kapak / çit kapısı aç-kapa --- */
+function toggleShaped(x, y, z) {
+  const b = getBlock(x, y, z), d = BLOCKS[b];
+  if (!d || !d.toggle || !BID[d.toggle]) return false;
+  setBlock(x, y, z, BID[d.toggle]);
+  if (d.door) {                              // kapının diğer yarısı da dönsün
+    const oy = d.doorTop ? y-1 : y+1;
+    const ob = getBlock(x, oy, z), od = BLOCKS[ob];
+    if (od && od.door && od.doorTop !== d.doorTop && BID[od.toggle]) setBlock(x, oy, z, BID[od.toggle]);
+  }
+  sfx(d.doorOpen ? 380 : 520, 0.08, 'square', 0.09, 300);
+  return true;
+}
+/* --- piston itme mekaniği --- */
+const PISTON_MAX = 12;
+function pistonPush(x, y, z, dir) {          // dir: [dx,dy,dz]
+  const chain = [];
+  let cx2 = x+dir[0], cy2 = y+dir[1], cz2 = z+dir[2];
+  for (let i=0; i<PISTON_MAX; i++) {
+    const b = getBlock(cx2, cy2, cz2);
+    if (b === 0) break;                      // boşluğa itilecek
+    const d = BLOCKS[b];
+    if (!d || d.unbreakable || d.piston) return false;   // bedrock/obsidyen zinciri itilemez
+    chain.push([cx2, cy2, cz2, b]);
+    cx2 += dir[0]; cy2 += dir[1]; cz2 += dir[2];
+    if (i === PISTON_MAX-1) return false;    // 12 bloktan fazlası itilemez
+  }
+  if (cy2 < Y_MIN || cy2 > Y_MAX) return false;
+  for (let i=chain.length-1; i>=0; i--) {    // sondan başa taşı
+    const [bx2,by2,bz2,b] = chain[i];
+    setBlock(bx2+dir[0], by2+dir[1], bz2+dir[2], b);
+    setBlock(bx2, by2, bz2, 0);
+  }
+  sfx(240, 0.09, 'square', 0.08, 160);
+  return true;
+}
+function pistonUpdate(ox, oy, oz) {          // civardaki pistonları güç durumuna göre çalıştır
+  for (let dx=-16; dx<=16; dx++) for (let dy=-4; dy<=4; dy++) for (let dz=-16; dz<=16; dz++) {
+    const x=ox+dx, y=oy+dy, z=oz+dz, b=getBlock(x,y,z);
+    if (b !== BID.piston && b !== BID.sticky_piston) continue;
+    let on = false;
+    for (const [ax,ay,az] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+      const nb = getBlock(x+ax, y+ay, z+az);
+      if (isPowerSource(nb) || nb === BID.redstone_wire_on) { on = true; break; }
+    }
+    const k = x+','+y+','+z;
+    if (on && !pistonState[k]) { pistonState[k] = 1; pistonPush(x, y, z, [0,1,0]); }
+    else if (!on && pistonState[k]) { pistonState[k] = 0; }
+  }
+}
+const pistonState = {};
+
 function toggleLever(x,y,z) {
   const on = getBlock(x,y,z) === BID.lever_on;
   setBlock(x,y,z, on ? BID.lever : BID.lever_on);
   sfx(on?400:600, 0.06, 'square', 0.1);
   redstoneUpdate(x,y,z);
+  pistonUpdate(x,y,z);
 }
 
 /* ================= İKSİR & DEMLEME ================= */
@@ -3245,6 +3562,7 @@ function doPlace() {
     return;
   }
   // etkileşimli blok?
+  if (hitDef.toggle && toggleShaped(r.x, r.y, r.z)) return;   // kapı/kapak/çit kapısı
   if (hitDef.inter) { openInter(hitDef.inter, r); return; }
   if (hitDef.ignite) { igniteTnt(r.x, r.y, r.z); return; }
   if (!held) return;
@@ -3260,7 +3578,10 @@ function doPlace() {
   if (isSolid(cur) || BLOCKS[cur].cross) { if (!hitDef.cross) return; }
   if (BLOCKS[it.block].solid &&
       px+1 > P.x-P.w && px < P.x+P.w && py+1 > P.y && py < P.y+P.hgt && pz+1 > P.z-P.w && pz < P.z+P.w) return;
-  setBlock(px, py, pz, it.block);
+  const pv = placeVariant(it.block, {px, py, pz, x:r.x, y:r.y, z:r.z});
+  if (!pv) { toast('Yer yok'); return; }                 // kapı/yatak için ikinci bloğa yer yok
+  setBlock(px, py, pz, pv.id);
+  for (const [ex,ey,ez,eb] of pv.extra) setBlock(ex, ey, ez, eb);
   if (it.block === BID.chest) chestData[px+','+py+','+pz] = Array(27).fill(null); // oyuncu sandığına ganimet dolmasın
   const pd = BLOCKS[it.block];
   if (pd.wire || pd.lamp || pd.rsource || pd.lever) redstoneUpdate(px, py, pz); // kızıltaş yeniden hesapla
@@ -4318,6 +4639,39 @@ mall('sunflower', 'sunflower_front', 'double_plant_sunflower_front');
 mall('lilac', 'lilac_top', 'double_plant_syringa_top');
 mall('rose_bush', 'rose_bush_top', 'double_plant_rose_top');
 mall('peony', 'peony_top', 'double_plant_paeonia_top');
+// şekilli blokların doku kaynakları (yarım blok/merdiven ana bloğun dokusunu kullanır)
+for (const [mat, nm, srcId] of SLAB_MATS) {
+  const src = MCTEX[srcId];
+  const faces = src || [[srcId+'_top', srcId], [srcId+'_side', srcId], [srcId+'_bottom', srcId]];
+  for (const id of Object.keys(BID)) {
+    if (id === mat+'_slab' || id === mat+'_slab_top' || id.startsWith(mat+'_stairs'))
+      MCTEX[id] = faces;
+  }
+}
+for (const w of ['oak','spruce','birch','jungle','acacia','dark_oak']) {
+  mall(w+'_fence', w+'_planks', 'planks_'+(w==='dark_oak'?'big_oak':w));
+  mall(w+'_fence_gate', w+'_planks'); mall(w+'_fence_gate_x', w+'_planks');
+  mall(w+'_fence_gate_open', w+'_planks'); mall(w+'_fence_gate_x_open', w+'_planks');
+  for (const ax of ['','_x']) for (const half of ['','_top']) for (const op of ['','_open'])
+    mall(w+'_door'+ax+half+op, half ? (w+'_door_top') : (w+'_door_bottom'), half ? 'door_wood_upper' : 'door_wood_lower');
+  mall(w+'_trapdoor', w+'_trapdoor', 'trapdoor');
+  mall(w+'_trapdoor_top', w+'_trapdoor', 'trapdoor');
+  mall(w+'_trapdoor_open', w+'_trapdoor', 'trapdoor');
+}
+for (const ax of ['','_x']) for (const half of ['','_top']) for (const op of ['','_open'])
+  mall('iron_door'+ax+half+op, half ? 'iron_door_top' : 'iron_door_bottom', half ? 'door_iron_upper' : 'door_iron_lower');
+mall('iron_trapdoor', 'iron_trapdoor'); mall('iron_trapdoor_top', 'iron_trapdoor'); mall('iron_trapdoor_open', 'iron_trapdoor');
+mall('nether_brick_fence', 'nether_bricks', 'nether_brick');
+mall('glass_pane', 'glass', 'glass_pane_top');
+mall('iron_bars', 'iron_bars');
+for (const c in COLORS) {
+  mall(c+'_carpet', c+'_wool', 'wool_colored_'+(c==='light_gray'?'silver':c));
+  mall(c+'_stained_glass_pane', c+'_stained_glass', 'glass_'+(c==='light_gray'?'silver':c));
+}
+mtex('red_bed', ['red_wool'], ['red_wool'], ['oak_planks']);
+mtex('red_bed_head', ['red_wool'], ['red_wool'], ['oak_planks']);
+for (let L=1; L<=8; L++) mall('snow'+(L===1?'':'_'+L), 'snow');
+
 for (const [c, mc] of [['wheat','wheat'],['carrots','carrots'],['potatoes','potatoes']])
   for (let s=0;s<3;s++) mall(c+'_stage'+s, mc+'_stage'+[0,3,7][s], mc+'_stage_'+[0,2,3][s], mc+'_stage'+[0,2,3][s]);
 
@@ -5122,6 +5476,8 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   hasDefaultSkin:()=>!!defaultSkinTex, applyTexturePNGsTest:applyTexturePNGs, ensureChunksNow,
   atlasInfo:()=>({N:ATLAS_N, TSZ, canvas:atlasCanvas}), iconOv:()=>iconOverride, MCTEX, MCITEM,
   cropSet, CROP_BY_ID, cropTickNow:(n)=>{ for(let i=0;i<n;i++) cropTick(99); },
+  placeVariantTest:placeVariant, toggleShapedTest:toggleShaped, shapeOfTest:shapeOf,
+  pistonPushTest:pistonPush, aabbHitTest:aabbHit, SHAPE_FAMILY,
   blockSoundTest:()=>{ for (const id of ['stone','oak_planks','glass','dirt','oak_leaves','iron_ore']) blockSound(BLOCKS[BID[id]], false); },
   applySkinTest:applySkin, dropTest:()=>spawnDrop('diamond', 1, P.x, P.y+1, P.z),
   vehicles:()=>vehicles, spawnVehicle, rideVehicle, redstoneUpdate, toggleLever,

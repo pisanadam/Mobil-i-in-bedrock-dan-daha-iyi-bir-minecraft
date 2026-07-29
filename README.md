@@ -128,7 +128,19 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - **Canlılar (18)**: tavşan, mantar inek, yaban kedisi, yarasa, at, eşek, katır, zombi köylü, mağara örümceği, gümüş böceği, ender böceği, magma küpü, cadı, ghast, demir golem, kar golemi, yaşlı muhafız, **Wither**
 - **Eşyalar (36)**: yay, kova/su/lav/süt kovası, makas, olta, kar topu, yumurta, kemik tozu, kase, mantar çorbası, tavşan güveci, kâğıt, kitap, pusula, saat, harita, eyer, tasma, isim etiketi, kil topu, tuğla, tecrübe şişesi ve daha fazlası — tarifleriyle birlikte
 
-> ⚠️ Yarım blok, merdiven, çit, kapı, kapak, korkuluk/cam panel, yatak, karo halı ve pistonların **itme mekaniği** henüz yok — bunlar özel geometri/mekanik gerektiriyor ve sıradaki adımda.
+### 📐 Şekil & çarpışma sistemi
+Küp olmayan bloklar için tam bir **kutu (AABB) sistemi** eklendi: her blok `[x0,y0,z0,x1,y1,z1]` kutularıyla tanımlanır, mesh üreticisi ve çarpışma aynı kutuları kullanır.
+- 🧱 **Yarım bloklar**: 15 malzeme (6 ağaç + taş, parke, taş tuğlası, kumtaşı, kırmızı kumtaşı, tuğla, nether tuğlası, kuvars, purpur) — üst/alt yarı, tıkladığın yüze göre otomatik
+- 🪜 **Merdivenler**: aynı 15 malzeme, **4 yöne** bakış açısına göre + üst/alt yarı (malzeme başına 8 varyant)
+- 🚶 **Otomatik basamak çıkma**: yarım blok, merdiven ve kar katmanına **zıplamadan** çıkılır (0.6 blok, Minecraft ile aynı)
+- 🚧 **Çit & çit kapısı**: komşu çit/bloklara **kendiliğinden bağlanır**; kapı tıklayınca açılıp kapanır
+- 🪟 **Cam panel (16 renk dahil) & demir korkuluk**: komşuya göre bağlanan ince paneller
+- 🚪 **Kapılar** (6 ağaç + demir): iki blok yüksek, iki eksen, açık/kapalı — tıklayınca **iki yarısı birlikte** döner
+- 🪟 **Kapaklar (trapdoor)**: alt/üst yerleşim + açık/kapalı
+- 🛏️ **Yatak** (ayak + baş), 🧶 **16 renk karo halı** (1/16 yükseklik), ❄️ **kar katmanı** (8 kademe)
+- ⚙️ **Piston itme mekaniği**: kızıltaşla güç verilince **12 bloğa kadar** zinciri iter; bedrock gibi kırılmaz bloklar iteklenmez
+
+
 
 ### 🎨 Doku paketi (Minecraft resource pack uyumlu)
 Ayarlar → *Doku paketi*'nden **kendi** Minecraft doku paketini (`.zip`) doğrudan yükleyebilirsin.
