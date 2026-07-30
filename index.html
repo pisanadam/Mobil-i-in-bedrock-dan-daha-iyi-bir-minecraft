@@ -9,7 +9,14 @@
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { width:100%; height:100%; overflow:hidden; background:#000; touch-action:none;
     font-family:'Segoe UI',system-ui,sans-serif; user-select:none; -webkit-user-select:none; }
-  #c { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  /* touch-action kalıtsal değildir: html/body'ye yazmak çocukları kapsamaz.
+     Safari'de çift dokunma yakınlaştırmasını kesen şey öğenin kendi değeri. */
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #joy { touch-action:none; }           /* sürükleme yüzeyi: tarayıcı jesti yok */
+  .btn, #hotbar, .slot, #mtabs button, #mhead .x, .opt, .opt .t, #uidone {
+    touch-action:manipulation;          /* tek dokunuş çalışır, çift dokunma zoom'u ölür */
+  }
+  #joy, #c { -webkit-touch-callout:none; }
   .hud { position:fixed; z-index:10; }
   #crosshair { left:50%; top:50%; transform:translate(-50%,-50%); width:20px; height:20px; pointer-events:none; }
   #crosshair:before,#crosshair:after { content:''; position:absolute; background:rgba(255,255,255,.75); }
@@ -4817,6 +4824,34 @@ window.addEventListener('lostpointercapture', cancelPointer);
 window.addEventListener('pointerout', (e) => { if (e.pointerType !== 'mouse') cancelPointer(e); });
 // sekme/pencere değişince veya oyun duraklayınca parmaklar "basılı" kalmasın
 window.addEventListener('blur', resetTouch);
+/* --- iPad/iPhone Safari: çift dokunma yakınlaştırması ve pinch zoom ---
+   Safari iOS 10'dan beri viewport'taki user-scalable=no'yu YOK SAYAR. Hızlı
+   ardışık dokunuşlar (zıplama tuşuna basmak gibi) çift dokunma sanılıp sayfa
+   büyüyor; bu da süren dokunuşu iptal ederek joystick'i takılı bırakıyordu. */
+for (const ev of ['gesturestart','gesturechange','gestureend'])
+  document.addEventListener(ev, (e) => { e.preventDefault(); resetTouch(); }, { passive:false });
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive:false });
+// Oyun yüzeyinde ikinci hızlı dokunuşun varsayılan (zoom) davranışını kes.
+// Panel/kaydırma/metin alanlarına dokunulmaz ki menüler ve klavye çalışsın.
+const KEEP_DEFAULT = 'input,textarea,select,#mbody,#mtabs,.scroll,#chatpanel,.panel,#menu';
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const tg = e.target;
+  if (tg && tg.closest && tg.closest(KEEP_DEFAULT)) return;
+  const now = performance.now();
+  if (now - lastTouchEnd < 350) e.preventDefault();   // çift dokunma penceresi
+  lastTouchEnd = now;
+}, { passive:false });
+// Zoom yine olduysa (erişilebilirlik jesti vb.): dokunmayı bırak, sayfayı başa çek
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const onVV = () => {
+    resetTouch();
+    if (vv.scale > 1.02) { try { window.scrollTo(0,0); } catch(e) {} }
+  };
+  vv.addEventListener('resize', onVV);
+  vv.addEventListener('scroll', onVV);
+}
 document.addEventListener('visibilitychange', () => { if (document.hidden) resetTouch(); });
 window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === canvas) {
@@ -5602,8 +5637,8 @@ function exitFullscreen() {
 }
 /* --- koşu kilidi (sol üstteki 🏃 tuşu) --- */
 function applySprintBtn() { const b = $('sprintbtn'); if (b) b.classList.toggle('on', sprintOn); }
-$('sprintbtn').addEventListener('click', (e) => {
-  e.preventDefault();
+$('sprintbtn').addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation();
   sprintOn = !sprintOn; OPT.sprintLock = sprintOn ? 1 : 0;
   applySprintBtn(); saveOpts();
   toast(sprintOn ? '🏃 Koşu kilidi AÇIK' : '🚶 Koşu kilidi kapalı');
