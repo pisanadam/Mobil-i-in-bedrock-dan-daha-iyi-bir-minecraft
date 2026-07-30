@@ -97,6 +97,11 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 
 > Sekmeler dar ekranda alt satıra sarar — hepsi görünür, hiçbiri kaydırma arkasında kalmaz.
 
+### 🍏 iPad / iPhone (Safari) uyumu
+- 🔒 **Çift dokunma yakınlaştırması kapalı**: Safari iOS 10'dan beri `user-scalable=no` ve `maximum-scale`'i **yok sayar**. Zıplama tuşuna hızlı hızlı basmak çift dokunma sanılıp sayfayı büyütüyor, zoom jesti süren dokunuşu iptal ettiği için **joystick takılı kalıyordu**. Çözüm: `touch-action` her dokunulabilir öğede açıkça ayarlı (`touch-action` kalıtsal değildir — html/body'ye yazmak yetmiyor), iOS'a özel `gesturestart/change/end` (pinch) ve `dblclick` engelleniyor, çift dokunma penceresindeki ikinci `touchend` iptal ediliyor. Ayarlar paneli, kaydırma alanları ve metin girişleri hariç tutuldu ki menü ve klavye çalışmaya devam etsin. Zoom yine olursa dokunma durumu sıfırlanıp sayfa başa çekiliyor
+- 🎛️ Tam ekran ve fare kilidi için WebKit ön ekli yedekler; ses kullanıcı dokunuşunda başlatılır (`AudioContext.resume`)
+- ⚡ M serisi çiplerde performans sorunu yok; HD doku paketleri (64x/128x) rahat çalışır
+
 ### 💬 Komut sistemi
 `/give <eşya> [adet]` · `/summon <canlı> [adet]` · `/effect <efekt> [sn] [seviye]` · `/tick rate <n>` / `/tick freeze|unfreeze` · `/gamemode <c|s>` · `/dim <overworld|nether|end>` · `/gamerule <kural> <true|false>` · `/time set <day|night|0-24000>` · `/tp <x y z>` · `/seed` · `/kill` · `/heal` · `/clear` · `/help`
 
