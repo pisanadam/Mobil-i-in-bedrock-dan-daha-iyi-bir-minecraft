@@ -277,7 +277,7 @@ const OPT = {                    // varsayılanlar (Minecraft varsayılanlarına
   graphics:1, rdist:3, simDist:4, maxFps:0, brightness:50, guiScale:0,
   smoothLight:1, clouds:1, particles:0, entShadows:1, entDist:100, biomeBlend:1,
   cores:0, frustumCull:1,   // cores:0 = otomatik (cihazın çekirdek sayısı)
-  fov:70, bobbing:1, distortion:1, damageTilt:1, autoOpt:0,
+  fov:70, bobbing:1, distortion:1, damageTilt:1, autoOpt:0, fovEffects:100,
   volMaster:100, volMusic:60, volBlocks:100, volHostile:100, volFriendly:100, volAmbient:100, subtitles:0,
   sens:75, invertY:0, autoJump:1, sprintLock:0, touchSens:75,
   chatOn:1, chatScale:100, chatOpacity:80,
@@ -338,6 +338,7 @@ chat: [
 access: [
   ['sw','damageTilt','Hasar Eğimi','Vurulunca kamera yalpalar'],
   ['sw','distortion','Bozulma Efektleri','Bulantı ve portal dalgalanması'],
+  ['rng','fovEffects','Görüş Açısı Efektleri','Koşarken ve su altında görüş açısının değişme miktarı',0,100,5,v=>v?'%'+v:'KAPALI'],
   ['sw','highContrast','Yüksek Kontrast','Arayüz metinlerini belirginleştirir'],
   ['sw','subtitles','Altyazılar','Sesleri yazıyla göster'],
 ],
@@ -432,6 +433,10 @@ const paintBuf = document.createElement('canvas'); paintBuf.width = paintBuf.hei
 const pbctx = paintBuf.getContext('2d');
 function paintTile(ti, fn) {
   paintSalt = ti*977;
+  // Gürültüyü karo indeksinden türet: atlas yeniden boyutlanınca (HD paket
+  // yükleme / sıfırlama) aynı karo aynı görünsün. Önceden PRNG durumu
+  // ilerlediği için her repaint'te dokular sessizce değişiyordu.
+  rs = ((seed ^ Math.imul(ti + 1, 2654435761)) >>> 0) || 1;
   const ox = (ti%ATLAS_N)*TSZ, oy = ((ti/ATLAS_N)|0)*TSZ;
   const img = pbctx.createImageData(16,16);
   for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
@@ -2199,12 +2204,18 @@ function setBlock(wx, wy, wz, b) {
   if (typeof MP !== 'undefined' && MP.peer && !MP.applying) mpSend({ t:'set', d:dim, x:wx, y:wy, z:wz, b });
   if (b === BID.fire) fireList.push({x:wx, y:wy, z:wz});
   if (CROP_BY_ID[b]) cropSet.add(wx+','+wy+','+wz);   // her ekin türü (buğday/havuç/patates/mercimek)
-  if (BLOCKS[old].light || BLOCKS[b].light) { // ışık 7 blok yayılır: komşular da yeniden ışıklansın
-    for (let dx=-1;dx<=1;dx++) for (let dz=-1;dz<=1;dz++) queueMesh(cx+dx, cz+dz);
+  const si = secOf(wy);
+  if (BLOCKS[old].light || BLOCKS[b].light) { // ışık 7 blok yayılır: komşu chunk'ların da bu bölümü
+    for (let dx=-1;dx<=1;dx++) for (let dz=-1;dz<=1;dz++)
+      for (let ds=-1;ds<=1;ds++) { const s2=si+ds; if (s2>=0 && s2<NSEC) queueMesh(cx+dx, cz+dz, s2); }
   } else {
-    queueMesh(cx,cz);
-    if (lx===0) queueMesh(cx-1,cz); if (lx===CH-1) queueMesh(cx+1,cz);
-    if (lz===0) queueMesh(cx,cz-1); if (lz===CH-1) queueMesh(cx,cz+1);
+    queueMesh(cx, cz, si);
+    // bölüm sınırındaysa üst/alt bölüm de etkilenir
+    const ly = (wy - Y_MIN) % SEC;
+    if (ly === 0 && si > 0) queueMesh(cx, cz, si-1);
+    if (ly === SEC-1 && si < NSEC-1) queueMesh(cx, cz, si+1);
+    if (lx===0) queueMesh(cx-1,cz,si); if (lx===CH-1) queueMesh(cx+1,cz,si);
+    if (lz===0) queueMesh(cx,cz-1,si); if (lz===CH-1) queueMesh(cx,cz+1,si);
   }
 }
 
@@ -2339,9 +2350,15 @@ function tileUV(t, u, v) { return [(t%ATLAS_N)*TS + EPS + u*(TS-2*EPS), ((t/ATLA
 const meshQueue = [];
 const queued = new Set();
 let meshSortT = 0;
-function queueMesh(cx, cz) {
-  const k = ckey(cx,cz);
-  if (chunks.has(k) && !queued.has(k)) { queued.add(k); meshQueue.push([cx,cz]); }
+/* Chunk'ı dikey BÖLÜMlere ayır: bir blok koyunca 384 blok yüksekliğin tamamı
+   değil, yalnızca o 16 bloklu bölüm yeniden örülür. Tek chunk remesh'i 45 ms
+   sürüyordu ve blok koyma kare düşmesine yol açıyordu. */
+const SEC = 16, NSEC = (H / SEC) | 0;          // 384/16 = 24 bölüm
+const secOf = (wy) => Math.min(NSEC-1, Math.max(0, ((wy - Y_MIN) / SEC) | 0));
+function queueMesh(cx, cz, si) {               // si yoksa tüm bölümler
+  const k = ckey(cx,cz) + '|' + (si === undefined ? 'a' : si);
+  if (!chunks.has(ckey(cx,cz)) || queued.has(k)) return;
+  queued.add(k); meshQueue.push([cx, cz, si === undefined ? -1 : si, k]);
 }
 function sortQueuesByDistance() {      // önce oyuncunun çevresi işlensin
   const pcx = Math.floor(P.x/CH), pcz = Math.floor(P.z/CH);
@@ -2367,10 +2384,11 @@ function lightsOf(cx, cz) { // chunk'taki ışık kaynakları (önbellekli)
   }
   return c.lights = out;
 }
-function buildMesh(cx, cz) {
+function buildMesh(cx, cz, onlySec) {
   const c = chunks.get(ckey(cx,cz));
   if (!c) return;
-  const opq = [], wat = [];
+  if (!c.sec) c.sec = new Array(NSEC).fill(null);
+  let opq = [], wat = [];
   const x0 = cx*CH, z0 = cz*CH;
   // yakın chunk'lardaki ışık kaynaklarını 8'lik hücre ızgarasına koy
   const grid = new Map();
@@ -2394,8 +2412,19 @@ function buildMesh(cx, cz) {
     }
     return L;
   }
+  // Komşu okuması: chunk sınırları içindeyse doğrudan c.data'dan oku.
+  // getBlock her çağrıda Map araması + string anahtar üretiyor; yüz başına
+  // yapıldığında bölüm örme süresinin çoğunu bu yiyordu.
+  const nbAt = (lx2, wy2, lz2, wx2, wz2) =>
+    (lx2 >= 0 && lx2 < CH && lz2 >= 0 && lz2 < CH && wy2 >= Y_MIN && wy2 <= Y_MAX)
+      ? c.data[bidx(lx2, wy2, lz2)]
+      : getBlock(wx2, wy2, wz2);
   const myTop = chunkMaxY(c);
-  for (let y=Y_MIN;y<=myTop;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
+  const secLo = onlySec === undefined ? 0 : onlySec;
+  const secHi = onlySec === undefined ? secOf(myTop) : onlySec;
+  for (let si=secLo; si<=secHi; si++) {
+  const yA = Y_MIN + si*SEC, yB = Math.min(myTop, yA + SEC - 1);
+  for (let y=yA;y<=yB;y++) for (let z=0;z<CH;z++) for (let x=0;x<CH;x++) {
     const b = c.data[bidx(x,y,z)];
     if (!b) continue;
     const def = BLOCKS[b], wx = x0+x, wz = z0+z;
@@ -2430,12 +2459,12 @@ function buildMesh(cx, cz) {
                      : f.d[1] > 0 ? Y1 >= 1 : f.d[1] < 0 ? Y0 <= 0
                      : f.d[2] > 0 ? Z1 >= 1 : Z0 <= 0;
         if (atEdge) {
-          const nb = getBlock(wx+f.d[0], y+f.d[1], wz+f.d[2]);
+          const nb = nbAt(x+f.d[0], y+f.d[1], z+f.d[2], wx+f.d[0], wz+f.d[2]);
           if (isFullCube(nb) || (nb === b && isTransp(nb) && !shaped)) continue;
         }
         const tileI = f.d[1] > 0 ? def.t[0] : f.d[1] < 0 ? def.t[2] : def.t[1];
         const arr = (def.water || def.trans) ? wat : opq;
-        const yTop = (!shaped && def.water && getBlock(wx, y+1, wz) !== b) ? 0.88 : 1;
+        const yTop = (!shaped && def.water && nbAt(x, y+1, z, wx, wz) !== b) ? 0.88 : 1;
         const L = def.light ? def.light : (OPT.smoothLight
           ? lightAt(wx+0.5+f.d[0]*0.6, y+0.5+f.d[1]*0.6, wz+0.5+f.d[2]*0.6) : 0);
         for (const vi of [0,1,2,0,2,3]) {
@@ -2449,6 +2478,15 @@ function buildMesh(cx, cz) {
         }
       }
     }
+  }
+  flushSection(si);
+  }
+  function flushSection(si) {
+    const s = c.sec[si] || (c.sec[si] = { vboO:null, cntO:0, vaoO:null, vboW:null, cntW:0, vaoW:null });
+    [s.vboO, s.cntO, s.vaoO] = upload(opq, s.vboO, s.vaoO);
+    [s.vboW, s.cntW, s.vaoW] = upload(wat, s.vboW, s.vaoW);
+    s.y0 = Y_MIN + si*SEC; s.y1 = s.y0 + SEC;
+    opq = []; wat = [];
   }
   function upload(arr, oldVbo, oldVao) {
     if (oldVbo) gl.deleteBuffer(oldVbo);
@@ -2468,8 +2506,6 @@ function buildMesh(cx, cz) {
     return [vbo, arr.length/7, vao];
   }
   c.minY = Y_MIN; c.maxYd = chunkMaxY(c) + 1;   // frustum kutusu için dikey sınır
-  [c.vboO, c.cntO, c.vaoO] = upload(opq, c.vboO, c.vaoO);
-  [c.vboW, c.cntW, c.vaoW] = upload(wat, c.vboW, c.vaoW);
   c.meshed = true;
 }
 /* birim küp (canlılar için), merkez tabanda */
@@ -3853,7 +3889,9 @@ function rsSet(x,y,z,b) { // kızıltaş güncellemesi (mesh yeniler, MP yaymaz 
   c.lights = null;
   const k = ckey(cx,cz);
   (edits[k]=edits[k]||{})[bidx(x-cx*CH,y,z-cz*CH)] = b;
-  for (let dx2=-1;dx2<=1;dx2++) for (let dz2=-1;dz2<=1;dz2++) queueMesh(cx+dx2,cz+dz2);
+  const si2 = secOf(y);   // kızıltaş da yalnızca kendi bölümünü yeniler
+  for (let dx2=-1;dx2<=1;dx2++) for (let dz2=-1;dz2<=1;dz2++)
+    for (let ds=-1;ds<=1;ds++) { const s3=si2+ds; if (s3>=0 && s3<NSEC) queueMesh(cx+dx2,cz+dz2,s3); }
 }
 
 /* --- şekilli blok yerleştirme: bakış yönü ve tıklanan yüze göre varyant seç --- */
@@ -5836,9 +5874,12 @@ function ensureChunks() {
   for (const [k,c] of chunks) {
     const [cx,cz] = k.split(',').map(Number);
     if (Math.max(Math.abs(cx-pcx), Math.abs(cz-pcz)) > G+2) {
-      if (c.vboO) gl.deleteBuffer(c.vboO);
-      if (c.vboW) gl.deleteBuffer(c.vboW);
-      if (vaoExt) { if (c.vaoO) vaoExt.deleteVertexArrayOES(c.vaoO); if (c.vaoW) vaoExt.deleteVertexArrayOES(c.vaoW); }
+      if (c.sec) for (const s of c.sec) {
+        if (!s) continue;
+        if (s.vboO) gl.deleteBuffer(s.vboO);
+        if (s.vboW) gl.deleteBuffer(s.vboW);
+        if (vaoExt) { if (s.vaoO) vaoExt.deleteVertexArrayOES(s.vaoO); if (s.vaoW) vaoExt.deleteVertexArrayOES(s.vaoW); }
+      }
       chunks.delete(k);
     }
   }
@@ -5892,6 +5933,7 @@ let last = performance.now(), fps = 0, fpsN = 0, fpsT = 0, stateT = 0;
 let lastCX = null, lastCZ = null, boundaryT = 0;
 const infoEl = $('info'), waterOv = $('wateroverlay');
 const drawStats = { drawn:0, culled:0 };
+let lastFovRad = 0;
 let lastCullState = false;
 const pixProbe = { want:false, result:null };
 let fpsGate = 0;
@@ -5936,9 +5978,9 @@ function frame(now) {
   processGen(genBudgetMs());
   const mt0 = performance.now(), mBudget = meshBudgetMs();
   while (meshQueue.length) {
-    const [mx,mz] = meshQueue.shift();
-    queued.delete(ckey(mx,mz));
-    buildMesh(mx,mz);
+    const [mx, mz, msi, mk] = meshQueue.shift();
+    queued.delete(mk);
+    buildMesh(mx, mz, msi < 0 ? undefined : msi);
     if (performance.now() - mt0 >= mBudget) break;     // bütçe doldu
   }
   if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
@@ -5973,8 +6015,10 @@ function frame(now) {
   let fovRad = fovDeg * Math.PI/180;
   if (viewEffects) {
     const spd = Math.hypot(P.vx, P.vz);
-    fovRad *= (1 + (spd > 5 ? 0.06 : 0) + (P.inWater ? -0.04 : 0)); // koşuda hafif genişle
+    const fe = OPT.fovEffects/100;                     // Görüş Açısı Efektleri ayarı
+    fovRad *= (1 + (spd > 5 ? 0.06*fe : 0) + (P.inWater ? -0.04*fe : 0));
   }
+  lastFovRad = fovRad;
   const proj = mpersp(fovRad, asp, 0.08, 400);
   let vyaw = P.yaw, vpitch = P.pitch, vroll = 0, veyeBob = 0;
   if (viewEffects) {
@@ -6025,16 +6069,22 @@ function frame(now) {
   const farD = RDIST*CH + CH*1.5, farD2 = farD*farD;
   let drawn = 0, culled = 0;
   for (const [k,c] of chunks) {
-    if (!c.meshed || (!c.vboO && !c.vboW)) continue;
+    if (!c.meshed || !c.sec) continue;
     const ci = k.indexOf(','), cx2 = +k.slice(0,ci), cz2 = +k.slice(ci+1);
     const x0 = cx2*CH, z0 = cz2*CH;
     // daire biçiminde mesafe kırpma (sis zaten gizliyor)
     const ddx = x0+8-P.x, ddz = z0+8-P.z;
     if (ddx*ddx + ddz*ddz > farD2) { culled++; continue; }
+    // önce tüm chunk'ı kaba ele: geçerse bölüm bölüm bak (dikeyde de kırpılır)
     if (OPT.frustumCull && !boxInFrustum(x0, c.minY||Y_MIN, z0, x0+CH, c.maxYd||Y_MAX, z0+CH)) { culled++; continue; }
-    drawn++;
-    if (c.vboO) bindDraw(c.vboO, c.cntO, c.vaoO);
-    if (c.vboW) waterList.push(c);
+    for (let si=0; si<NSEC; si++) {
+      const s = c.sec[si];
+      if (!s || (!s.vboO && !s.vboW)) continue;
+      if (OPT.frustumCull && !boxInFrustum(x0, s.y0, z0, x0+CH, s.y1, z0+CH)) { culled++; continue; }
+      drawn++;
+      if (s.vboO) bindDraw(s.vboO, s.cntO, s.vaoO);
+      if (s.vboW) waterList.push(s);
+    }
   }
   drawStats.drawn = drawn; drawStats.culled = culled;
   gl.disable(gl.CULL_FACE);
@@ -6045,7 +6095,7 @@ function frame(now) {
   gl.depthMask(false);
   gl.uniform1f(loc.uAlpha, 0.85);
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
-  for (const c of waterList) bindDraw(c.vboW, c.cntW, c.vaoW);
+  for (const s of waterList) bindDraw(s.vboW, s.cntW, s.vaoW);
   gl.depthMask(true);
   drawHeld(proj, now);
   if (pixProbe.want) {            // test sondası: kare içinde oku (dışarıda tampon geçersiz)
@@ -6097,6 +6147,9 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   drawStatsTest:()=>drawStats, chunkCountTest:()=>chunks.size, fpsTest:()=>fps,
   boxInFrustumTest:boxInFrustum, frustumTest:()=>frustum, chunkAt:(a,b)=>chunks.get(ckey(a,b)),
   vaoExtTest:()=>!!vaoExt,
+  buildMeshTest:buildMesh,
+  secOfTest:secOf, SECtest:SEC,
+  fovRadTest:()=>lastFovRad,
   probeAsk:()=>{ pixProbe.want=true; pixProbe.result=null; }, probeGet:()=>pixProbe.result,
   gpuInfoTest:()=>gpuInfo, glVerTest:()=>glVer,
   glStateTest:()=>({ cullEnabledDuringChunks:lastCullState, frontFace:gl.getParameter(gl.FRONT_FACE),

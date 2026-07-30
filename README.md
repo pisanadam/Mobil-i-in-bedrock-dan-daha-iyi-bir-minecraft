@@ -91,7 +91,7 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - **🔊 Ses**: Ana Ses, Müzik, Bloklar, Düşman Canlılar, Dost Canlılar, Ortam, Altyazılar — Minecraft'taki ses kanallarının aynısı
 - **🎮 Kontroller**: **Fare Hassasiyeti**, **Dokunmatik Hassasiyeti**, **Dikey Ekseni Ters Çevir**, **Otomatik Zıplama**, Koşu Kilidi, Tuşları Taşı
 - **💬 Sohbet**: Sohbet aç/kapa, **Yazı Boyutu**, **Arka Plan Saydamlığı**
-- **♿ Erişilebilirlik**: Hasar Eğimi, Bozulma Efektleri, **Yüksek Kontrast**, Altyazılar
+- **♿ Erişilebilirlik**: Hasar Eğimi, Bozulma Efektleri, **Görüş Açısı Efektleri** (koşarken/su altında FOV değişimi — %0'da tamamen kapanır), **Yüksek Kontrast**, Altyazılar
 - **🎲 Oyun**: **Zorluk** (Barışçıl/Kolay/Normal/Zor — hasarı 0/×0.5/×1/×1.5 ölçekler, Barışçıl'da düşman doğmaz), **Koordinatları Göster**, Çok Oyunculu, Yeni Dünya
 - **🎨 Kaynaklar**: Skin yükle + kol tipi, Minecraft doku paketi (.zip) yükle & sıfırla
 
@@ -144,6 +144,8 @@ Uzak görüşte asıl yük chunk **sayısı** değil, kare başına yapılan iş
 - 🖥️ **GPU (donanım hızlandırma)**: bağlam **WebGL2** olarak ve `powerPreference: high-performance` ile alınır (yoksa WebGL1'e düşer). Ayarlar → Grafik'te çalıştığın **GPU adı ve API sürümü** görünür
 - 🧊 **Blok yüzü kırpma (GPU `CULL_FACE`)**: bloğun sana bakmayan yüzleri GPU'da hiç rasterleştirilmez. Bunun için altı yüzün sarım yönü tutarlı hale getirildi (dışarıdan CCW); bitkiler çift taraflı basılır, su ve canlılar kırpma dışı tutulur
 - 🚫 **Komşu yüz kırpma (CPU)**: iki tam küp arasındaki gizli yüzler mesh'e hiç girmez (şekilli bloklar komşusunun yüzünü kapatmaz)
+- 🧱 **Bölümlü (sub-chunk) mesh**: chunk 16 bloklu dikey bölümlere ayrıldı. Blok koyunca 384 blok yüksekliğin tamamı değil yalnızca o bölüm yeniden örülür. Ölçüm: **tek remesh 45 ms → 0.8 ms (56x)**, blok koyarken en kötü kare **85 ms → 21 ms**. Bölümler ayrıca dikeyde de frustum ile kırpılır
+- ⚡ **Komşu blok okuması hızlandırıldı**: mesh örerken chunk içi komşular `getBlock` (Map araması + string anahtar) yerine doğrudan chunk dizisinden okunur
 - 👁 **Görüş piramidi (frustum) kırpma**: kameranın görmediği chunk'lar hiç çizilmez. Ölçüm: 24 chunk'ta **438 → 63 çizim çağrısı (%86 azalma)**
 - ⭕ **Daire biçimli mesafe kırpma**: sisin arkasında kalan köşe chunk'ları atlanır
 - 🧵 **VAO (vertex array object)**: chunk başına 4 öznitelik çağrısı yerine tek bağlama
