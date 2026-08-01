@@ -5523,7 +5523,9 @@ function mpBroadcastExcept(from, o) { for (const pid in MP.conns) if (pid !== fr
 
 function mpRecv(from, m) {
   if (m.t === 'hello') {
-    seed = m.seed; try { localStorage.setItem('ck_seed', seed); } catch(e) {}
+    savePlayerState();          // odaya girmeden önce envanteri güvenceye al
+    seed = m.seed;              // ck_seed'e DOKUNMA: oyuncunun kendi dünyası kaybolmasın
+    // (oda dünyası ck2_state_<hostSeed> altına kaydedilir, çıkınca kendi dünyana dönersin)
     timeOfDay = m.tod;
     worlds.overworld = { chunks:new Map(), edits:m.edits.o };
     worlds.nether = { chunks:new Map(), edits:m.edits.n };
@@ -5694,6 +5696,7 @@ function bindMenuActions() {
   on('newworld', 'click', () => {
     if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
     localStorage.removeItem('ck2_edits_'+seed); localStorage.removeItem('ck2_state_'+seed);
+    localStorage.removeItem('ck2_player');   // yeni dünya = sıfır envanter
     localStorage.removeItem('ck_seed'); location.reload();
   });
   on('tpreset', 'click', () => {
@@ -5794,12 +5797,25 @@ $('uidone').addEventListener('click', () => {
   buildMenu();
   uiApply();
 })();
+/* Kayıt iki parçaya ayrıldı:
+   - OYUNCU (envanter, zırh, can…) cihaza ait: ck2_player. Hangi dünyada
+     olursan ol seninle gelir; odaya girip çıkınca eşyalar kaybolmaz.
+   - DÜNYA (konum, sandıklar, saat…) tohuma ait: ck2_state_<seed>.
+   Önceden ikisi de tohuma bağlıydı; odaya girince tohum değiştiği için
+   oyuncu kendi dünyasına dönemiyordu. */
+function savePlayerState() {
+  try {
+    localStorage.setItem('ck2_player', JSON.stringify({
+      inv, armor:armorInv, off:offhand, hot:hotSel,
+      hp:P.hp, hun:P.hunger, gm:gamemode }));
+  } catch(e) {}
+}
 function saveState() {
+  savePlayerState();
   try {
     localStorage.setItem('ck2_state_'+seed, JSON.stringify({
-      p:[P.x,P.y,P.z,P.yaw,P.pitch], hp:P.hp, gm:gamemode, inv, hot:hotSel,
-      tod:timeOfDay, rules:RULES, chest:chestData, fuel:furnaceFuel, fly:P.fly,
-      dim, armor:armorInv, off:offhand, hun:P.hunger }));
+      p:[P.x,P.y,P.z,P.yaw,P.pitch], tod:timeOfDay, rules:RULES,
+      chest:chestData, fuel:furnaceFuel, fly:P.fly, dim }));
   } catch(e) {}
 }
 // eski kayıtlardaki eşya kimlikleri → Minecraft kimlikleri
@@ -5810,21 +5826,43 @@ function fixLegacySlots(arr) {
   for (const s of arr) if (s && LEGACY_IDS[s.id]) s.id = LEGACY_IDS[s.id];
   return arr;
 }
+function applyPlayerState(s) {
+  if (!s) return false;
+  if (s.inv) inv = fixLegacySlots(s.inv);
+  armorInv = fixLegacySlots(s.armor || [null,null,null,null]);
+  offhand = s.off || null;
+  if (offhand && LEGACY_IDS[offhand.id]) offhand.id = LEGACY_IDS[offhand.id];
+  if (s.hot !== undefined) hotSel = s.hot;
+  if (s.hp !== undefined) P.hp = s.hp;
+  if (s.hun !== undefined) P.hunger = s.hun;
+  if (s.gm) gamemode = s.gm;
+  return true;
+}
 function loadState() {
-  try {
-    const s = JSON.parse(localStorage.getItem('ck2_state_'+seed) || 'null');
-    if (!s) return false;
-    [P.x,P.y,P.z,P.yaw,P.pitch] = s.p;
-    P.hp = s.hp; gamemode = s.gm; inv = fixLegacySlots(s.inv); hotSel = s.hot;
-    timeOfDay = s.tod; Object.assign(RULES, s.rules);
-    chestData = s.chest || {}; furnaceFuel = s.fuel || 0; P.fly = s.fly && gamemode==='creative';
-    armorInv = fixLegacySlots(s.armor || [null,null,null,null]); offhand = s.off || null;
-    if (offhand && LEGACY_IDS[offhand.id]) offhand.id = LEGACY_IDS[offhand.id];
-    for (const k in chestData) fixLegacySlots(chestData[k]);
-    P.hunger = s.hun === undefined ? 20 : s.hun;
-    if (s.dim && s.dim !== dim) switchWorld(s.dim);
-    return true;
-  } catch(e) { return false; }
+  let world = null, ok = false;
+  try { world = JSON.parse(localStorage.getItem('ck2_state_'+seed) || 'null'); } catch(e) {}
+  // oyuncu verisi: yeni anahtar; yoksa eski tek-parça kayıttan taşı
+  let pl = null;
+  try { pl = JSON.parse(localStorage.getItem('ck2_player') || 'null'); } catch(e) {}
+  if (!pl && world && world.inv) { pl = world; savePlayerStateFrom(world); }
+  if (applyPlayerState(pl)) ok = true;
+  if (world) {
+    try {
+      if (world.p) [P.x,P.y,P.z,P.yaw,P.pitch] = world.p;
+      if (world.tod !== undefined) timeOfDay = world.tod;
+      if (world.rules) Object.assign(RULES, world.rules);
+      chestData = world.chest || {}; furnaceFuel = world.fuel || 0;
+      P.fly = world.fly && gamemode === 'creative';
+      for (const k in chestData) fixLegacySlots(chestData[k]);
+      if (world.dim && world.dim !== dim) switchWorld(world.dim);
+      ok = true;
+    } catch(e) {}
+  }
+  return ok;
+}
+function savePlayerStateFrom(s) {   // eski kayıttan oyuncu bölümünü ayır
+  try { localStorage.setItem('ck2_player', JSON.stringify({
+    inv:s.inv, armor:s.armor, off:s.off, hot:s.hot, hp:s.hp, hun:s.hun, gm:s.gm })); } catch(e) {}
 }
 window.addEventListener('beforeunload', saveState);
 
@@ -6148,6 +6186,9 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   boxInFrustumTest:boxInFrustum, frustumTest:()=>frustum, chunkAt:(a,b)=>chunks.get(ckey(a,b)),
   vaoExtTest:()=>!!vaoExt,
   buildMeshTest:buildMesh,
+  mpRecvTest:mpRecv, saveStateTest:saveState, seedTest:()=>seed,
+  chestDataTest:()=>chestData,
+  offhandTest:()=>offhand,
   secOfTest:secOf, SECtest:SEC,
   fovRadTest:()=>lastFovRad,
   probeAsk:()=>{ pixProbe.want=true; pixProbe.result=null; }, probeGet:()=>pixProbe.result,

@@ -79,7 +79,7 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 🧍 **Skin yükleme**: kendi PNG skinini yükle (Java 64×64 / eski 64×32 uyumlu), doğru bölgelere maplenir, **ince/kalın kol** seçeneği; hatalıysa özgün varsayılan skin
 - 🎨 **Doku paketi**: Ayarlar → **🎨 Kaynaklar** sekmesinden Minecraft `.zip` paketi veya tek tek PNG yükle; eksik doku varsa varsayılan kalır, çökmez, oyun içinden sıfırlanır
 - 🖼️ **Ayrı eşya silüetleri**: kova, kemik, kâğıt, kitap, harita, tüy, çakmaktaşı, deri, eyer, ip, ok, yay, makas, olta, pusula, saat, vagon, tekne, deniz kabuğu, göz, gözyaşı, kristal, ekmek, balık, et, havuç, patates, şişe… her biri kendi şeklinde (alet ve zırh kademeleri Minecraft'taki gibi bilerek ortak şekil)
-- 💾 Dünya + envanter + sandıklar + ayarlar otomatik kaydedilir
+- 💾 **Kayıt iki parçalı**: **oyuncu** (envanter, zırh, 2. el, can, açlık, mod) cihaza ait — hangi dünyada olursan ol seninle gelir; **dünya** (konum, sandıklar, saat, kurallar) tohuma ait. Böylece **çok oyunculu odaya girip çıkınca eşyalar kaybolmaz** ve odadan çıkınca **kendi dünyana** dönersin. Eski tek parçalı kayıtlar ilk açılışta otomatik taşınır
 
 ### 🌟 Efektler (/effect)
 30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
