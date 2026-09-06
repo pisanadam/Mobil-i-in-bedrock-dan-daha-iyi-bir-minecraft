@@ -4754,16 +4754,17 @@ let joyId = null, joyOX = 0, joyOY = 0;
 /* Joystick takılmasına karşı: hangi parmakların gerçekten basılı olduğunu izle.
    pointerup/cancel bir şekilde kaçırılırsa (panel açılması, tarayıcı araya girmesi,
    sekme değişimi) joystick asılı kalıp oyuncuyu sonsuza dek yürütüyordu. */
-const activePointers = new Set();
+const activePointers = new Set();   // fare/kalem (Pointer Events)
+const activeTouches  = new Set();   // parmaklar (Touch Events, identifier)
 function resetJoy() {
   joyId = null; input.f = 0; input.r = 0;
   joyBase.style.display = joyKnob.style.display = 'none';
 }
 function resetLook() { clearTimeout(holdTimer); stopBreaking(); lookId = null; }
-function resetTouch() { resetJoy(); resetLook(); activePointers.clear(); }
+function resetTouch() { resetJoy(); resetLook(); activePointers.clear(); activeTouches.clear(); }
 function joyWatchdog() {   // her karede: basılı olmayan bir parmağa bağlıysa bırak
-  if (joyId !== null && !activePointers.has(joyId)) resetJoy();
-  if (lookId !== null && !activePointers.has(lookId)) resetLook();
+  if (joyId !== null && !activeTouches.has(joyId)) resetJoy();
+  if (lookId !== null && !activeTouches.has(lookId)) resetLook();
   if (joyId !== null && (P.dead || uiOpen())) resetJoy();
 }
 let lookId = null, lookLX = 0, lookLY = 0, lookMoved = 0, lookT0 = 0;
@@ -4785,8 +4786,7 @@ window.addEventListener('pointerdown', (e) => {
     return;
   }
   if (P.dead || uiOpen()) return;
-  const tg = e.target;
-  if (tg && tg.closest && tg.closest('#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#sprintbtn,#splash,.panel,#chatpanel,#deathscreen')) return;
+  if (isUITarget(e.target)) return;
   if (e.pointerType === 'mouse') {
     const lockEl = document.pointerLockElement || document.webkitPointerLockElement;
     if (lockEl !== canvas) { (canvas.requestPointerLock || canvas.webkitRequestPointerLock || (()=>{})).call(canvas); return; }
@@ -4799,50 +4799,78 @@ window.addEventListener('pointerdown', (e) => {
     if (e.button === 2) doTap();
     return;
   }
-  const lx = e.clientX, ly = e.clientY;
+  // Parmak girdisi Touch Events tarafında; burada bir şey yapmıyoruz.
+});
+window.addEventListener('pointermove', (e) => {
+  if (uiEdit && uiDrag) {
+    uiDrag.style.left = (e.clientX - uiOffX)+'px'; uiDrag.style.top = (e.clientY - uiOffY)+'px';
+    uiDrag.style.right = 'auto'; uiDrag.style.bottom = 'auto'; uiDrag.style.transform = 'none';
+  }
+});
+window.addEventListener('pointerup', (e) => {
+  activePointers.delete(e.pointerId);
+  if (uiEdit) { if (uiDrag) { uiSavePos(); uiDrag = null; } return; }
+  if (e.pointerType === 'mouse' && breaking) stopBreaking();
+});
+function cancelPointer(e) {
+  activePointers.delete(e.pointerId);
+  if (e.pointerType === 'mouse' && breaking) stopBreaking();
+}
+window.addEventListener('pointercancel', cancelPointer);
+window.addEventListener('lostpointercapture', cancelPointer);
+
+/* ---------- DOKUNMATİK: ham Touch Events ----------
+   Neden Pointer Events değil? iPad Safari, ekranda ikinci parmak belirir
+   belirmez pinch/çift-dokunma tanıyıcısını çalıştırıp o ana kadar süren
+   parmaklara pointercancel gönderiyor (ayrıca gesturestart tetikliyordu).
+   Sonuç: joystick ile yürürken kamerayı çevirmek için ikinci parmağı
+   koyunca ikisi birden düşüyordu. Touch Events'te touchstart'ta
+   preventDefault demek jesti kökünden kapatır ve her parmak kendi
+   identifier'ıyla bağımsız yaşar; böylece yürüme + bakış aynı anda olur. */
+const UI_SEL = '#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#sprintbtn,#splash,.panel,#chatpanel,#deathscreen';
+function isUITarget(t) { return !!(t && t.closest && t.closest(UI_SEL)); }
+function touchBegin(t) {
+  const lx = t.clientX, ly = t.clientY;
   if (joyId === null && lx < innerWidth*0.45 && ly > innerHeight*0.35) {
     // taban dairesi ekrandan taşmasın (alt kenarda yarısı kesiliyordu)
     joyOX = Math.max(58, Math.min(innerWidth-58, lx));
     joyOY = Math.max(58, Math.min(innerHeight-58, ly));
-    joyId = e.pointerId;
+    joyId = t.identifier;
     joyBase.style.display = joyKnob.style.display = 'block';
     joyBase.style.left = (joyOX-55)+'px'; joyBase.style.top = (joyOY-55)+'px';
     joyKnob.style.left = (joyOX-24)+'px'; joyKnob.style.top = (joyOY-24)+'px';
   } else if (lookId === null) {
-    lookId = e.pointerId; lookLX = lx; lookLY = ly; lookMoved = 0; lookT0 = performance.now();
+    lookId = t.identifier; lookLX = lx; lookLY = ly; lookMoved = 0; lookT0 = performance.now();
     clearTimeout(holdTimer);
     holdTimer = setTimeout(() => { if (lookId !== null && lookMoved < 14) startBreaking(); }, 260);
   }
-});
-window.addEventListener('pointermove', (e) => {
-  if (uiEdit) {
-    if (uiDrag) {
-      uiDrag.style.left = (e.clientX - uiOffX)+'px'; uiDrag.style.top = (e.clientY - uiOffY)+'px';
-      uiDrag.style.right = 'auto'; uiDrag.style.bottom = 'auto'; uiDrag.style.transform = 'none';
-    }
-    return;
-  }
-  if (e.pointerId === joyId) {
-    let dx = e.clientX-joyOX, dy = e.clientY-joyOY;
+}
+function touchMove(t) {
+  if (t.identifier === joyId) {
+    let dx = t.clientX-joyOX, dy = t.clientY-joyOY;
     const l = Math.hypot(dx,dy), max = 52;
     if (l > max) { dx = dx/l*max; dy = dy/l*max; }
     joyKnob.style.left = (joyOX+dx-24)+'px'; joyKnob.style.top = (joyOY+dy-24)+'px';
     input.f = -dy/max; input.r = dx/max;
-  } else if (e.pointerId === lookId) {
-    const dx = e.clientX-lookLX, dy = e.clientY-lookLY;
+    return true;
+  }
+  if (t.identifier === lookId) {
+    const dx = t.clientX-lookLX, dy = t.clientY-lookLY;
     lookMoved += Math.abs(dx)+Math.abs(dy);
     const ts = 0.0075*(OPT.touchSens/75), iy = OPT.invertY ? -1 : 1;
     P.yaw += dx*ts; P.pitch += dy*ts*iy;
     P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch));
-    lookLX = e.clientX; lookLY = e.clientY;
+    lookLX = t.clientX; lookLY = t.clientY;
     if (breaking && lookMoved > 60) stopBreaking();
+    return true;
   }
-});
-function endPointer(e) {
-  if (e.pointerId === joyId) {
+  return false;
+}
+function touchEnd(t) {
+  if (t.identifier === joyId) {
     joyId = null; input.f = 0; input.r = 0;
     joyBase.style.display = joyKnob.style.display = 'none';
-  } else if (e.pointerId === lookId) {
+  } else if (t.identifier === lookId) {
     clearTimeout(holdTimer);
     const dt = performance.now()-lookT0;
     if (!breaking && dt < 250 && lookMoved < 14 && !uiOpen() && !P.dead) doTap();
@@ -4850,24 +4878,38 @@ function endPointer(e) {
     lookId = null;
   }
 }
-window.addEventListener('pointerup', (e) => {
-  activePointers.delete(e.pointerId);
-  if (uiEdit) { if (uiDrag) { uiSavePos(); uiDrag = null; } endPointer(e); return; }
-  if (e.pointerType === 'mouse') { if (breaking) stopBreaking(); }
-  endPointer(e);
-});
-function cancelPointer(e) { activePointers.delete(e.pointerId); endPointer(e); }
-window.addEventListener('pointercancel', cancelPointer);
-window.addEventListener('lostpointercapture', cancelPointer);
-window.addEventListener('pointerout', (e) => { if (e.pointerType !== 'mouse') cancelPointer(e); });
+window.addEventListener('touchstart', (e) => {
+  for (const t of e.changedTouches) activeTouches.add(t.identifier);
+  if (uiEdit) return;                       // yerleşim düzenleme sürüklemesi pointer tarafında
+  const game = [];
+  for (const t of e.changedTouches) if (!isUITarget(t.target)) game.push(t);
+  if (!game.length) return;                 // buton/panel: tarayıcı normal davransın
+  e.preventDefault();                       // pinch / çift dokunma / kaydırma jesti hiç başlamasın
+  if (P.dead || uiOpen()) return;
+  for (const t of game) touchBegin(t);
+}, { passive:false });
+window.addEventListener('touchmove', (e) => {
+  if (uiEdit) return;
+  let used = false;
+  for (const t of e.changedTouches) if (touchMove(t)) used = true;
+  if (used) e.preventDefault();             // panel kaydırmasına dokunma
+}, { passive:false });
+function touchFinish(e) {
+  for (const t of e.changedTouches) { activeTouches.delete(t.identifier); touchEnd(t); }
+}
+window.addEventListener('touchend', touchFinish, { passive:false });
+window.addEventListener('touchcancel', touchFinish);
 // sekme/pencere değişince veya oyun duraklayınca parmaklar "basılı" kalmasın
 window.addEventListener('blur', resetTouch);
 /* --- iPad/iPhone Safari: çift dokunma yakınlaştırması ve pinch zoom ---
    Safari iOS 10'dan beri viewport'taki user-scalable=no'yu YOK SAYAR. Hızlı
    ardışık dokunuşlar (zıplama tuşuna basmak gibi) çift dokunma sanılıp sayfa
-   büyüyor; bu da süren dokunuşu iptal ederek joystick'i takılı bırakıyordu. */
+   büyüyor; bu da süren dokunuşu iptal ederek joystick'i takılı bırakıyordu.
+   DİKKAT: burada resetTouch() ÇAĞIRMIYORUZ. İkinci parmak ekrana değdiğinde
+   Safari gesturestart atıyordu; eskiden bu hem joystick'i hem bakışı sıfırlayıp
+   "yürürken kamerayı çevirme"yi imkânsız kılıyordu. Jesti iptal etmek yeter. */
 for (const ev of ['gesturestart','gesturechange','gestureend'])
-  document.addEventListener(ev, (e) => { e.preventDefault(); resetTouch(); }, { passive:false });
+  document.addEventListener(ev, (e) => { e.preventDefault(); }, { passive:false });
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive:false });
 // Oyun yüzeyinde ikinci hızlı dokunuşun varsayılan (zoom) davranışını kes.
 // Panel/kaydırma/metin alanlarına dokunulmaz ki menüler ve klavye çalışsın.
@@ -4883,9 +4925,11 @@ document.addEventListener('touchend', (e) => {
 // Zoom yine olduysa (erişilebilirlik jesti vb.): dokunmayı bırak, sayfayı başa çek
 if (window.visualViewport) {
   const vv = window.visualViewport;
+  // Sadece gerçekten yakınlaştırma olduysa müdahale et. Eskiden her resize/scroll
+  // olayında resetTouch() çağrılıyordu; iki parmak basılıyken tetiklenip yürüme
+  // ile bakışı aynı anda düşürüyordu.
   const onVV = () => {
-    resetTouch();
-    if (vv.scale > 1.02) { try { window.scrollTo(0,0); } catch(e) {} }
+    if (vv.scale > 1.02) { resetTouch(); try { window.scrollTo(0,0); } catch(e) {} }
   };
   vv.addEventListener('resize', onVV);
   vv.addEventListener('scroll', onVV);
@@ -5655,10 +5699,19 @@ function openMP() { menu.classList.remove('open'); closePanels(); $('mppanel').s
 
 /* ================= MENÜ & KAYIT ================= */
 const menu = $('menu');
+let menuOpenT = 0;
 $('menubtn').addEventListener('pointerdown', (e) => {
-  e.stopPropagation(); menu.classList.toggle('open'); resetTouch();
+  e.stopPropagation(); menu.classList.toggle('open');
+  if (menu.classList.contains('open')) menuOpenT = performance.now();
+  resetTouch();
 });
-$('closemenu').addEventListener('click', () => { menu.classList.remove('open'); saveOpts(); });
+$('closemenu').addEventListener('click', () => {
+  /* ☰ ile ✕ ekranın aynı köşesinde duruyor. Dokunmatikte menü pointerdown'da
+     açılıyor, ama aynı dokunuşun ürettiği "hayalet tık" bırakınca artık üstte
+     olan ✕'e düşüp menüyü anında kapatıyordu — menü hiç açılmıyor sanılıyordu. */
+  if (performance.now() - menuOpenT < 400) return;
+  menu.classList.remove('open'); saveOpts();
+});
 let shaderOn = true, autoOpt = false, chunkAuto = false, adaptT = 0, adaptFps = 60;
 let sprintOn = false;
 let fovDeg = 70, damageTiltOn = true, viewEffects = true, tiltT = 0, tiltDir = 1, bobPhase = 0;
@@ -6179,7 +6232,10 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   hasDefaultSkin:()=>!!defaultSkinTex, applyTexturePNGsTest:applyTexturePNGs, ensureChunksNow,
   atlasInfo:()=>({N:ATLAS_N, TSZ, canvas:atlasCanvas}), iconOv:()=>iconOverride, MCTEX, MCITEM,
   cropSet, CROP_BY_ID, cropTickNow:(n)=>{ for(let i=0;i<n;i++) cropTick(99); },
-  dropPointerTest:(id)=>activePointers.delete(id),
+  dropPointerTest:(id)=>{ activePointers.delete(id); activeTouches.delete(id); },
+  touchTest:{ begin:touchBegin, move:touchMove, end:touchEnd,
+    state:()=>({ joyId, lookId, f:input.f, r:input.r, yaw:P.yaw, pitch:P.pitch }),
+    add:(id)=>activeTouches.add(id) },
   OPT, damagePlayerTest:damagePlayer, applyOptTest:applyOpt,
   uiIconTest:uiIcon,
   drawStatsTest:()=>drawStats, chunkCountTest:()=>chunks.size, fpsTest:()=>fps,
