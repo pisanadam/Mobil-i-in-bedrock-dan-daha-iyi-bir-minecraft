@@ -39,6 +39,8 @@
   #invbtn  { right:16px; bottom:178px; font-size:26px; }
   #chatbtn { right:66px; top:14px; width:44px; height:44px; font-size:19px; border-radius:10px; }
   #menubtn { right:14px; top:14px; width:44px; height:44px; font-size:20px; border-radius:10px; }
+  #fsbtn2  { right:118px; top:14px; width:44px; height:44px; font-size:18px; border-radius:10px; }
+  #fsbtn2.on { background:rgba(90,200,90,.4); border-color:#8f9; }
   #sprintbtn { left:12px; top:58px; width:46px; height:46px; font-size:20px; border-radius:10px; opacity:.55; }
   #sprintbtn::after { content:'KAPALI'; position:absolute; bottom:-13px; left:50%; transform:translateX(-50%);
     font-size:8px; letter-spacing:.5px; color:#fff; text-shadow:1px 1px 0 #000; }
@@ -166,6 +168,7 @@
 <button class="btn" id="downbtn">⤓</button>
 <button class="btn" id="invbtn">🎒</button>
 <button class="btn hud" id="chatbtn">💬</button>
+<button class="btn hud" id="fsbtn2" title="Tam ekran">⛶</button>
 <button class="btn hud" id="menubtn">☰</button>
 <button class="btn hud" id="sprintbtn" title="Koşu kilidi">🏃</button>
 <div class="hud" id="hearts"></div>
@@ -930,22 +933,362 @@ const tBedSide = tile((x,y,r)=>nzc(hex(y>11?'#8a6a3a':(y<4?'#e8e8e0':'#b02a2a'))
 defBlock('red_bed','Yatak', [tBedTop,tBedSide,tile(T.plank('#8a6a3a'))], {hard:0.2, boxes:BED_BOX, shape:'bed', bed:1, flammable:1});
 defBlock('red_bed_head','Yatak (baş)', [tBedTop,tBedSide,tile(T.plank('#8a6a3a'))], {hard:0.2, boxes:BED_BOX, shape:'bed', bed:1, bedHead:1, noitem:1, drop:'red_bed', flammable:1});
 
-const IC = { // ikon boyacıları (16x16)
-  ingot:c=>(x,y)=>{ const inY=y>5&&y<11, inX=x>2&&x<13; if (inY&&inX) return (y<8?hex(mixHex(c,'#ffffff',0.3)):hex(c)); return null; },
-  raw:c=>(x,y)=>{ if (Math.hypot(x-8,y-8)<5.2) return hex(cell(x,y,3)<0.4?mixHex(c,'#000000',0.25):c); return null; },
-  gem:c=>(x,y)=>{ if (Math.abs(x-8)+Math.abs(y-8)<5.5) return hex((x+y)%3?c:mixHex(c,'#ffffff',0.4)); return null; },
-  dust:c=>(x,y)=>{ if (y>8 && Math.hypot(x-8,y-13)<6 && hash2(x*3+1,y*7)<0.75) return hex(c); return null; },
-  stick:()=>(x,y)=>{ if (Math.abs((15-y)-x)<1.5 && x>2 && x<13) return hex('#8a6a3a'); return null; },
-  tool:(t,c)=>(x,y)=>{ const hnd = Math.abs((15-y)-x)<1.4 && x>1 && x<11;
-    let hd = false;
-    if (t==='pickaxe') hd = y<5 && x>3 && x<15 && (y+((x-9)*(x-9))/9 < 5);
-    else if (t==='axe') hd = x>8 && x<15 && y>0 && y<8 && (x-8)+(7-y)<9;
-    else if (t==='shovel') hd = x>9 && x<15 && y>0 && y<6;
-    else if (t==='hoe') hd = y<3 && x>6 && x<14;
-    else if (t==='sword') return (Math.abs((15-y)-x)<1.6 && x>1) ? (x<5?hex('#6a4a2a'):hex(c)) : null;
-    if (hd) return hex(c); if (hnd) return hex('#8a6a3a'); return null; },
-  food:(c,c2)=>(x,y)=>{ const d=Math.hypot(x-8,y-9); if (d<5) return hex(d<2&&c2?c2:c); if (y<5&&Math.abs(x-8)<1&&c2) return hex('#5a3a1a'); return null; },
-  pearl:c=>(x,y)=>{ const d=Math.hypot(x-8,y-8); if (d<5) return hex(d<2.5?mixHex(c,'#ffffff',0.35):c); return null; },
+/* ================= EŞYA PİKSEL SANATI =================
+   Eşya ikonları prosedürel formüllerle (daire/çizgi matematiği) çiziliyordu;
+   her şey birbirine benzeyen bulanık lekelere dönüşüyordu. Artık her şekil
+   elle çizilmiş 16x16 karakter ızgarası. Karakterler paletten renk alır,
+   böylece aynı şekil farklı renklerle kullanılabilir (alet kademeleri,
+   iksirler, yiyecekler). Karakter anlamları:
+     .  saydam     o  kontur (en koyu)   #  gölge      =  ana renk
+     +  açık ton   *  parlaklık          k  siyah      l  beyaz
+     w W n N  ahşap sap tonları (koyu -> açık)
+     q Q  cam açık/koyu    L  dolgu (kova/sıvı)   y  kağıt
+     G g  yeşil açık/koyu  r  kırmızı             s  gri metal */
+const PIXPAL = { w:'#3b2814', W:'#6b4622', n:'#96682f', N:'#b98a4c', k:'#141118', l:'#f4f4ee',
+  q:'#e4eef5', Q:'#9fb4c2', y:'#efe8cc', G:'#4f9a3a', g:'#2f6b23', r:'#b0202a', s:'#8a8a92' };
+function shadeHex(c, t) { return t < 0 ? mixHex(c, '#000000', -t) : mixHex(c, '#ffffff', t); }
+/* satır dizisi + ana renk -> ikon boyacısı (x,y) => [r,g,b] | null */
+function spr(rows, c, extra) {
+  const P = Object.assign({}, PIXPAL, { o:shadeHex(c,-0.62), '#':shadeHex(c,-0.32),
+    '=':c, '+':shadeHex(c,0.20), '*':shadeHex(c,0.42) }, extra || {});
+  const g = new Array(256).fill(null);
+  for (let y = 0; y < 16; y++) { const rw = rows[y] || '';
+    for (let x = 0; x < 16; x++) { const ch = rw[x];
+      if (ch && ch !== '.' && P[ch]) g[y*16+x] = hex(P[ch]); } }
+  return (x, y) => g[y*16+x];
+}
+const PIX = {
+  pickaxe:['...ooooo..ooooo.','..o+++++oo+++++o','..o=====++=====o','..o#===o++o===#o',
+    '...oo=o.++.o=oo.','.....o..++..o...','.........wWn....','........wWn.....',
+    '.......wWn......','......wWn.......','.....wWn........','....wWn.........',
+    '...wWn..........','..wWn...........','.wWn............','.ww.............'
+  ],
+  axe:['......oooo......','.....o++++oo....','.....o+====+o...','.....o+=====+o..',
+    '.....o+=====+o..','.....o#====+o...','......o#===o....','.......o##o.....',
+    '.......woo......','......wWn.......','.....wWn........','....wWn.........',
+    '...wWn..........','..wWn...........','.wWn............','.ww.............'
+  ],
+  shovel:['.......oooooo...','......o++++++o..','......o+=====o..','......o+=====o..',
+    '......o#=====o..','.......o#===o...','........o#=o....','........woo.....',
+    '.......wWn......','......wWn.......','.....wWn........','....wWn.........',
+    '...wWn..........','..wWn...........','.wWn............','.ww.............'
+  ],
+  hoe:['...oooooooooo...','..o++++++++++o..','..o====oooo=+o..','..oooo....o=+o..',
+    '..........o#+o..','..........o#o...','.........wWoo...','........wWn.....',
+    '.......wWn......','......wWn.......','.....wWn........','....wWn.........',
+    '...wWn..........','..wWn...........','.wWn............','.ww.............'
+  ],
+  sword:['............oooo','...........o+++o','..........o+++=o','.........o+++=o.',
+    '........o+++=o..','.......o+++=o...','......o+++=o....','.....o+++=o.....',
+    '....o+++=o......','...o=+++o.......','..oNo=+o........','.oNWNo=o........',
+    'oNWnWNo.........','.owWNo..........','..ow.o..........','................'
+  ],
+  helmet:['................','....oooooooo....','...o++++++++o...','..o++======++o..',
+    '..o+========+o..','..o+========+o..','..o+==oooo==+o..','..o+=o....o=+o..',
+    '..o#=o....o=#o..','..o#=o....o=#o..','..o##o....o##o..','..oooo....oooo..',
+    '................','................','................','................'
+  ],
+  chestplate:['................','.oooo......oooo.','o+++oo....oo+++o','o+====o..o====+o',
+    'o+=====oo=====+o','o+============+o','o+============+o','.o+==========+o.',
+    '.o+==========+o.','.o#==========#o.','.o#==========#o.','.o#==========#o.',
+    '.o############o.','.oooooooooooooo.','................','................'
+  ],
+  leggings:['................','..oooooooooooo..','.o++++++++++++o.','.o+==========+o.',
+    '.o+==========+o.','.o+===oooo===+o.','.o+==o....o==+o.','.o+==o....o==+o.',
+    '.o+==o....o==+o.','.o#==o....o==#o.','.o#==o....o==#o.','.o#==o....o==#o.',
+    '.o#==o....o==#o.','.o###o....o###o.','.ooooo....ooooo.','................'
+  ],
+  boots:['................','................','................','................',
+    '................','..oooo....oooo..','.o++++o..o++++o.','.o+oo+o..o+oo+o.',
+    '.o+==+o..o+==+o.','.o+==+o..o+==+o.','.o+==+o..o+==+o.','.o+==+oo.o+==+oo',
+    '.o+====o.o+====o','.o#####o.o#####o','.ooooooo.ooooooo','................'
+  ],
+  ingot:['................','................','................','....oooooooo....',
+    '...o++++++++o...','..o++======+o...','.o++========+o..','.o+==========+o.',
+    '.o+=========#+o.','.o#=========##o.','..o##=======#o..','...o#########o..',
+    '....ooooooooo...','................','................','................'
+  ],
+  gem:['................','.......oo.......','......o++o......','.....o++++o.....',
+    '....o+*==*+o....','...o+*====*+o...','..o+*========o..','.o+*==========o.',
+    '.o+==========#o.','..o#========#o..','...o#=======#o..','....o#=====#o...',
+    '.....o#===#o....','......o#=#o.....','.......ooo......','................'
+  ],
+  nugget:['................','................','.....oooo.......','....o+++o.......',
+    '...o+==+o..oo...','...o#==o..o++o..','....ooo..o+==+o.','.........o#==o..',
+    '..oooo....ooo...','.o+++o..........','o+==+o..........','o#==o...........',
+    '.ooo............','................','................','................'
+  ],
+  chunk:['................','................','.....oooo.......','....o+++#oo.....',
+    '...o++====#o....','..o+=======#o...','..o+========o...','.o+=========#o..',
+    '.o+========##o..','.o#=======##o...','..o##====##o....','...o#####o......',
+    '....ooooo.......','................','................','................'
+  ],
+  dust:['................','................','................','......oo........',
+    '.....o+#o...oo..','....o+==#o.o+#o.','..oo.o##o..o##o.','.o+#o.oo....oo..',
+    'o+==#o..oo......','o#==o..o+#o.....','.o##o..o==#o....','..oo...o##o.....',
+    '........oo......','................','................','................'
+  ],
+  fsteel:['................','................','..........ooo...','.........o+++o..',
+    '........o+===+o.','........o+=o=+o.','.......o+=o.o=o.','..oo...o+=o.....',
+    '.o**o.o+=o......','o*==*oo+=o......','o*===*o=o.......','o*===*oo........',
+    '.o***o..........','..ooo...........','................','................'
+  ],
+  stick:['................','...........oo...','..........o+No..','.........o+No...',
+    '........o+No....','.......o+No.....','......o+No......','.....o+No.......',
+    '....o+No........','...o+No.........','..o+No..........','..oNo...........',
+    '..oo............','................','................','................'
+  ],
+  ball:['................','................','.....oooo.......','...oo+**+oo.....',
+    '..o+*+===+*o....','..o+*=====+o....','.o+*=======+o...','.o+=========o...',
+    '.o+========#o...','.o+=======##o...','..o#=====##o....','..o##===##o.....',
+    '...oo###oo......','.....oooo.......','................','................'
+  ],
+  crystal:['................','.......oo.......','......o*+o......','......o*=+o.....',
+    '.....o+*==o.....','.....o+*==+o....','....o+*====o....','....o+=====o....',
+    '...o+*=====+o...','...o+=======o...','...o#======#o...','....o#====#o....',
+    '....o#===#o.....','.....o#=#o......','......ooo.......','................'
+  ],
+  shard:['................','........oo......','.......o*+o.....','......o+*=+o....',
+    '.....o+*===o....','.....o+*==+o....','....o+*===+o....','....o+====+o....',
+    '...o+*===+o.....','...o+====+o.....','...o#===+o......','....o#==+o......',
+    '....o#=+o.......','.....o#o........','......oo........','................'
+  ],
+  loaf:['................','................','................','....oooooooo....',
+    '..oo++++++++oo..','.o++==+==+==++o.','.o+==========+o.','.o+=+==+==+==+o.',
+    '.o+==========+o.','.o#==========#o.','..o##########o..','...oooooooooo...',
+    '................','................','................','................'
+  ],
+  chop:['................','................','......oooo......','....oo++++oo....',
+    '...o++====++o...','..o++======++o..','.o++========++o.','.o+==========+o.',
+    '.o+==========+o.','..o#========#o..','...o##====##o...','....oooooooo....',
+    '................','................','................','................'
+  ],
+  fish:['................','................','................','.........oooo...',
+    '.......oo++++o..','......o++====+o.','.oo..o++===k==+o','o++oo+========+o',
+    'o+==o+========+o','o++oo+========+o','.oo..o++=====+o.','.......oo+++o...',
+    '.........oooo...','................','................','................'
+  ],
+  egg:['................','................','......oooo......','.....o+**+o.....',
+    '....o+*===+o....','...o+*=====o....','...o+=======o...','...o+=======o...',
+    '...o+======#o...','....o#=====#o...','....o##===##o...','.....oo###oo....',
+    '.......ooo......','................','................','................'
+  ],
+  snowball:['................','................','.....oooo.......','...oo+**+oo.....',
+    '..o+*+===+*o....','..o+*=====+o....','.o+*=======+o...','.o+=========o...',
+    '.o+========#o...','.o+=======##o...','..o#=====##o....','..o##===##o.....',
+    '...oo###oo......','.....oooo.......','................','................'
+  ],
+  carrot:['................','.......G........','....G..G..G.....','...GgGGGGGgG....',
+    '.....oo=oo......','....o+===+o.....','....o+====o.....','....o+===+o.....',
+    '.....o+==+o.....','.....o+===o.....','.....o+==o......','......o+=o......',
+    '......o+#o......','.......o#o......','.......oo.......','................'
+  ],
+  potato:['................','................','.....ooooo......','...oo+++++oo....',
+    '..o++==#===+o...','.o++========+o..','.o+===#=====+o..','.o+=========+o..',
+    '.o+===#====#+o..','.o#=========#o..','..o#=======#o...','...oo#####oo....',
+    '.....ooooo......','................','................','................'
+  ],
+  berry:['................','................','......oo........','.....o+*o.oo....',
+    '....o+==+o+*o...','....o+==o+==o...','.....o##oo==o...','..oo..oo.o##o...',
+    '.o+*o..o..oo....','o+==+o..........','o+===o..........','.o###o..........',
+    '..ooo...........','................','................','................'
+  ],
+  seeds:['................','................','................','.....oo.........',
+    '....o+#o...oo...','....o+=o..o+#o..','.....o#o..o+=o..','......oo..o+=o..',
+    '..oo.......o#o..','.o+#o.......oo..','.o+=o...........','.o+=o...........',
+    '..o#o...........','...oo...........','................','................'
+  ],
+  wheat:['................','.......yy.......','......y=+y......','.....y=++=y.....',
+    '......y=+y......','.....y=++=y.....','......y=+y......','.....y=++=y.....',
+    '......y=+y......','......o=o.......','......o=o.......','......o=o.......',
+    '......o=o.......','.......oo.......','................','................'
+  ],
+  bowl:['................','................','................','................',
+    '...oooooooooo...','..o==========o..','..o+========+o..','.o#==========#o.',
+    '.oW==========Wo.','.oW+========+Wo.','..oW+======+Wo..','...oWW====WWo...',
+    '.....oWWWWo.....','......oooo......','................','................'
+  ],
+  bone:['................','................','.........oo.oo..','........o++o++o.',
+    '........o+===+o.','.........o+=+o..','.......oo+==+o..','......o+++=+o...',
+    '.....o+++=+o....','....o+++=+o.....','...o++==+o......','..o+=++o.o......',
+    '.o+==+o.oo......','.o+=+o..........','.oo.oo..........','................'
+  ],
+  leather:['................','................','...oooo..oooo...','..o++++oo++++o..',
+    '.o++========++o.','.o+==========+o.','o+============+o','o+============+o',
+    'o+============+o','.o+==========+o.','.o#==========#o.','..o##======##o..',
+    '...o##====##o...','....oooooooo....','................','................'
+  ],
+  feather:['................','...........oo...','..........o++o..','.........o+==+o.',
+    '........o+==++o.','.......o+==++o..','......o+==++Wo..','.....o+==++Wo...',
+    '....o+==++Wo....','...o+==++Wo.....','...o+=++Wo......','....o+=Wo.......',
+    '.....oWo........','.....oWo........','......oo........','................'
+  ],
+  string:['................','................','.....oooo.......','...oo++++oo.....',
+    '..o++oooo++o....','..o+oo..oo+o....','.o+=o....o=+o...','.o+=o....o=+o...',
+    '.o+=o....o=+o...','..o+oo..oo+o....','..o++oooo++o....','...oo++++oo.....',
+    '.....oooo.......','................','................','................'
+  ],
+  paw:['................','................','..oo..oo..oo....','.o++o.o++o.o++o.',
+    '.o==o.o==o.o==o.','..oo...oo...oo..','................','.....oooooo.....',
+    '...oo++++++oo...','..o++======++o..','.o+==========+o.','.o+==========+o.',
+    '..o#========#o..','...oo######oo...','.....oooooo.....','................'
+  ],
+  eyeball:['................','................','.....oooooo.....','...oo++++++oo...',
+    '..o++==**===++o.','.o++==*###==++o.','.o+===#kk#===+o.','.o+===#kk#===+o.',
+    '.o+====##====+o.','.o+==========+o.','..o#========#o..','...oo######oo...',
+    '.....oooooo.....','................','................','................'
+  ],
+  sac:['................','................','......oooo......','.....o+**+o.....',
+    '....o+*===+o....','...o+*=====+o...','...o+=======o...','..o+========o...',
+    '..o+========o...','..o+=======#o...','...o#======#o...','...o##====#o....',
+    '....oo####oo....','......oooo......','................','................'
+  ],
+  tear:['................','.......oo.......','......o*+o......','......o*=o......',
+    '.....o+*==o.....','.....o+*==o.....','....o+*====o....','....o+*====o....',
+    '...o+*======o...','...o+*======o...','...o+======#o...','....o#=====#o...',
+    '....oo#####o....','.....ooooooo....','......oooo......','................'
+  ],
+  shell:['................','................','.....oooooo.....','...oo++++++oo...',
+    '..o++==##==++o..','.o++==#==#==++o.','.o+==#=oo=#==+o.','.o+=#=o..o=#=+o.',
+    '.o+=#=o..o=#=+o.','.o+==#=oo=#==+o.','..o+==#==#==+o..','...o#==##==#o...',
+    '....oo#####o....','......oooo......','................','................'
+  ],
+  wart:['................','................','....oo....oo....','...o++o..o++o...',
+    '...o==o..o==o...','....oo=oo=oo....','.....o=##=o.....','......o##o......',
+    '.....o+##+o.....','....o++##++o....','...o++#==#++o...','...o+#====#+o...',
+    '....o#====#o....','.....oo##oo.....','.......oo.......','................'
+  ],
+  slime:['................','................','................','.....oooooo.....',
+    '...oo++**++oo...','..o++*====++o...','.o++*========o..','.o+*=========o..',
+    'o+*==========+o.','o+============+o','o+============+o','.o#==========#o.',
+    '..o##======##o..','...oooooooooo...','................','................'
+  ],
+  pod:['................','................','.......oo.......','......o++o......',
+    '.....o+**+o.....','....o+*==+o.....','....o+*===o.....','....o+=====o....',
+    '....o+=====o....','....o+====#o....','....o#====#o....','.....o#==#o.....',
+    '.....o#==#o.....','......o##o......','.......oo.......','................'
+  ],
+  saddle:['................','................','................','.....oooooo.....',
+    '...oo++++++oo...','..o++======++o..','.o++==########==','o+============+o',
+    'o+=#========#=+o','o+=#========#=+o','.o#==========#o.','..oo########oo..',
+    '....oooooooo....','................','................','................'
+  ],
+  bottle:['................','......oooo......','......oQQo......','......oqqo......',
+    '.....oq==qo.....','....oq+==+qo....','...oq++===+qo...','...oq======qo...',
+    '...oq======qo...','...oq======qo...','...oq======qo...','...oq=====#qo...',
+    '...oq#====#qo...','....oq####qo....','.....oooooo.....','................'
+  ],
+  splash:['................','......oooo......','......oQQo......','.o....oqqo......',
+    'o=o..oq==qo...o.','.o..oq+==+qo.o=o','...oq++===+qo.o.','...oq======qo...',
+    '...oq======qo...','...oq======qo...','...oq======qo...','...oq=====#qo...',
+    '.o.oq#====#qo.o.','o=o.oq####qo.o=o','.o...oooooo...o.','................'
+  ],
+  bucket:['................','................','..oo........oo..','.o++oooooooo++o.',
+    '.o+==========+o.','.o+=LLLLLLLL=+o.','.o+=LLLLLLLL=+o.','..o+LLLLLLLL+o..',
+    '..o+========+o..','..o+========+o..','...o#======#o...','...o#======#o...',
+    '....o######o....','.....oooooo.....','................','................'
+  ],
+  fireball:['................','.......oo.......','......o++o......','.....o+**+o.....',
+    '..oo.o+*==+o.oo.','.o+oo+*====+oo+o','o+*+o+*=====+o*+','o+*==+======+==+',
+    '.o+==========+o.','.o+=====*====+o.','..o+========+o..','..o+==*=====+o..',
+    '...o#=======#o..','....o##===##o...','.....oooooo.....','................'
+  ],
+  eye:['................','................','.....oooooo.....','...oo++++++oo...',
+    '..o++===kk==++o.','.o++===kkkk==+o.','.o+===kkkkkk=+o.','.o+===kkkkkk=+o.',
+    '.o+====kkkk==+o.','.o+=====kk===+o.','..o#========#o..','...oo######oo...',
+    '.....oooooo.....','................','................','................'
+  ],
+  paper:['................','..oooooooooo....','..o========oo...','..o=+=+====+=o..',
+    '..o========+=+o.','..o=+=+=======o.','..o===========o.','..o=+=+=+=====o.',
+    '..o===========o.','..o=+=+=+=====o.','..o===========o.','..o=+=+=======o.',
+    '..o===========o.','..ooooooooooooo.','................','................'
+  ],
+  brick:['................','................','...oooooooooo...','..o++++++++++o..',
+    '..o==========o..','..o###o###o##o..','..o==========o..','..o=========+o..',
+    '..o#o###o###=o..','..o==========o..','..o##########o..','...oooooooooo...',
+    '................','................','................','................'
+  ],
+  book:['................','..oooooooooo....','.o##oyyyyyyyoo..','.o##oyyyyyyyy+o.',
+    '.o##oyyyyyyyy=o.','.o##oyyyyyyyy=o.','.o##oyyyyyyyy=o.','.o##oyyyyyyyy=o.',
+    '.o##oyyyyyyyy=o.','.o##oyyyyyyyy=o.','.o##oyyyyyyyy=o.','.o##oyyyyyyy+o..',
+    '.o##ooooooooo...','.oooo...........','................','................'
+  ],
+  nameTag:['................','................','................','....oooooooooo..',
+    '...o++++++++++o.','..o+========+=o.','.oko=========+o.','.o.o=========+o.',
+    '.oko=========+o.','..o+========+=o.','...o##########o.','....oooooooooo..',
+    '................','................','................','................'
+  ],
+  map:['................','..oooooooooooo..','..o++++++++++o..','..o=+==+===+=o..',
+    '..o==+==GG==+o..','..o=+==GGGG=+o..','..o====GGGG==o..','..o=+===GG===o..',
+    '..o==+======+o..','..o=+===r===+o..','..o=======r==o..','..o=+=======+o..',
+    '..o##########o..','..oooooooooooo..','................','................'
+  ],
+  compass:['................','.....oooooo.....','...oo######oo...','..o##kkkkkk##o..',
+    '.o#kkkklkkkkk#o.','.o#kkkkrkkkkk#o.','o##kkkkrkkkkk##o','o#kkkkkrkkkkkk#o',
+    'o#kkkkklkkkkkk#o','o##kkkklkkkkk##o','.o#kkkklkkkkk#o.','.o##kkkkkkkk#o..',
+    '..o##kkkkkk##o..','...oo######oo...','.....oooooo.....','................'
+  ],
+  clock:['................','.....oooooo.....','...oo++++++oo...','..o++======++o..',
+    '.o+==qqqqqq==+o.','.o+=qqqkqqqq=+o.','o+==qqqkqqqqq=+o','o+==qqqkkkkqq=+o',
+    'o+==qqqqqqqqq=+o','o+==qqqqqqqqq=+o','.o+=qqqqqqqq=+o.','.o+==qqqqqq==+o.',
+    '..o#========#o..','...oo######oo...','.....oooooo.....','................'
+  ],
+  star:['................','.......oo.......','......o++o......','......o**o......',
+    '.oo...o**o...oo.','o++oo.o**o.oo++o','.o++*ooo**ooo*+o','..o+*********+o.',
+    '..o+*********+o.','.o++*ooo**ooo*+o','o++oo.o**o.oo++o','.oo...o**o...oo.',
+    '......o**o......','......o++o......','.......oo.......','................'
+  ],
+  skull:['................','....oooooooo....','..oo++++++++oo..','.o++========++o.',
+    '.o+==========+o.','.o+=oooo=oooo+o.','.o+=okko=okko+o.','.o+=okko=okko+o.',
+    '.o+=oooo=oooo+o.','.o+====ok====+o.','..o+===oo===+o..','..o#o#o#o#o#o...',
+    '...o#o#o#o#o#o..','....oooooooo....','................','................'
+  ],
+  totem:['................','.....oooooo.....','....o++**++o....','....o+*kk*+o....',
+    '....o+*==*+o....','....o+kkkk+o....','....oo====oo....','..oo++====++oo..',
+    '.o++========++o.','.o+=#======#=+o.','.o+=#======#=+o.','..oo#======#oo..',
+    '....o#====#o....','....o##==##o....','.....oooooo.....','................'
+  ],
+  cart:['................','................','..o..........o..','.o+o........o+o.',
+    '.o=o........o=o.','.o=oooooooooo=o.','.o=+========+=o.','.o=+========+=o.',
+    '.o=+========+=o.','.o=##########=o.','.oo##########oo.','..oo#o####o#oo..',
+    '...ooo.oo.ooo...','..o+*o.oo.o+*o..','..o**o.oo.o**o..','...oo...oo.oo...'
+  ],
+  boat:['................','................','................','.oo..........oo.',
+    'o++oooooooooo++o','o+============+o','o+=+oooooooo+=+o','o+=o##nnnn##o=+o',
+    'o+=o#nnnnnn#o=+o','o+=#o##nn##o#=+o','.o+##########+o.','..o+########+o..',
+    '...o########o...','....oooooooo....','................','................'
+  ],
+  arrow:['................','............oooo','...........o+**o','..........o+*=*o',
+    '.........o+*=*oo','........o+*=*o..','.......o+*=*o...','......o+W=*o....',
+    '.....o+W=Wo.....','....o+W=Wo......','...o+W=Wo.......','.olo+W=o........',
+    'ollloWWo........','.olo+W=o........','..o.oWo.........','................'
+  ],
+  bow:['................','.........oooo...','........o+WW+o..','.......o+Wo.o+o.',
+    '......o+Wo...oo.','.....o+Wo..l....','....o+Wo..l.....','...o+Wo..l......',
+    '...o+Wo.l.......','...o+Wo..l......','....o+Wo..l.....','.....o+Wo..l....',
+    '......o+Wo...oo.','.......o+Wo.o+o.','........o+WW+o..','.........oooo...'
+  ],
+  shears:['................','...oo.......oo..','..o++o.....o++o.','..o+=+o...o+=+o.',
+    '...o+=+o.o+=+o..','....o+=+o+=+o...','.....o+=+++=+o..','......o+=k=+o...',
+    '......o+===+o...','.....o+=+.o=+o..','....o+=+o..o=+o.','...o+=+o....o=+o',
+    '..o+=+o......o=o','..o+=o........oo','...oo...........','................'
+  ],
+  rod:['................','.............ooo','............o+No','...........o+No.',
+    '..........o+No..','.........o+No...','........o+No..l.','.......o+No....l',
+    '......o+No.....l','.....o+No......l','....o+No.......l','...o+No.......l.',
+    '..o+No........o.','..oNo...........','..oo............','................'
+  ],
+};
+const IC = {                                   // eski adlar korunuyor, çizim yeni
+  ingot: c => spr(PIX.ingot, c),
+  raw:   c => spr(PIX.chunk, c),
+  gem:   c => spr(PIX.gem, c),
+  dust:  c => spr(PIX.dust, c),
+  stick: () => spr(PIX.stick, '#9a7442'),
+  tool:  (t, c) => spr(PIX[t] || PIX.sword, c),
+  armor: (p, c) => spr(PIX[['helmet','chestplate','leggings','boots'][p]], c),
+  food:  (c) => spr(PIX.loaf, c),
+  pearl: c => spr(PIX.ball, c),
 };
 /* dayanıklılık değerleri Minecraft ile aynı */
 const TIERS = { wooden:['Tahta','#9a7040',2,4,1,59], stone:['Taş','#8a8a8a',4,5,2,131], iron:['Demir','#d6d6d6',6,6,3,250],
@@ -959,13 +1302,6 @@ for (const tr in TIERS) {
   }
 }
 /* zırhlar (koruma puanı + dayanıklılık Minecraft ile aynı) */
-IC.armor = (p,c) => (x,y) => {
-  const C = hex(c), D = hex(mixHex(c,'#000000',0.3));
-  if (p===0) { const d=Math.hypot(x-8,y-9); if (d<6.5 && y<10) return (y<5?C:D); if (y>=10&&y<12&&Math.abs(x-8)<7) return C; return null; }
-  if (p===1) { if (y>2&&y<14&&x>3&&x<12) return (x>5&&x<10&&y<6)?D:C; if (y>2&&y<7&&(x===3||x===12)) return D; return null; }
-  if (p===2) { if (y>2&&y<7&&x>4&&x<11) return C; if (y>=7&&y<14&&((x>4&&x<7.5)||(x>8.5&&x<11))) return (y>11?D:C); return null; }
-  return (y>8&&y<13&&((x>2&&x<7)||(x>9&&x<14))) ? (y>11?D:C) : null;
-};
 const ARMOR_MATS = {
   leather:  ['Deri','#a5713a',[1,3,2,1],[55,80,75,65],'leather'],
   chainmail:['Zincir','#9aa4ac',[2,5,4,1],[165,240,225,195],null],
@@ -1102,181 +1438,60 @@ defItem('pumpkin_seeds','Balkabağı Tohumu',{icon:IC.dust('#e8e0b0')});
 /* ================= EŞYA SİLÜETLERİ =================
    Aynı şekli paylaşan eşyalara kendi biçimlerini ver (alet/zırh kademeleri
    Minecraft'ta da aynı şekildedir, onlar bilerek ortak kaldı). */
-const S = {
-  bottle: (c,liq) => (x,y) => { const cc=hex(c);
-    if (y<3 && Math.abs(x-8)<2) return hex('#c8d8e0');                       // boyun
-    if (y>=3 && y<5 && Math.abs(x-8)<3) return hex('#c8d8e0');
-    const w = 5.2 - Math.max(0, (6-y))*0.5;
-    if (y>=5 && y<15 && Math.abs(x-8)<w) return (y>7 && liq!==false) ? cc : hex('#dfeaf2');
-    return null; },
-  eye: (c) => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>5.4) return null;
-    if (Math.abs(x-8)<1.2 && Math.abs(y-8)<3.4) return hex('#101018');       // dikey yarık
-    return hex(d<3 ? mixHex(c,'#ffffff',0.4) : c); },
-  fireball: (c) => (x,y) => { const d=Math.hypot(x-8,y-9);
-    if (d<4.6) return hex(d<2 ? '#fff0b0' : c);
-    if (y<7 && Math.abs(x-8)<4 && hash2(x*5,y*3)<0.5) return hex('#e8621a'); return null; },
-  bucket: (c,fill) => (x,y) => {
-    if (y<4 && Math.abs(Math.abs(x-8)-4.5)<1 ) return hex('#8a8a92');        // sap
-    if (y>=4) { const w = 5.6 - (y-4)*0.22;
-      if (Math.abs(x-8)<w) { if (Math.abs(x-8)>w-1.4 || y>13) return hex('#9a9aa4');
-        return fill ? hex(c) : hex('#b6b6c0'); } }
-    return null; },
-  bone: () => (x,y) => { const k=hex('#e8e6dc');
-    if (Math.abs((15-y)-x)<1.6 && x>3 && x<12) return k;
-    for (const [cx,cy] of [[3,12],[12,3]]) { if (Math.hypot(x-cx,y-cy)<2.6) return k; }
-    return null; },
-  paper: () => (x,y) => { if (x<3||x>13||y<2||y>14) return null;
-    if (x>10 && y<5) return null;                                            // kıvrık köşe
-    return hex((x+y)%7===0 ? '#d0d0c8' : '#f2f2ea'); },
-  brick: (c) => (x,y) => { if (y<5||y>11||x<2||x>14) return null;
-    return hex(y===8 ? mixHex(c,'#000000',0.3) : c); },
-  book: (c) => (x,y) => { if (x<3||x>13||y<2||y>14) return null;
-    if (x<5) return hex(c);                                                  // sırt
-    return hex(y%3===0 ? '#d8d4c4' : '#f4f0e2'); },
-  nameTag: () => (x,y) => { if (y<5||y>11||x<2||x>14) return null;
-    if (Math.hypot(x-4,y-8)<1.2) return null;                                // delik
-    return hex('#ded4b4'); },
-  map: () => (x,y) => { if (x<2||x>14||y<2||y>14) return null;
-    if (x<4||x>12||y<4||y>12) return hex('#b09060');
-    return hex(hash2(x*3,y*5)<0.2 ? '#c8a878' : '#efe4c4'); },
-  loaf: (c) => (x,y) => { const d=Math.hypot((x-8)/6.2,(y-9)/4.2); if (d>1) return null;
-    return hex((x+y*2)%6<1 && y<10 ? mixHex(c,'#000000',0.25) : c); },
-  chop: (c,ck) => (x,y) => { const d=Math.hypot((x-9)/5.4,(y-9)/4.6);
-    if (d<1) return hex((x*3+y*5)%9<3 ? mixHex(c,'#ffffff',0.25) : c);
-    if (Math.hypot(x-3.5,y-11)<2.2) return hex('#efe8d8');                   // kemik
-    return null; },
-  fish: (c,c2) => (x,y) => { const d=Math.hypot((x-9)/5.2,(y-8)/3.4);
-    if (d<1) { if (Math.hypot(x-11,y-7)<0.9) return hex('#101018');          // göz
-      return hex(c2 && (x+y)%5<2 ? c2 : c); }
-    if (x<5 && Math.abs(y-8) < (5-x)*1.3) return hex(c);                     // kuyruk
-    return null; },
-  egg: () => (x,y) => { const d=Math.hypot((x-8)/4.4,(y-8.5)/5.6); if (d>1) return null;
-    return hex(d<0.5 ? '#fffdf4' : '#eae0c8'); },
-  snowball: () => (x,y) => { const d=Math.hypot(x-8,y-9); if (d>5) return null;
-    return hex(hash2(x*7,y*7)<0.25 ? '#dfeaf6' : '#fbfeff'); },
-  carrot: () => (x,y) => {
-    if (y<5 && Math.abs(x-8)<3.4 && hash2(x*5,y*7)<0.8) return hex('#3f8f30');
-    const w = 3.4 - (y-5)*0.28;
-    if (y>=5 && Math.abs(x-8)<w) return hex((y%3===0) ? '#c05f10' : '#e07a18');
-    return null; },
-  potato: () => (x,y) => { const d=Math.hypot((x-8)/5,(y-8.5)/4.4); if (d>1) return null;
-    return hex(hash2(x*3,y*3)<0.18 ? '#8a6a30' : '#c8a24e'); },
-  berry: (c) => (x,y) => { for (const [cx,cy] of [[5.5,7],[10,6],[8,11]])
-      if (Math.hypot(x-cx,y-cy)<3) return hex(Math.hypot(x-cx,y-cy)<1.2 ? mixHex(c,'#ffffff',0.4) : c);
-    return null; },
-  feather: () => (x,y) => { const t=(15-y);
-    if (Math.abs(x-t*0.8-2)<0.9 && y>2) return hex('#c8c4b8');               // sap
-    if (y>1 && y<13 && Math.abs(x-t*0.8-2)<3.2 && hash2(x*3,y*5)<0.72) return hex('#f4f2ea');
-    return null; },
-  flint: () => (x,y) => { if (Math.abs(x-8)+Math.abs(y-9) > 6) return null;
-    if (x+y < 11) return hex('#5a5a62'); return hex('#33333a'); },
-  leather: () => (x,y) => { if (x<2||x>14) return null;
-    const top = 4 + Math.sin(x*0.7)*1.6, bot = 13 - Math.sin(x*0.9)*1.4;
-    if (y<top || y>bot) return null; return hex(hash2(x*3,y*3)<0.2 ? '#8a5c34' : '#a5764a'); },
-  saddle: () => (x,y) => { if (y<6||y>12) return null;
-    const w = 6.4 - Math.abs(y-9)*0.5;
-    if (Math.abs(x-8)>w) return null;
-    return hex(y<8 ? '#8a4a24' : (Math.abs(x-8)>w-1.5 ? '#5a2e14' : '#6b3a1c')); },
-  seeds: (c) => (x,y) => { for (const [cx,cy] of [[5,9],[9,6],[11,11]])
-      if (Math.hypot((x-cx)/1.7,(y-cy)/2.4)<1) return hex(c); return null; },
-  wheat: () => (x,y) => { if (Math.abs(x-8)<0.9 && y>3) return hex('#8a7028');
-    if (y<12 && Math.abs(x-8)<3.4 && (y+Math.abs(x-8)*2)%5<2) return hex('#e0c04a'); return null; },
-  string: () => (x,y) => { const d=Math.abs(Math.hypot(x-8,y-8)-4.5);
-    return d<1 ? hex('#eceff2') : null; },
-  arrow: () => (x,y) => { const on=Math.abs((15-y)-x)<1.1;
-    if (on && x>3 && x<12) return hex('#8a6a3a');                            // sap
-    if (x>10 && y<5 && (x-10)+(5-y)<5) return hex('#c8ccd2');                // uç
-    if (x<6 && y>10 && hash2(x*5,y*5)<0.7 && Math.abs((15-y)-x)<3.2) return hex('#f0f0e8');
-    return null; },
-  bow: () => (x,y) => { const d=Math.hypot(x-3,y-8);
-    if (d>5.2 && d<6.6 && x>2) return hex('#8a6a3a');                        // yay gövdesi
-    if (Math.abs(x-9)<0.7 && Math.abs(y-8)<6) return hex('#e8e8e0');         // kiriş
-    return null; },
-  shears: () => (x,y) => { if (Math.abs((15-y)-x)<1.2 && x>2 && x<13) return hex('#c0c4cc');
-    if (Math.abs(y-x)<1.2 && x>2 && x<13) return hex('#9aa0aa');
-    return null; },
-  rod: () => (x,y) => { if (Math.abs((15-y)-x)<1.3 && x>1 && x<11) return hex('#8a6a3a');
-    if (x>9 && Math.abs(y-(x-9)*2.4-2)<0.8) return hex('#dfe6ee'); return null; },
-  compass: () => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>6) return null;
-    if (d>4.6) return hex('#9aa0aa');
-    if (Math.abs(x-8)<1 && y<8) return hex('#d02a2a');                       // ibre
-    if (Math.abs(x-8)<1 && y>=8) return hex('#f0f0f0');
-    return hex('#22304a'); },
-  clock: () => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>6) return null;
-    if (d>4.6) return hex('#f6d038');
-    if (Math.abs(x-8)<0.9 && y>4 && y<9) return hex('#22242a');
-    if (Math.abs(y-8)<0.9 && x>8 && x<12) return hex('#22242a');
-    return hex('#dfe8f4'); },
-  star: (c) => (x,y) => { const dx=Math.abs(x-8), dy=Math.abs(y-8);
-    if (dx+dy < 6 || (dx<1.3 && dy<7) || (dy<1.3 && dx<7)) return hex(dx+dy<2.5 ? '#ffffff' : c);
-    return null; },
-  skull: () => (x,y) => { if (x<3||x>13||y<2||y>13) return null;
-    if (y>10 && (x<5||x>11)) return null;
-    if (y>5 && y<9 && (Math.abs(x-6)<1.6 || Math.abs(x-10)<1.6)) return hex('#101014');
-    if (y>11 && (x+y)%3===0) return hex('#101014');
-    return hex('#c8c4b4'); },
-  bowl: (c) => (x,y) => { if (y>7 && y<13 && Math.abs(x-8) < 6.2-(y-7)*0.7) return hex('#8a6a3a');
-    if (y>=6 && y<=8 && Math.abs(x-8)<6) return hex(c); return null; },
-  totem: () => (x,y) => { if (x<4||x>12||y<1||y>15) return null;
-    if (y<6 && Math.hypot(x-8,y-4)<3) return hex('#e8c860');
-    if (y>=6) return hex((x+y)%4<2 ? '#3a8f6a' : '#e8c860'); return null; },
-  nugget: (c) => (x,y) => { for (const [cx,cy] of [[6,7],[10,9],[7,11]])
-      if (Math.hypot(x-cx,y-cy)<2.4) return hex(Math.hypot(x-cx,y-cy)<1 ? mixHex(c,'#ffffff',0.45) : c);
-    return null; },
-  chunk: (c) => (x,y) => { const d=Math.abs(x-8)+Math.abs(y-9);
-    if (d>6.5) return null; return hex(hash2(x*5,y*3)<0.35 ? mixHex(c,'#000000',0.35) : c); },
-  slime: (c) => (x,y) => { const d=Math.hypot((x-8)/5.4,(y-9.5)/4.2); if (d>1) return null;
-    return [ ...hex(d<0.45 ? mixHex(c,'#ffffff',0.4) : c), 205 ]; },
-  pod: (c) => (x,y) => { const d=Math.hypot((x-8)/3.6,(y-8)/5.4); if (d>1) return null;
-    return hex((y%4<2) ? mixHex(c,'#000000',0.25) : c); },
-  cart: (c) => (x,y) => {
-    if (y>12 && (Math.hypot(x-5,y-13.5)<2 || Math.hypot(x-11,y-13.5)<2)) return hex('#3a3a42');  // tekerler
-    if (y>=5 && y<=12 && x>2 && x<14) { if (y<7 && x>4 && x<12) return null;                      // iç boşluk
-      return hex(c); }
-    return null; },
-  boat: (c) => (x,y) => {
-    if (y<7 || y>13) return null;
-    const w = 6.6 - Math.abs(y-10)*0.35;
-    if (Math.abs(x-8) > w) return null;
-    if (y<9 && Math.abs(x-8) < w-1.6) return null;                                                // oturak boşluğu
-    return hex(y>12 ? mixHex(c,'#000000',0.3) : c); },
-  shell: (c) => (x,y) => { const a2=Math.atan2(y-9,x-8), d=Math.hypot(x-8,y-9);
-    if (d>6.2) return null;
-    if (Math.abs(d - (2 + (a2+Math.PI)*0.62)) < 1.5) return hex(mixHex(c,'#000000',0.28));        // spiral
-    return hex(c); },
-  eyeball: (c) => (x,y) => { const d=Math.hypot(x-8,y-8); if (d>5.2) return null;
-    if (d<1.8) return hex('#101014');
-    if (d<3) return hex(mixHex(c,'#000000',0.4));
-    return hex(c); },
-  sac: (c) => (x,y) => { const d=Math.hypot((x-8)/4.4,(y-9)/5); if (d>1) return null;
-    return hex(d<0.4 ? mixHex(c,'#ffffff',0.3) : c); },
-  tear: (c) => (x,y) => { if (y<3) return null;
-    const w = Math.min(4.6, (y-2)*0.85);
-    if (Math.abs(x-8) > w) return null;
-    return hex(Math.abs(x-7) < 1.4 && y < 9 ? mixHex(c,'#ffffff',0.5) : c); },
-  crystal: (c) => (x,y) => { const dx=Math.abs(x-8);
-    if (y<3 || y>13) return null;
-    if (dx > 4.4 - Math.abs(y-8)*0.42) return null;
-    return hex(x < 8 ? mixHex(c,'#ffffff',0.35) : c); },
-  paw: (c) => (x,y) => {
-    for (const [cx,cy,r] of [[5,6,1.7],[8,5,1.7],[11,6,1.7],[8,10.5,3.6]])
-      if (Math.hypot(x-cx,y-cy)<r) return hex(c);
-    return null; },
-  ball: (c) => (x,y) => { const d=Math.hypot(x-8,y-9); if (d>5) return null;
-    return hex(d<2 ? mixHex(c,'#ffffff',0.3) : c); },
-  shard: (c) => (x,y) => {
-    if (y<2 || y>14) return null;
-    if (Math.abs(x - 8 - (y-8)*0.35) > 3.6 - Math.abs(y-8)*0.2) return null;
-    return hex((x+y)%4<2 ? mixHex(c,'#ffffff',0.3) : c); },
-  splash: (c) => (x,y) => {                                                   // sıçrayan iksir: yan yatık şişe + damla
-    if (y>4 && y<13 && Math.abs(x-9)<4.4) return hex(y>7 ? c : '#dfeaf2');
-    if (y<=4 && Math.abs(x-9)<2) return hex('#c8d8e0');
-    if (y>12 && hash2(x*7,y*5)<0.45 && Math.abs(x-8)<6) return hex(c);        // sıçrayan damlalar
-    return null; },
-  wart: (c) => (x,y) => { if (y<5) return null;
-    if (Math.abs(x-8)<1.2) return hex(mixHex(c,'#000000',0.35));
-    for (const [cx,cy] of [[5,8],[11,9],[8,12]]) if (Math.hypot(x-cx,y-cy)<2.4) return hex(c);
-    return null; },
+const S = {                                    // ICON_SHAPE'in kullandığı şekil fabrikaları
+  bottle:   (c, liq) => spr(PIX.bottle, liq === false ? '#cfe2ee' : c),
+  splash:   (c) => spr(PIX.splash, c),
+  eye:      (c) => spr(PIX.eye, c),
+  fireball: (c) => spr(PIX.fireball, c),
+  bucket:   (c, fill) => spr(PIX.bucket, '#b6bcc4', { L: fill ? c : '#8f959d' }),
+  bone:     () => spr(PIX.bone, '#e8e6dc'),
+  paper:    () => spr(PIX.paper, '#f2f2ea'),
+  brick:    (c) => spr(PIX.brick, c),
+  book:     (c) => spr(PIX.book, c),
+  nameTag:  () => spr(PIX.nameTag, '#ded4b4'),
+  map:      () => spr(PIX.map, '#efe4c4'),
+  loaf:     (c) => spr(PIX.loaf, c),
+  chop:     (c) => spr(PIX.chop, c),
+  fish:     (c) => spr(PIX.fish, c),
+  egg:      () => spr(PIX.egg, '#eae0c8'),
+  snowball: () => spr(PIX.snowball, '#f2f8ff'),
+  carrot:   (c) => spr(PIX.carrot, c || '#e07a18'),
+  potato:   (c) => spr(PIX.potato, c || '#c8a24e'),
+  berry:    (c) => spr(PIX.berry, c),
+  feather:  () => spr(PIX.feather, '#f0f0ea'),
+  flint:    () => spr(PIX.shard, '#4a4a52'),
+  leather:  (c) => spr(PIX.leather, c || '#a5764a'),
+  saddle:   () => spr(PIX.saddle, '#8a4a24'),
+  seeds:    (c) => spr(PIX.seeds, c),
+  wheat:    () => spr(PIX.wheat, '#d8b53c'),
+  string:   () => spr(PIX.string, '#e8ecf0'),
+  arrow:    () => spr(PIX.arrow, '#c8ccd2'),
+  bow:      () => spr(PIX.bow, '#9a7442'),
+  shears:   () => spr(PIX.shears, '#c0c4cc'),
+  rod:      () => spr(PIX.rod, '#9a7442'),
+  compass:  () => spr(PIX.compass, '#c8ccd4'),
+  clock:    () => spr(PIX.clock, '#f6d038'),
+  star:     (c) => spr(PIX.star, c),
+  skull:    () => spr(PIX.skull, '#c8c4b4'),
+  bowl:     (c) => spr(PIX.bowl, c),
+  totem:    () => spr(PIX.totem, '#e8c860'),
+  nugget:   (c) => spr(PIX.nugget, c),
+  chunk:    (c) => spr(PIX.chunk, c),
+  slime:    (c) => spr(PIX.slime, c),
+  pod:      (c) => spr(PIX.pod, c),
+  cart:     (c) => spr(PIX.cart, c),
+  boat:     (c) => spr(PIX.boat, c),
+  shell:    (c) => spr(PIX.shell, c),
+  eyeball:  (c) => spr(PIX.eyeball, c),
+  sac:      (c) => spr(PIX.sac, c),
+  tear:     (c) => spr(PIX.tear, c),
+  crystal:  (c) => spr(PIX.crystal, c),
+  paw:      (c) => spr(PIX.paw, c),
+  ball:     (c) => spr(PIX.ball, c),
+  shard:    (c) => spr(PIX.shard, c),
+  wart:     (c) => spr(PIX.wart, c),
+  bar:      (c) => spr(PIX.stick, c),
+  fsteel:   () => spr(PIX.fsteel, '#c2c6ce', { '*':'#4a4a52' }),
 };
 /* --- yeni silüetleri ata --- */
 const ICON_SHAPE = {
@@ -1324,8 +1539,8 @@ const ICON_SHAPE = {
   prismarine_shard:S.shard('#8fc8b8'), prismarine_crystals:S.crystal('#c8f0e0'),
   clay_ball:S.ball('#9aa2b0'), flint:S.shard('#4a4a52'),
   nether_wart:S.wart('#a02a3a'), turtle_scute:S.shell('#6aaa4a'),
-  sugar:S.seeds('#f0f0f0'), lentil:S.seeds('#9ac83e'), quartz:S.crystal('#e6e0d8'),
-  blaze_rod:S.crystal('#f6b020'), blaze_powder:S.nugget('#f6a030'),
+  sugar:S.seeds('#f0f0f0'), lentil:S.nugget('#b8963a'), flint_and_steel:S.fsteel(), quartz:S.crystal('#e6e0d8'),
+  blaze_rod:S.bar('#f6b020'), blaze_powder:S.nugget('#f6a030'),
   dragon_egg:S.egg(), gunpowder:S.nugget('#4a4a52'),
 };
 
@@ -4827,7 +5042,7 @@ window.addEventListener('lostpointercapture', cancelPointer);
    koyunca ikisi birden düşüyordu. Touch Events'te touchstart'ta
    preventDefault demek jesti kökünden kapatır ve her parmak kendi
    identifier'ıyla bağımsız yaşar; böylece yürüme + bakış aynı anda olur. */
-const UI_SEL = '#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#sprintbtn,#splash,.panel,#chatpanel,#deathscreen';
+const UI_SEL = '#hotbar,#menubtn,#menu,#jumpbtn,#downbtn,#invbtn,#chatbtn,#sprintbtn,#fsbtn2,#splash,.panel,#chatpanel,#deathscreen';
 function isUITarget(t) { return !!(t && t.closest && t.closest(UI_SEL)); }
 function touchBegin(t) {
   const lx = t.clientX, ly = t.clientY;
@@ -5728,6 +5943,35 @@ function exitFullscreen() {
   const fn = document.exitFullscreen || document.webkitExitFullscreen;
   if (fn) try { const r = fn.call(document); if (r && r.catch) r.catch(()=>{}); } catch(e) {}
 }
+/* --- HUD tam ekran tuşu (mobil) ---
+   Ayarlar menüsünde zaten bir tam ekran satırı vardı ama oynarken menüyü açıp
+   kapatmak gerekiyordu. Tuş sağ üstte, tek dokunuşla açıp kapatıyor.
+   iPhone Safari Fullscreen API'sini öğelere vermez (yalnız <video>); orada
+   istek reddedilir, bu yüzden kullanıcıya "Ana Ekrana Ekle" yolunu söylüyoruz. */
+const fsbtn2 = $('fsbtn2');
+function fsAvailable() {
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen);
+}
+function updateFsBtn() {
+  const on = !!fsElement();
+  fsbtn2.textContent = on ? '🗗' : '⛶';
+  fsbtn2.title = on ? 'Tam ekrandan çık' : 'Tam ekran';
+  fsbtn2.classList.toggle('on', on);
+}
+function toggleFullscreen() {
+  if (fsElement()) { exitFullscreen(); return; }
+  if (!fsAvailable()) { toast('iOS tam ekrana izin vermiyor — Paylaş ▸ Ana Ekrana Ekle ile tam ekran açılır'); return; }
+  reqFullscreen(document.documentElement).then(() => {
+    // yatay kilit yalnız destekleyen tarayıcılarda çalışır, yoksa sessizce geçilir
+    try { const o = screen.orientation; if (o && o.lock) { const r = o.lock('landscape'); if (r && r.catch) r.catch(()=>{}); } } catch(e) {}
+  }).catch(() => toast('Tarayıcı tam ekrana izin vermedi'));
+}
+fsbtn2.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+fsbtn2.addEventListener('click', (e) => { e.stopPropagation(); toggleFullscreen(); });
+for (const ev of ['fullscreenchange','webkitfullscreenchange'])
+  document.addEventListener(ev, () => { updateFsBtn(); resize(); });
+updateFsBtn();
 /* --- koşu kilidi (sol üstteki 🏃 tuşu) --- */
 function applySprintBtn() { const b = $('sprintbtn'); if (b) b.classList.toggle('on', sprintOn); }
 $('sprintbtn').addEventListener('pointerdown', (e) => {
@@ -5793,7 +6037,7 @@ function applyGuiScale() {
   const auto = Math.min(1.35, Math.max(0.85, innerWidth/430));
   const s = [auto, 0.85, 1.05, 1.3][OPT.guiScale] || auto;
   document.documentElement.style.setProperty('--gui', s);
-  for (const id of ['hotbar','jumpbtn','downbtn','invbtn','chatbtn','menubtn','sprintbtn'])
+  for (const id of ['hotbar','jumpbtn','downbtn','invbtn','chatbtn','menubtn','sprintbtn','fsbtn2'])
     { const el = $(id); if (el) el.style.zoom = s; }
 }
 function applyChatOpt() {
@@ -5811,7 +6055,7 @@ function startUiEdit() {
   toast('🎛 Tuşları sürükle, bitince ✔ Bitti\'ye bas');
 }
 /* --- tuş yerlerini taşıma --- */
-const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','hotbar'];
+const MOVABLE = ['jumpbtn','downbtn','invbtn','chatbtn','menubtn','fsbtn2','hotbar'];
 let uiEdit = false, uiDrag = null, uiOffX = 0, uiOffY = 0;
 function uiApply() {
   let saved = {}; try { saved = JSON.parse(localStorage.getItem('ck2_ui')||'{}'); } catch(e) {}
