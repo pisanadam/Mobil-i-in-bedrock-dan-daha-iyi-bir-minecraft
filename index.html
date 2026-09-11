@@ -6172,15 +6172,21 @@ const HW_CORES = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 4)));
 function coreCount() { return OPT.cores > 0 ? OPT.cores : Math.max(2, HW_CORES - 1); }
 function genBudgetMs() { return 2.2 * coreCount(); }    // çekirdek başına ~2.2 ms
 function meshBudgetMs() { return 1.8 * coreCount(); }
+/* Bütçe kontrolü işten SONRAydı: bütçe dolana kadar iş alınıyor, dolduğu
+   anlaşıldığında zaten taşılmış oluyordu. Artık ortalama maliyet izlenip
+   sonraki iş ancak sığacaksa başlatılıyor; ilk iş hep yapılır ki üretim durmasın. */
+let genAvgMs = 3, meshAvgMs = 1.5;
 function processGen(maxMs) {
   const t0 = performance.now();
   let n = 0;
   while (genQueue.length) {
+    if (n > 0 && (performance.now() - t0) + genAvgMs > maxMs) break;
     const [cx,cz] = genQueue.shift();
     genQueued.delete(ckey(cx,cz));
+    const s0 = performance.now();
     if (!chunks.has(ckey(cx,cz))) chunks.set(ckey(cx,cz), genChunk(cx,cz));
+    genAvgMs = genAvgMs*0.75 + (performance.now()-s0)*0.25;
     n++;
-    if (performance.now() - t0 >= maxMs) break;        // bütçe doldu: kalanı sonraki kareye
   }
   return n;
 }
@@ -6312,11 +6318,15 @@ function frame(now) {
   if (meshSortT <= 0) { meshSortT = 0.5; sortQueuesByDistance(); }
   processGen(genBudgetMs());
   const mt0 = performance.now(), mBudget = meshBudgetMs();
+  let mDone = 0;
   while (meshQueue.length) {
+    if (mDone > 0 && (performance.now() - mt0) + meshAvgMs > mBudget) break;
     const [mx, mz, msi, mk] = meshQueue.shift();
     queued.delete(mk);
+    const s1 = performance.now();
     buildMesh(mx, mz, msi < 0 ? undefined : msi);
-    if (performance.now() - mt0 >= mBudget) break;     // bütçe doldu
+    meshAvgMs = meshAvgMs*0.75 + (performance.now()-s1)*0.25;
+    mDone++;
   }
   if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
