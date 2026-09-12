@@ -57,10 +57,26 @@
     image-rendering:pixelated; pointer-events:none; z-index:8; transform-origin:85% 105%; transition:transform .09s ease-out; }
   #hand.swing { transform: rotate(-32deg) translate(-14px, 8px) scale(1.06); }
   .slot.pick { border-color:#ffd24a; box-shadow:0 0 8px rgba(255,210,74,.9); }
-  #hearts { left:50%; bottom:58px; transform:translateX(-103%); display:flex; gap:1px; z-index:11; pointer-events:none; }
+  #hearts { left:50%; bottom:72px; transform:translateX(-103%); display:flex; gap:1px; z-index:11; pointer-events:none; }
   #hearts span { font-size:15px; text-shadow:1px 1px 0 #000; }
-  #hunger { left:50%; bottom:58px; transform:translateX(3%); display:flex; gap:1px; z-index:11; pointer-events:none; }
+  #hunger { left:50%; bottom:72px; transform:translateX(3%); display:flex; gap:1px; z-index:11; pointer-events:none; }
   #hunger span { font-size:15px; text-shadow:1px 1px 0 #000; }
+  #xpbar { left:50%; bottom:59px; transform:translateX(-50%); width:min(64vw,352px); height:8px;
+    background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.22); border-radius:4px;
+    z-index:11; pointer-events:none; overflow:hidden; }
+  #xpbar i { display:block; height:100%; width:0; background:linear-gradient(#a8ff5a,#3fbf10); }
+  #xplvl { left:50%; bottom:56px; transform:translateX(-50%); z-index:12; pointer-events:none;
+    color:#8bff3a; font-size:13px; font-weight:800; letter-spacing:.5px;
+    text-shadow:1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000; }
+  .slot.ench { border-color:#c78bff; }
+  .slot.ench::after { content:''; position:absolute; inset:0; border-radius:4px; pointer-events:none;
+    background:linear-gradient(115deg, transparent 34%, rgba(205,150,255,.42) 50%, transparent 66%); }
+  #enchpanel .off { display:flex; align-items:center; gap:8px; padding:8px; margin-bottom:6px;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.13); border-radius:8px; }
+  #enchpanel .off .t { flex:1; font-size:12px; line-height:1.45; }
+  #enchpanel .off .t b { color:#d6b8ff; }
+  #enchpanel .off button { border:none; border-radius:7px; padding:9px 11px; background:#6a3fa8; color:#fff; font-size:13px; }
+  #enchpanel .off button:disabled { opacity:.35; }
   #fx { left:10px; top:30px; z-index:11; pointer-events:none; font-size:11px; color:#cfe;
     text-shadow:1px 1px 0 #000; line-height:1.5; }
   #mppanel textarea { user-select:text; -webkit-user-select:text; width:100%; height:56px; margin:4px 0 8px;
@@ -173,6 +189,8 @@
 <button class="btn hud" id="sprintbtn" title="Koşu kilidi">🏃</button>
 <div class="hud" id="hearts"></div>
 <div class="hud" id="hunger"></div>
+<div class="hud" id="xpbar"><i></i></div>
+<div class="hud" id="xplvl"></div>
 <div class="hud" id="fx"></div>
 <div class="hud" id="hand"></div>
 <div class="hud" id="hotbar"></div>
@@ -191,6 +209,11 @@
   <h3><span>🔥 Fırın</span><button class="x" data-close="furnpanel">✕</button></h3>
   <div id="fuelinfo" style="font-size:12px;opacity:.8;margin-bottom:6px"></div>
   <div class="scroll" id="furnbody"></div>
+</div>
+<div class="panel" id="enchpanel">
+  <h3><span>✨ Büyü Masası</span><button class="x" data-close="enchpanel">✕</button></h3>
+  <div id="enchinfo" style="font-size:12px;opacity:.85;margin-bottom:6px"></div>
+  <div class="scroll" id="enchbody"></div>
 </div>
 <div class="panel" id="mppanel">
   <h3><span>🎮 Çok Oyunculu (P2P Co-op)</span><button class="x" data-close="mppanel">✕</button></h3>
@@ -703,7 +726,7 @@ defBlock('barrier','Bariyer', stone3(tile((x,y,r)=>[0,0,0,0])), {cutout:1, hard:
 defBlock('command_block','Komut Bloku', stone3(tile((x,y,r)=>{ const d=(Math.abs(x-8)+Math.abs(y-8)); return nzc(hex(d<4?'#d8a05a':'#b6774a'),14,r); })), {hard:-1, unbreakable:1, drop:null});
 defBlock('note_block', 'Nota Bloku', stone3(tile((x,y,r)=>{ if (Math.hypot(x-8,y-8)<3) return nzc(hex('#2a1a12'),10,r); return nzc(hex('#6b4a2e'),16,r); })), {hard:0.8, tool:'axe', noteblock:1});
 defBlock('jukebox','Müzik Kutusu', [tile((x,y,r)=>{ if (Math.hypot(x-8,y-8)<3.4) return nzc(hex('#3a2a1e'),10,r); return nzc(hex('#6b4a2e'),16,r); }), tile(T.plank('#6b4a2e')), tile(T.plank('#5a3e26'))], {hard:2, tool:'axe'});
-defBlock('enchanting_table','Büyü Masası', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#c02a2a'),20,r); return nzc(hex('#1e1a2a'),14,r); }), tile(T.stone('#2a2438')), tile(T.stone('#1a1622'))], {hard:5, tool:'pick', tier:1, light:0.35, inter:'craft'});
+defBlock('enchanting_table','Büyü Masası', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#c02a2a'),20,r); return nzc(hex('#1e1a2a'),14,r); }), tile(T.stone('#2a2438')), tile(T.stone('#1a1622'))], {hard:5, tool:'pick', tier:1, light:0.35, inter:'enchant'});
 defBlock('anvil','Örs', [tile(T.flat('#43434a',14)), tile((x,y,r)=>{ if (y<5||y>11) return nzc(hex('#3a3a42'),12,r); return (x>4&&x<12)?nzc(hex('#4d4d55'),12,r):[0,0,0,0]; }), tile(T.flat('#3a3a42',12))], {hard:5, tool:'pick', tier:1, cutout:1});
 defBlock('beacon','İşaret Feneri', stone3(tile((x,y,r)=>{ const d=Math.max(Math.abs(x-8),Math.abs(y-8)); if (d<3) return nzc(hex('#8ff0e8'),24,r); return [90,200,196,200]; })), {hard:3, light:1, trans:1});
 defBlock('cauldron','Kazan', [tile((x,y,r)=>{ if (x>2&&x<13&&y>2&&y<13) return nzc(hex('#2a2a30'),10,r); return nzc(hex('#4a4a52'),12,r); }), tile(T.stone('#46464e')), tile(T.stone('#3a3a42'))], {hard:2, tool:'pick', tier:1});
@@ -2732,10 +2755,17 @@ for (const f of FACES) for (const vi of [0,1,2,0,2,3]) {
 const cubeVbo = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, cubeVbo);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeArr), gl.STATIC_DRAW);
+// gök cisimleri için birim kare (x,y düzlemi) — poz(3) uv(2) gölge(1) ışık(1)
+const skyQuadVbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, skyQuadVbo);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+  -1,-1,0, 0,0, 1,1,   1,-1,0, 1,0, 1,1,   1,1,0, 1,1, 1,1,
+  -1,-1,0, 0,0, 1,1,   1,1,0, 1,1, 1,1,   -1,1,0, 0,1, 1,1 ]), gl.STATIC_DRAW);
 /* ================= OYUNCU & DURUM ================= */
 const P = { x:8.5, y:40, z:8.5, vx:0, vy:0, vz:0, yaw:0, pitch:0,
   w:0.3, hgt:1.8, eye:1.62, onGround:false, fly:false, inWater:false,
-  hp:20, maxhp:20, absorb:0, hunger:20, air:10, dead:false, fallD:0, riding:null };
+  hp:20, maxhp:20, absorb:0, hunger:20, air:10, dead:false, fallD:0, riding:null,
+  xp:0, lvl:0 };
 let gamemode = 'creative';
 const RULES = { keepInventory:true, mobSpawning:true, daylightCycle:true };
 const DIFF_DMG = [0, 0.5, 1, 1.5];            // Barışçıl / Kolay / Normal / Zor
@@ -2977,7 +3007,9 @@ function physics(dt) {
   if (!P.onGround && P.vy < 0 && !P.fly) P.fallD -= P.vy*dt;
   moveEnt(P, dt);
   if (P.onGround && wasVy < -1) {
-    if (!isCreative() && P.fallD > 3.5 && !hasEff('slow_falling')) damagePlayer(Math.floor(P.fallD-3), 'düşme');
+    const ff = armorEnch('feather_falling');                   // Tüy Düşüşü büyüsü
+    if (!isCreative() && P.fallD > 3.5 + ff*0.7 && !hasEff('slow_falling'))
+      damagePlayer(Math.max(1, Math.round((P.fallD-3) * (1 - Math.min(0.6, ff*0.12)))), 'düşme');
     P.fallD = 0;
   }
   if (P.fly && P.onGround) P.fallD = 0;
@@ -2996,16 +3028,245 @@ function physics(dt) {
   if (P.onGround && hsp2 > 2) { stepT -= dt*hsp2; if (stepT <= 0) { stepT = 1.7; sfx(65+Math.random()*45, 0.05, 'triangle', 0.05); } }
   if (P.y < Y_MIN-6) { if (isCreative()) { P.y = 120; P.vy = 0; } else damagePlayer(100, 'boşluk'); }
 }
+/* ================= DENEYİM (XP) & BÜYÜ =================
+   Deneyim küreleri cevher kazınca ve canlı öldürünce düşer; oyuncuya doğru
+   süzülür. Seviye eğrisi Minecraft ile aynı: ilk seviyeler ucuz, 16 ve 31'den
+   sonra belirgin şekilde pahalılaşır. Seviyeler büyü masasında harcanır. */
+function xpNeed(l) { return l >= 31 ? 9*l - 158 : l >= 16 ? 5*l - 38 : 2*l + 7; }
+function addXP(n) {
+  if (n <= 0 || isCreative()) return;
+  P.xp += n;
+  let up = false;
+  while (P.xp >= xpNeed(P.lvl)) { P.xp -= xpNeed(P.lvl); P.lvl++; up = true; }
+  if (up) { sfx(520, 0.2, 'sine', 0.09, 980); toast('⭐ Seviye ' + P.lvl); }
+  updateXpBar();
+}
+function takeLevels(n) { P.lvl = Math.max(0, P.lvl - n); P.xp = 0; updateXpBar(); }
+let orbs = [];
+function spawnXP(n, x, y, z) {
+  if (n <= 0 || isCreative()) return;
+  // her puan için ayrı küre çizmek pahalı: en çok 6 küreye bölünür
+  let left = Math.round(n);
+  for (let i = 0; i < 6 && left > 0; i++) {
+    const v = (i === 5) ? left : Math.min(left, Math.max(1, Math.ceil(n/4)));
+    left -= v;
+    if (orbs.length > 60) orbs.shift();
+    orbs.push({ x: x + (Math.random()-0.5)*0.4, y: y + 0.25, z: z + (Math.random()-0.5)*0.4,
+      vx:(Math.random()-0.5)*2.2, vy: 2.2 + Math.random(), vz:(Math.random()-0.5)*2.2,
+      n: v, age: 0, delay: 0.35, w: 0.1, hgt: 0.2, onGround: false, dim });
+  }
+}
+function updateOrbs(dt) {
+  for (let i = orbs.length-1; i >= 0; i--) {
+    const o = orbs[i];
+    if (o.dim !== dim) continue;
+    o.age += dt; o.delay -= dt;
+    if (o.age > 300) { orbs.splice(i, 1); continue; }
+    const dx = P.x - o.x, dy = (P.y + 0.9) - o.y, dz = P.z - o.z;
+    const dist = Math.hypot(dx, dy, dz);
+    if (o.delay <= 0 && dist < 7 && !P.dead && !isCreative()) {
+      const k = 16 * dt / Math.max(0.7, dist);   // oyuncuya çekilir (yerçekimi yok)
+      o.vx += dx*k; o.vy += dy*k; o.vz += dz*k;
+    } else o.vy -= 20*dt;
+    o.vx *= (1 - Math.min(1, dt*1.5)); o.vz *= (1 - Math.min(1, dt*1.5));
+    moveEnt(o, dt);
+    if (o.delay <= 0 && dist < 1.15 && !P.dead && !isCreative()) {
+      addXP(o.n);
+      sfx(720 + Math.random()*260, 0.07, 'sine', 0.06, 1250);
+      orbs.splice(i, 1);
+    }
+  }
+}
+function updateXpBar() {
+  const bar = $('xpbar'), lbl = $('xplvl');
+  if (isCreative()) { bar.style.display = 'none'; lbl.style.display = 'none'; return; }
+  bar.style.display = 'block'; lbl.style.display = 'block';
+  bar.firstElementChild.style.width = Math.min(100, P.xp / xpNeed(P.lvl) * 100) + '%';
+  lbl.textContent = P.lvl > 0 ? P.lvl : '';
+}
+// cevher kırınca düşen deneyim (Minecraft değerleri)
+const ORE_XP = { coal:[0,2], lapis:[2,5], redstone:[1,5], diamond:[3,7], emerald:[3,7],
+                 iron:[0,0], gold:[0,0], copper:[0,0] };
+function oreXP(id) {
+  if (!id) return 0;
+  if (id === 'nether_quartz_ore') return 2 + ((Math.random()*4)|0);
+  const m = /^(?:deepslate_)?([a-z_]+)_ore$/.exec(id);
+  const r = m && ORE_XP[m[1]];
+  if (!r || r[1] === 0) return 0;
+  return r[0] + ((Math.random()*(r[1]-r[0]+1))|0);
+}
+
+/* Büyüler eşya yuvasında saklanır: {id, n, d, e:{efficiency:3,...}}.
+   Yuva nesnesi zaten kaydedildiği için büyüler de kendiliğinden kalıcı olur.
+   Listeye yalnızca oyunda GERÇEKTEN işleyen büyüler konur. */
+const ENCH = {
+  protection:      { n:'Koruma',         max:4, on:'armor' },
+  feather_falling: { n:'Tüy Düşüşü',     max:4, on:'boots' },
+  sharpness:       { n:'Keskinlik',      max:5, on:'sword' },
+  looting:         { n:'Yağma',          max:3, on:'sword' },
+  knockback:       { n:'Geri Tepme',     max:2, on:'sword' },
+  fire_aspect:     { n:'Ateş Görünümü',  max:2, on:'sword' },
+  efficiency:      { n:'Verimlilik',     max:5, on:'tool' },
+  fortune:         { n:'Şans',           max:3, on:'tool' },
+  silk_touch:      { n:'İpeksi Dokunuş', max:1, on:'tool' },
+  unbreaking:      { n:'Dayanıklılık',   max:3, on:'*' },
+  power:           { n:'Güç',            max:5, on:'bow' },
+  punch:           { n:'Yumruk',         max:2, on:'bow' },
+  flame:           { n:'Alev',           max:1, on:'bow' },
+  infinity:        { n:'Sonsuzluk',      max:1, on:'bow' },
+};
+const ENCH_CONFLICT = { fortune:['silk_touch'], silk_touch:['fortune'] };
+const ROMAN = ['','I','II','III','IV','V'];
+function enchCat(id) {                     // eşya hangi büyü ailesine girer
+  const it = ITEMS[id];
+  if (!it) return null;
+  if (it.bow) return 'bow';
+  if (it.armor) return it.aslot === 3 ? 'boots' : 'armor';
+  if (/_sword$/.test(id)) return 'sword';
+  if (/_(pickaxe|axe|shovel)$/.test(id)) return 'tool';
+  return null;
+}
+function canEnch(cat, k) {
+  const e = ENCH[k];
+  if (!e || !cat) return false;
+  if (e.on === '*') return true;
+  if (e.on === 'armor') return cat === 'armor' || cat === 'boots';
+  return e.on === cat;
+}
+function enchLvl(slot, k) { return (slot && slot.e && slot.e[k]) || 0; }
+function heldEnch(k) { return enchLvl(heldItem(), k); }
+function armorEnch(k) { let t = 0; for (const a of armorInv) t += enchLvl(a, k); return t; }
+function enchNames(slot) {
+  if (!slot || !slot.e) return '';
+  return Object.keys(slot.e).map(k => (ENCH[k] ? ENCH[k].n : k) + ' ' + (ROMAN[slot.e[k]] || slot.e[k])).join(', ');
+}
+function isEnchanted(slot) { return !!(slot && slot.e && Object.keys(slot.e).length); }
+/* Masanın çevresindeki kitaplıklar gücü artırır — Minecraft'taki gibi bir
+   blokluk boşluk bırakılmalı, bitişik kitaplık sayılmaz. */
+function shelfPower(x, y, z) {
+  let c = 0;
+  for (let dx=-2; dx<=2; dx++) for (let dz=-2; dz<=2; dz++) {
+    if (Math.abs(dx) < 2 && Math.abs(dz) < 2) continue;
+    for (let dy=0; dy<=1; dy++) if (getBlock(x+dx, y+dy, z+dz) === BID.bookshelf) c++;
+  }
+  return Math.min(15, c);
+}
+function rollOffers(power) {
+  const o = [];
+  for (let i=0;i<3;i++) {
+    const lv = Math.max(i+1, Math.min(30,
+      Math.round(power * 2 * (i+1)/3 * (0.7 + Math.random()*0.45)) + i));
+    o.push({ lv, lapis: i+1, ench: null });
+  }
+  return o;
+}
+function rollEnchants(cat, lv) {
+  const pool = Object.keys(ENCH).filter(k => canEnch(cat, k));
+  const res = {};
+  const count = 1 + (lv >= 14 ? 1 : 0) + (lv >= 24 && Math.random() < 0.65 ? 1 : 0);
+  for (let i=0;i<count && pool.length;i++) {
+    const k = pool.splice((Math.random()*pool.length)|0, 1)[0];
+    if ((ENCH_CONFLICT[k] || []).some(c => res[c])) continue;
+    const mx = ENCH[k].max;
+    res[k] = Math.max(1, Math.min(mx, Math.round(mx * (lv/30) * (0.6 + Math.random()*0.7))));
+  }
+  if (!Object.keys(res).length) res.unbreaking = 1;
+  return res;
+}
+let enchOffers = null, enchPower = 0, enchPick = -1;
+function openEnch(r) {
+  closePanels();
+  enchPower = r ? shelfPower(r.x, r.y, r.z) : 0;
+  enchPick = -1;
+  enchOffers = rollOffers(enchPower);
+  $('enchpanel').style.display = 'flex';
+  renderEnch();
+}
+function renderEnch() {
+  $('enchinfo').innerHTML =
+    `📚 Kitaplık gücü: <b>${enchPower}/15</b> &nbsp;|&nbsp; ⭐ Seviye: <b>${P.lvl}</b>` +
+    ` &nbsp;|&nbsp; 🔷 Lapis: <b>${countItem('lapis_lazuli')}</b>` +
+    `<div style="opacity:.6;margin-top:3px">Masanın çevresine (bir blok boşluk bırakarak) kitaplık diz, güç artsın.</div>`;
+  const body = $('enchbody');
+  body.innerHTML = '';
+  // 1) büyülenecek eşyayı seç
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:12px;opacity:.8;margin-bottom:4px';
+  title.textContent = 'Büyülenecek eşyayı seç:';
+  body.appendChild(title);
+  const g = document.createElement('div'); g.className = 'grid'; g.style.marginBottom = '8px';
+  let any = false;
+  for (let i=0;i<36;i++) {
+    const it = inv[i];
+    if (!it || !enchCat(it.id)) continue;
+    any = true;
+    const sl = document.createElement('div');
+    sl.className = 'slot' + (i === enchPick ? ' pick' : '') + (isEnchanted(it) ? ' ench' : '');
+    slotBg(sl, it.id); addDurBar(sl, it);
+    sl.title = ITEMS[it.id].name;
+    sl.onclick = () => { enchPick = (enchPick === i ? -1 : i); renderEnch(); };
+    g.appendChild(sl);
+  }
+  body.appendChild(g);
+  if (!any) {
+    const w = document.createElement('div');
+    w.style.cssText = 'font-size:12px;color:#f0b060';
+    w.textContent = '⚠️ Büyülenebilir eşyan yok. Kılıç, kazma, balta, kürek, yay ya da zırh getir.';
+    body.appendChild(w);
+    return;
+  }
+  if (enchPick < 0) return;
+  const slot = inv[enchPick];
+  const cat = enchCat(slot.id);
+  if (slot.e) {
+    const cur = document.createElement('div');
+    cur.style.cssText = 'font-size:12px;color:#d6b8ff;margin-bottom:6px';
+    cur.textContent = '✨ Mevcut: ' + enchNames(slot);
+    body.appendChild(cur);
+  }
+  // 2) üç teklif
+  enchOffers.forEach((of, i) => {
+    if (!of.ench || of.cat !== cat) { of.ench = rollEnchants(cat, of.lv); of.cat = cat; }
+    const row = document.createElement('div'); row.className = 'off';
+    const t = document.createElement('div'); t.className = 't';
+    const names = Object.keys(of.ench).map(k => ENCH[k].n + ' ' + ROMAN[of.ench[k]]).join(', ');
+    t.innerHTML = `<b>${names}</b><br><span style="opacity:.7">${of.lv} seviye · ${of.lapis} lapis</span>`;
+    const b = document.createElement('button');
+    b.textContent = 'Büyüle';
+    const ok = isCreative() || (P.lvl >= of.lv && countItem('lapis_lazuli') >= of.lapis);
+    b.disabled = !ok;
+    b.onclick = () => {
+      if (!isCreative()) {
+        if (P.lvl < of.lv || countItem('lapis_lazuli') < of.lapis) return renderEnch();
+        removeItem('lapis_lazuli', of.lapis);
+        takeLevels(of.lv);
+      }
+      slot.e = slot.e || {};
+      for (const k in of.ench) slot.e[k] = Math.max(slot.e[k] || 0, of.ench[k]);
+      // çelişen büyüyü temizle (Şans + İpeksi Dokunuş bir arada olmaz)
+      for (const k in slot.e) for (const c of (ENCH_CONFLICT[k] || [])) if (slot.e[c] && k !== c) delete slot.e[c];
+      sfx(420, 0.35, 'sine', 0.12, 1500);
+      toast('✨ ' + ITEMS[slot.id].name + ': ' + enchNames(slot));
+      enchOffers = rollOffers(enchPower);   // teklifler yenilenir
+      updateHotbar(); saveState(); renderEnch();
+    };
+    row.appendChild(t); row.appendChild(b);
+    body.appendChild(row);
+  });
+}
 function damagePlayer(d, src) {
   d = d * diffMul();                       // Zorluk ayarı (Barışçıl'da hasar yok)
   if (d <= 0) return;
   if (isCreative() || P.dead || d <= 0) return;
   // zırh koruması + zırh yıpranması
   const pts = armorInv.reduce((a,s)=>a+(s?(ITEMS[s.id].armor||0):0), 0);
+  const prot = armorEnch('protection');                       // Koruma büyüsü
+  if (prot) d = Math.max(1, Math.round(d * (1 - Math.min(0.6, prot*0.04))));
   if (pts > 0 && src !== 'boşluk') {
     d = Math.max(1, Math.round(d * (1 - Math.min(0.8, pts*0.04))));
     armorInv.forEach((s,i) => {
       if (!s) return;
+      if (unbreakingRoll(s, 1) <= 0) return;                   // Dayanıklılık
       s.d = (s.d||0) + 1;
       if (s.d >= ITEMS[s.id].dur) { toast('💔 '+ITEMS[s.id].name+' parçalandı!'); sfx(90,0.3,'sawtooth'); armorInv[i] = null; }
     });
@@ -3031,7 +3292,11 @@ function damagePlayer(d, src) {
 }
 function die() {
   P.dead = true;
-  if (!RULES.keepInventory) inv = Array(36).fill(null);
+  if (!RULES.keepInventory) {
+    inv = Array(36).fill(null);
+    spawnXP(Math.min(100, P.lvl*7), P.x, P.y+0.5, P.z);   // seviyelerin bir kısmı yere düşer
+    P.lvl = 0; P.xp = 0; updateXpBar();
+  }
   $('deathscreen').style.display = 'flex';
 }
 function respawn() {
@@ -3207,7 +3472,7 @@ function trySpawns(dt, light) {
     spawnMob(pick([['zombie',0.3],['skeleton',0.25],['spider',0.2],['creeper',0.12],['slime',0.08],['enderman',0.05]]), bx+0.5, gy, bz+0.5);
   }
 }
-function hurtMob(e, d, kx, kz) {
+function hurtMob(e, d, kx, kz, en) {
   if (MP.peer && !MP.isHost && e.rid) { // misafir vuruşu ev sahibine gönder
     mpSend({ t:'mobHit', id:e.rid, dmg:d, kx, kz });
     e.hurtT = 0.3; emitParts(e.x, e.y+e.hgt*0.6, e.z, hex(e.def.body), 4, 2, 0.3);
@@ -3220,15 +3485,23 @@ function hurtMob(e, d, kx, kz) {
   sfx(160, 0.1, 'square');
   emitParts(e.x, e.y+e.hgt*0.6, e.z, hex(e.def.body), 6, 2.5, 0.4);
   if (e.hp <= 0 && !e.def.boss) { // boss ölümü updateMobs'ta özel işlenir
+    const loot = (en && en.looting) || 0;                   // Yağma büyüsü
     for (const [id, mn, mx] of e.def.drops) {
-      const n = mn + Math.round(Math.random()*(mx-mn));
+      let n = mn + Math.round(Math.random()*(mx-mn));
+      if (loot && n > 0) n += Math.round(Math.random()*loot);
       if (n > 0) spawnDrop(id, n, e.x, e.y+0.4, e.z);
     }
+    spawnXP(mobXP(e.def), e.x, e.y+0.4, e.z);
     emitParts(e.x, e.y+e.hgt*0.5, e.z, [240,240,240], 14, 3, 0.6);
     sfx(200, 0.3, 'triangle', 0.12, 60);
     ents.splice(ents.indexOf(e), 1);
     toast(e.def.name + ' öldürüldü');
   }
+}
+// canlı öldürünce düşen deneyim: düşman 5, evcil 1-3 (Minecraft ile aynı)
+function mobXP(def) {
+  if (def.boss) return 50;
+  return def.hostile ? 5 : 1 + ((Math.random()*3)|0);
 }
 function tpMob(e) {
   for (let t=0; t<8; t++) {
@@ -3290,6 +3563,12 @@ function updateMobs(dt, light) {
     if (e.def.burns && light > 0.6 && dim==='overworld') { e.hp -= 2*dt;
       if (Math.random() < dt*4) emitParts(e.x, e.y+e.hgt, e.z, [230,120,30], 1, 1, 0.4);
       if (e.hp<=0) { ents.splice(i,1); continue; } }
+    if (e.fireT > 0) {                       // Ateş Görünümü / Alev ile tutuşan canlı
+      e.fireT -= dt;
+      e.fireTick = (e.fireTick || 0) - dt;
+      if (Math.random() < dt*6) emitParts(e.x, e.y+e.hgt*0.6, e.z, [250,150,40], 1, 1.2, 0.4);
+      if (e.fireTick <= 0) { e.fireTick = 1; hurtMob(e, 1, 0, 0); if (e.hp <= 0) continue; }
+    }
     // hedef seçimi
     const angry = e.def.hostile || (e.def.neutral && e.aggro);
     const detect = 20 * (hasEff('invisibility') ? 0.15 : 1);
@@ -3412,7 +3691,22 @@ function updateMobs(dt, light) {
       }
       continue;
     }
+    if (a.mine) {   // oyuncunun attığı ok: canlıya vurur (duvara dayanmış canlı da ıskalanmasın diye blok kontrolünden ÖNCE)
+      let hitE = null;
+      for (const e of ents)
+        if (Math.abs(a.x-e.x) < e.w+0.35 && Math.abs(a.z-e.z) < e.w+0.35 &&
+            a.y > e.y-0.2 && a.y < e.y+e.hgt+0.2) { hitE = e; break; }
+      if (hitE) {
+        const l = Math.hypot(a.vx, a.vz) || 1, kb = a.kb || 1;
+        hurtMob(hitE, Math.round(a.dmg || 4), a.vx/l*kb, a.vz/l*kb);
+        if (a.flame && hitE.hp > 0) hitE.fireT = Math.max(hitE.fireT || 0, 5);
+        sfx(900, 0.08, 'square', 0.09);
+        arrows.splice(i,1);
+        continue;
+      }
+    }
     if (a.t <= 0 || isSolid(getBlock(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)))) { arrows.splice(i,1); continue; }
+    if (a.mine) continue;               // oyuncunun oku oyuncuya zarar vermez
     if (Math.abs(a.x-P.x) < 0.5 && Math.abs(a.z-P.z) < 0.5 && a.y > P.y && a.y < P.y+P.hgt) {
       damagePlayer(3, 'ok'); arrows.splice(i,1);
     }
@@ -3791,6 +4085,18 @@ function drawEnts(proj, view, now) {
       gl.drawArrays(gl.TRIANGLES, 0, 36);
     }
   }
+  // deneyim küreleri (yeşil, hafifçe zıplayan küçük küpler)
+  if (orbs.length) {
+    gl.uniform1f(loc.uUseTex, 0);
+    for (const o of orbs) {
+      if (o.dim !== dim) continue;
+      const pulse = 0.09 + Math.sin(o.age*7)*0.015 + Math.min(0.05, o.n*0.004);
+      gl.uniform3f(loc.uColor, 0.62 + Math.sin(o.age*5)*0.12, 1.0, 0.28);
+      gl.uniformMatrix4fv(loc.uMVP, false,
+        mmul(pv, mmul(mtrans(o.x, o.y + 0.1, o.z), mmul(mrotY(o.age*2.4), mscale(pulse, pulse, pulse)))));
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+    }
+  }
   // partiküller
   for (const p of parts) {
     gl.uniform3f(loc.uColor, p.c[0], p.c[1], p.c[2]);
@@ -3841,6 +4147,8 @@ function breakTimeOf(b) {
   let t = (def.hard||0.5) * 1.35;
   const right = held && held.tool && held.tool === def.tool;
   if (right) t /= held.speed;
+  const effL = heldEnch('efficiency');                 // Verimlilik büyüsü
+  if (right && effL) t /= (1 + 0.35*effL);
   t /= Math.pow(1.2, effLvl('haste'));
   t *= Math.pow(3, Math.min(3, effLvl('mining_fatigue')));
   let harvest = true;
@@ -3867,10 +4175,20 @@ function stepBreaking(dt) {
     breakSt = null;
   }
 }
+/* Dayanıklılık: her yıpranma puanı 1/(seviye+1) olasılıkla sayılır. */
+function unbreakingRoll(slot, n) {
+  const u = enchLvl(slot, 'unbreaking');
+  if (!u) return n;
+  let k = 0;
+  for (let i=0;i<n;i++) if (Math.random() < 1/(u+1)) k++;
+  return k;
+}
 function wearHeld(n) {
   if (isCreative()) return;
   const s = inv[hotSel];
   if (!s || !ITEMS[s.id].dur) return;
+  n = unbreakingRoll(s, n);                            // Dayanıklılık büyüsü
+  if (n <= 0) return;
   s.d = (s.d||0) + n;
   if (s.d >= ITEMS[s.id].dur) { toast('💔 '+ITEMS[s.id].name+' kırıldı!'); sfx(90, 0.3, 'sawtooth'); inv[hotSel] = null; }
   updateHotbar();
@@ -3885,14 +4203,22 @@ function finishBreak(st) {
     if (chestData[key]) { for (const s of chestData[key]) if (s) addItem(s.id, s.n); delete chestData[key]; }
   }
   if (!isCreative() && st.harvest) {
-    const list = def.drops ? def.drops :
-      [[def.drop === undefined ? def.id : def.drop, ...(def.dropN || [1,1])]];
-    for (let [dropId, mn, mx] of list) {
-      if (def.dropP && !def.drops && Math.random() > def.dropP) continue;
-      if (dropId && ITEMS[dropId]) {
-        const n = (mn||1) + Math.round(Math.random()*((mx||mn||1)-(mn||1)));
-        if (n > 0) spawnDrop(dropId, n, st.x+0.5, st.y+0.4, st.z+0.5); // önce yere düşer
+    const silk = heldEnch('silk_touch'), fort = heldEnch('fortune');
+    if (silk && ITEMS[def.id]) {
+      spawnDrop(def.id, 1, st.x+0.5, st.y+0.4, st.z+0.5);   // İpeksi Dokunuş: blok olduğu gibi düşer
+    } else {
+      const list = def.drops ? def.drops :
+        [[def.drop === undefined ? def.id : def.drop, ...(def.dropN || [1,1])]];
+      for (let [dropId, mn, mx] of list) {
+        if (def.dropP && !def.drops && Math.random() > def.dropP) continue;
+        if (dropId && ITEMS[dropId]) {
+          let n = (mn||1) + Math.round(Math.random()*((mx||mn||1)-(mn||1)));
+          // Şans yalnız kendi kendine düşmeyen bloklarda (cevherlerde) işler
+          if (fort && dropId !== def.id) n += Math.round(Math.random()*fort);
+          if (n > 0) spawnDrop(dropId, n, st.x+0.5, st.y+0.4, st.z+0.5); // önce yere düşer
+        }
       }
+      spawnXP(oreXP(def.id), st.x+0.5, st.y+0.5, st.z+0.5);  // cevher deneyimi
     }
   }
   blockSound(def, false);
@@ -4232,6 +4558,20 @@ function eatHeld(held, it) {
   toast('😋 ' + it.name);
   swingHand();
 }
+/* Yay: ok harcar, Güç/Yumruk/Alev/Sonsuzluk büyülerini uygular.
+   Oyuncunun oku 'mine' işaretlidir; canlılara vurur, oyuncuya vurmaz. */
+function shootBow(held) {
+  const inf = enchLvl(held, 'infinity');
+  if (!isCreative() && !inf && countItem('arrow') < 1) { toast('🏹 Okun yok'); return; }
+  if (!isCreative() && !inf) removeItem('arrow', 1);
+  const d = camDir();
+  const pw = enchLvl(held, 'power'), pu = enchLvl(held, 'punch');
+  arrows.push({ x:P.x + d.x*0.6, y:P.y + 1.5 + d.y*0.6, z:P.z + d.z*0.6,
+    vx:d.x*30, vy:d.y*30 + 1.2, vz:d.z*30, t:4, mine:1,
+    dmg: 4 + 1.2*pw, kb: 1 + pu, flame: enchLvl(held, 'flame') ? 1 : 0 });
+  wearHeld(1); swingHand();
+  sfx(320, 0.12, 'triangle', 0.1, 90);
+}
 function doPlace() {
   const held = heldItem();
   const it = held ? ITEMS[held.id] : null;
@@ -4245,6 +4585,7 @@ function doPlace() {
   }
   if (it && it.potion) { drinkPotion(held, it); return; }
   if (it && it.splash) { throwSplash(held, it); return; }
+  if (it && it.bow) { shootBow(held); return; }
   const r = raycast(6.5);
   if (it && it.vehicle) { // vagon/tekne yerleştir → binilebilir varlık
     if (r) { const bx = r.px+0.5, by = r.py, bz = r.pz+0.5;
@@ -4313,21 +4654,27 @@ function doPlace() {
   blockSound(BLOCKS[it.block], true);
   swingHand();
 }
-function attackDmg(held) {
-  return Math.max(1, (held && held.dmg ? held.dmg : 1) + 3*effLvl('strength') - 2*effLvl('weakness'));
+function attackDmg(held, slot) {
+  return Math.max(1, Math.round((held && held.dmg ? held.dmg : 1)
+    + 1.5*enchLvl(slot, 'sharpness') + 3*effLvl('strength') - 2*effLvl('weakness')));
 }
 function isCrit() { return !P.onGround && P.vy < -0.5 && !P.fly && !P.inWater; }
 function attackEnt(e) {
-  const held = heldItem() ? ITEMS[heldItem().id] : null;
+  const slot = heldItem();
+  const held = slot ? ITEMS[slot.id] : null;
+  const en = (slot && slot.e) || null;
   const d = camDir();
-  let dmg = attackDmg(held);
+  let dmg = attackDmg(held, slot);
   if (isCrit()) { // kritik vuruş: düşerken vur
     dmg = Math.ceil(dmg * 1.5);
     emitParts(e.x, e.y+e.hgt+0.3, e.z, [255,215,70], 10, 3, 0.5);
     sfx(1300, 0.12, 'square', 0.12, 400);
     toast('💢 Kritik!');
   }
-  hurtMob(e, dmg, d.x, d.z);
+  const kb = 1 + 0.9*enchLvl(slot, 'knockback');            // Geri Tepme
+  hurtMob(e, dmg, d.x*kb, d.z*kb, en);
+  const fa = enchLvl(slot, 'fire_aspect');                  // Ateş Görünümü
+  if (fa && e.hp > 0) e.fireT = Math.max(e.fireT || 0, 4*fa);
   swingHand();
   wearHeld(held && held.tool ? 2 : 1);
 }
@@ -4341,6 +4688,7 @@ function doTap() { // dokunma: araç binme > canlıya vur > yerleştir/etkileşi
 }
 function openInter(kind, r) {
   if (kind === 'craft') { openInv('craft'); toast('🛠️ Çalışma masası'); }
+  else if (kind === 'enchant') openEnch(r);
   else if (kind === 'furnace') openFurnace();
   else if (kind === 'chest') openChest(r.x+','+r.y+','+r.z);
   else if (kind === 'brew') openBrew();
@@ -4462,12 +4810,13 @@ function updateHotbar() {
     const it = inv[i];
     if (it) {
       slotBg(s, it.id);
+      if (isEnchanted(it)) s.classList.add('ench');
       if (!isCreative() && it.n > 1) { const c = document.createElement('span'); c.className='cnt'; c.textContent = it.n; s.appendChild(c); }
       addDurBar(s, it);
     }
     s.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); hotSel = i; updateHotbar();
-      if (inv[i]) toast(ITEMS[inv[i].id].name);
+      if (inv[i]) toast(ITEMS[inv[i].id].name + (isEnchanted(inv[i]) ? ' ✨ ' + enchNames(inv[i]) : ''));
     });
     hotbarEl.appendChild(s);
   }
@@ -4484,6 +4833,94 @@ function swingHand() {
   handEl.classList.add('swing');
   clearTimeout(swingTimer);
   swingTimer = setTimeout(() => handEl.classList.remove('swing'), 110);
+}
+/* ================= GÖKKUBBE: GÜNEŞ, AY, YILDIZLAR =================
+   Gökyüzü eskiden tek bir clearColor'dı. Güneş ve ay, gündüz/gece döngüsünün
+   açısını izleyen birer kare; yıldızlar tek bir statik tamponda (tek çizim
+   çağrısı) durur ve gece yaklaştıkça gök renginden beyaza doğru açılır.
+   Hepsi kod üretimi — hiçbir hazır görsel kullanılmıyor. */
+let starVbo = null, starCount = 0;
+function buildStars() {
+  let sd = 1337;
+  const rnd = () => (sd = (sd*1664525 + 1013904223) >>> 0) / 4294967296;
+  const a = [];
+  for (let i=0;i<130;i++) {
+    const th = rnd()*Math.PI*2, ph = Math.acos(rnd()*2 - 1);
+    const dx = Math.sin(ph)*Math.cos(th), dy = Math.cos(ph), dz = Math.sin(ph)*Math.sin(th);
+    // yıldız yönüne dik bir taban: kareyi kameraya bakacak şekilde kurar
+    let ux = -dy, uy = dx, uz = 0;
+    const ul = Math.hypot(ux, uy, uz) || 1;
+    ux /= ul; uy /= ul; uz /= ul;
+    const vx = dy*uz - dz*uy, vy = dz*ux - dx*uz, vz = dx*uy - dy*ux;
+    const R = 300, sz = 0.9 + rnd()*1.9;
+    const c = [dx*R, dy*R, dz*R];
+    const q = (su, sv) => a.push(c[0] + ux*su*sz + vx*sv*sz, c[1] + uy*su*sz + vy*sv*sz,
+                                c[2] + uz*su*sz + vz*sv*sz, 0, 0, 1, 1);
+    q(-1,-1); q(1,-1); q(1,1);
+    q(-1,-1); q(1,1); q(-1,1);
+  }
+  starVbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, starVbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.STATIC_DRAW);
+  starCount = a.length/7;
+}
+// yönü verilen, kameraya dönük kare için model matrisi (sütun-öncelikli)
+function skyQuad(dx, dy, dz, R, sz) {
+  let ux = -dy, uy = dx, uz = 0;
+  const ul = Math.hypot(ux, uy, uz) || 1;
+  ux /= ul; uy /= ul; uz /= ul;
+  const vx = dy*uz - dz*uy, vy = dz*ux - dx*uz, vz = dx*uy - dy*ux;
+  return new Float32Array([ ux*sz, uy*sz, uz*sz, 0,
+                            vx*sz, vy*sz, vz*sz, 0,
+                            dx*sz, dy*sz, dz*sz, 0,
+                            dx*R,  dy*R,  dz*R,  1 ]);
+}
+let dayCount = 0;
+function drawSky(proj, vroll, vpitch, vyaw, sky) {
+  if (dim !== 'overworld' || skyTestOff) return;
+  if (!starVbo) buildStars();
+  const ang = timeOfDay * Math.PI * 2;           // gün ortası: tepede
+  const sx = Math.sin(ang), sy = -Math.cos(ang);
+  const night = Math.max(0, Math.min(1, (-sy - 0.05) * 2.2));   // yıldız görünürlüğü
+  const rotOnly = mmul(mrotZ(vroll), mmul(mrotX(vpitch), mrotY(vyaw)));
+  const pvSky = mmul(proj, rotOnly);
+  const wasDepth = gl.isEnabled(gl.DEPTH_TEST), wasCull = gl.isEnabled(gl.CULL_FACE);
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+  gl.depthMask(false);
+  gl.uniform1f(loc.uUseTex, 0);
+  gl.uniform1f(loc.uFogFar, 1e9);               // gök cisimleri sise karışmasın
+  gl.uniform1f(loc.uLight, 1);
+  gl.uniform1f(loc.uPLight, 0);
+  // yıldızlar — tek çizim çağrısı, gök renginden beyaza karıştırılır
+  if (night > 0.02) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, starVbo);
+    setAttribs();
+    gl.uniform3f(loc.uColor, sky[0] + (1-sky[0])*night, sky[1] + (1-sky[1])*night, sky[2] + (1-sky[2])*night);
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pvSky, mrotZ(ang)));
+    gl.drawArrays(gl.TRIANGLES, 0, starCount);
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, skyQuadVbo);
+  setAttribs();
+  // güneş
+  gl.uniform3f(loc.uColor, 1.0, 0.97, 0.78);
+  gl.uniformMatrix4fv(loc.uMVP, false, mmul(pvSky, skyQuad(sx, sy, 0, 260, 26)));
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  // ay (güneşin tam karşısında) + sekiz evre
+  gl.uniform3f(loc.uColor, 0.92, 0.93, 1.0);
+  gl.uniformMatrix4fv(loc.uMVP, false, mmul(pvSky, skyQuad(-sx, -sy, 0, 260, 19)));
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  const ph = dayCount % 8;                       // 0 = dolunay
+  if (ph !== 0) {
+    const off = (ph <= 4 ? ph : ph - 8) * 0.5;   // gölge kaydırması (-2..2)
+    gl.uniform3f(loc.uColor, sky[0], sky[1], sky[2]);
+    const m = skyQuad(-sx, -sy, 0, 259, 19);
+    m[12] += m[0]*off*19; m[13] += m[1]*off*19; m[14] += m[2]*off*19;
+    gl.uniformMatrix4fv(loc.uMVP, false, mmul(pvSky, m));
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+  gl.depthMask(true);
+  if (wasDepth) gl.enable(gl.DEPTH_TEST);
+  if (wasCull) gl.enable(gl.CULL_FACE);
 }
 function drawHeld(proj, now) { // eldeki blok/meşale 3D görünür
   const src = heldItem() || offhand;
@@ -4509,7 +4946,7 @@ function drawHeld(proj, now) { // eldeki blok/meşale 3D görünür
 }
 function updateHearts() {
   const h = $('hearts');
-  if (isCreative()) { h.innerHTML=''; $('hunger').innerHTML=''; return; }
+  if (isCreative()) { h.innerHTML=''; $('hunger').innerHTML=''; updateXpBar(); return; }
   let s = '';
   const hearts = Math.ceil(P.maxhp/2);
   for (let i=0;i<hearts;i++) {
@@ -4519,6 +4956,7 @@ function updateHearts() {
   for (let i=0;i<Math.ceil(P.absorb/2);i++) s += '<span>💛</span>';
   h.innerHTML = s;
   updateHunger();
+  updateXpBar();
 }
 function updateHunger() {
   const h = $('hunger');
@@ -4549,11 +4987,11 @@ function toast(msg) {
 
 /* ================= PANELLER ================= */
 function uiOpen() {
-  return ['invpanel','furnpanel','chestpanel','mppanel','brewpanel'].some(id => $(id).style.display === 'flex') ||
+  return ['invpanel','furnpanel','chestpanel','mppanel','brewpanel','enchpanel'].some(id => $(id).style.display === 'flex') ||
     $('chatpanel').style.display === 'block';
 }
 function closePanels() {
-  for (const id of ['invpanel','furnpanel','chestpanel','mppanel','brewpanel']) $(id).style.display = 'none';
+  for (const id of ['invpanel','furnpanel','chestpanel','mppanel','brewpanel','enchpanel']) $(id).style.display = 'none';
   $('chatpanel').style.display = 'none';
 }
 document.querySelectorAll('.x').forEach(b => b.addEventListener('click', () => {
@@ -4624,7 +5062,8 @@ function renderInv() {
     armorInv.forEach((s2, i) => {
       const s = document.createElement('div'); s.className = 'slot';
       s.style.borderColor = 'rgba(240,200,90,.6)';
-      if (s2) { slotBg(s, s2.id); addDurBar(s, s2); }
+      if (s2) { slotBg(s, s2.id); addDurBar(s, s2);
+        if (isEnchanted(s2)) { s.classList.add('ench'); s.title = ITEMS[s2.id].name + ' — ' + enchNames(s2); } }
       else { s.textContent = AEMOJI[i]; s.style.cssText += 'display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.6'; }
       s.onclick = () => {
         if (pickSlot >= 0 && inv[pickSlot] && ITEMS[inv[pickSlot].id].aslot === i) {
@@ -4658,6 +5097,7 @@ function renderInv() {
       if (i < 9) s.style.borderColor = 'rgba(120,190,255,.55)';
       const it = inv[i];
       if (it) { slotBg(s, it.id);
+        if (isEnchanted(it)) { s.classList.add('ench'); s.title = ITEMS[it.id].name + ' — ' + enchNames(it); }
         if (!isCreative() && it.n>1) { const c=document.createElement('span'); c.className='cnt'; c.textContent=it.n; s.appendChild(c); }
         addDurBar(s, it); }
       attachDrag(s, i);
@@ -4742,7 +5182,7 @@ function renderFurnace() {
     btn.onclick = () => {
       if (!isCreative()) { if (furnaceFuel<1 || countItem(inp)<1) return renderFurnace();
         removeItem(inp,1); furnaceFuel--; }
-      addItem(out,1); sfx(600,0.1); renderFurnace();
+      addItem(out,1); addXP(1); sfx(600,0.1); renderFurnace();
     };
     row.appendChild(ic); row.appendChild(nm); row.appendChild(btn);
     body.appendChild(row);
@@ -6104,7 +6544,7 @@ function savePlayerState() {
   try {
     localStorage.setItem('ck2_player', JSON.stringify({
       inv, armor:armorInv, off:offhand, hot:hotSel,
-      hp:P.hp, hun:P.hunger, gm:gamemode }));
+      hp:P.hp, hun:P.hunger, gm:gamemode, xp:P.xp, lvl:P.lvl }));
   } catch(e) {}
 }
 function saveState() {
@@ -6132,6 +6572,8 @@ function applyPlayerState(s) {
   if (s.hot !== undefined) hotSel = s.hot;
   if (s.hp !== undefined) P.hp = s.hp;
   if (s.hun !== undefined) P.hunger = s.hun;
+  if (s.xp !== undefined) P.xp = s.xp;
+  if (s.lvl !== undefined) P.lvl = s.lvl;
   if (s.gm) gamemode = s.gm;
   return true;
 }
@@ -6159,7 +6601,8 @@ function loadState() {
 }
 function savePlayerStateFrom(s) {   // eski kayıttan oyuncu bölümünü ayır
   try { localStorage.setItem('ck2_player', JSON.stringify({
-    inv:s.inv, armor:s.armor, off:s.off, hot:s.hot, hp:s.hp, hun:s.hun, gm:s.gm })); } catch(e) {}
+    inv:s.inv, armor:s.armor, off:s.off, hot:s.hot, hp:s.hp, hun:s.hun, gm:s.gm,
+    xp:s.xp, lvl:s.lvl })); } catch(e) {}
 }
 window.addEventListener('beforeunload', saveState);
 
@@ -6277,6 +6720,9 @@ const drawStats = { drawn:0, culled:0 };
 let lastFovRad = 0;
 let lastCullState = false;
 const pixProbe = { want:false, result:null };
+// test sondası 2: ekranın üst şeridinden en parlak pikseli okur (gök cisimleri)
+const skyProbe = { want:false, result:null };
+let skyTestOff = false;
 let fpsGate = 0;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -6328,7 +6774,11 @@ function frame(now) {
     meshAvgMs = meshAvgMs*0.75 + (performance.now()-s1)*0.25;
     mDone++;
   }
-  if (RULES.daylightCycle && dim === 'overworld') timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
+  if (RULES.daylightCycle && dim === 'overworld') {
+    const prevTod = timeOfDay;
+    timeOfDay = (timeOfDay + sdt/DAY_LEN) % 1;
+    if (timeOfDay < prevTod) dayCount++;          // gün döndü → ay evresi ilerler
+  }
   const sun = Math.max(0, Math.sin(timeOfDay*Math.PI*2 - Math.PI/2)*0.5+0.62);
   let light = dim==='nether' ? 0.55 : dim==='end' ? 0.5 : 0.25 + 0.75*Math.min(1, sun);
   light = Math.min(1.6, light * (0.72 + OPT.brightness/100*0.75));   // Parlaklık ayarı
@@ -6340,6 +6790,7 @@ function frame(now) {
   tickEffects(sdt);
   updateParts(sdt);
   updateDrops(dt);
+  updateOrbs(dt);
   updateVehicles(dt);
   updateFire(sdt);
   cropTick(sdt);
@@ -6385,6 +6836,7 @@ function frame(now) {
   }
   const view = mmul(mrotZ(vroll), mmul(mrotX(vpitch), mmul(mrotY(vyaw), mtrans(-P.x, -(P.y+P.eye+veyeBob), -P.z))));
   const mvp = mmul(proj, view);
+  drawSky(proj, vroll, vpitch, vyaw, sky);   // gök cisimleri: arazi uniform'larından ÖNCE
   gl.uniformMatrix4fv(loc.uMVP, false, mvp);
   gl.uniform3f(loc.uFog, sky[0], sky[1], sky[2]);
   gl.uniform1f(loc.uFogFar, shaderOn ? (RDIST*CH+14) * ((hasEff('blindness')||hasEff('darkness')) ? 0.22 : 1) : 4000);
@@ -6454,6 +6906,19 @@ function frame(now) {
     pixProbe.want = false;
     pixProbe.result = { ratio: nonSky/(sw*sh), colors: seen.size };
   }
+  if (skyProbe.want) {
+    const sw = canvas.width, sh = canvas.height;
+    const buf = new Uint8Array(sw*sh*4);
+    gl.readPixels(0, 0, sw, sh, gl.RGBA, gl.UNSIGNED_BYTE, buf);   // tüm kare
+    let maxL = 0, sum = 0; const seen = new Set();
+    for (let i=0;i<sw*sh;i++) { const o=i*4, l = buf[o]+buf[o+1]+buf[o+2];
+      if (l > maxL) maxL = l; sum += l; seen.add((buf[o]>>3)+','+(buf[o+1]>>3)+','+(buf[o+2]>>3)); }
+    const avg = sum/(sw*sh);
+    let bright = 0;
+    for (let i=0;i<sw*sh;i++) { const o=i*4; if (buf[o]+buf[o+1]+buf[o+2] > avg + 60) bright++; }
+    skyProbe.want = false;
+    skyProbe.result = { maxL, avg: Math.round(avg), bright, colors: seen.size };
+  }
   $('burnoverlay').style.display = P.burnT > 0 ? 'block' : 'none';
   const hb = getBlock(Math.floor(P.x), Math.floor(P.y+P.eye), Math.floor(P.z));
   waterOv.style.display = (hb === BID.water || hb === BID.lava) ? 'block' : 'none';
@@ -6480,6 +6945,11 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   offhand:()=>offhand, setOffhand:(id)=>{ offhand = id ? {id, n:1} : null; updateHand(); },
   hurt:(d)=>damagePlayer(d,'test'), effects:()=>effects, addEffect, EFFECTS,
   parts:()=>parts, arrows:()=>arrows, MP, biomeAt, BIOME_DEFS,
+  orbs:()=>orbs, addXP, xpNeed, spawnXP, ENCH, enchCat, rollEnchants, shelfPower,
+  openEnch, breakTimeOf, attackDmg, oreXP, mobXP, drawSkyReady:()=>!!starVbo,
+  countItem, removeItem, enchLvl, isEnchanted, enchNames, updateHotbar, shootBow, wearHeld,
+  finishBreakTest:finishBreak,
+  hotSel:(v)=>{ if (v !== undefined) { hotSel = v; updateHotbar(); } return hotSel; },
   tick:()=>({ scale:tickScale, frozen:tickFrozen }),
   drops:()=>drops, nearestStronghold, useEyeTest:useEye, isCritTest:isCrit,
   checkEndPortalTest:checkEndPortal, tryNetherPortalTest:tryNetherPortal,
@@ -6502,6 +6972,9 @@ window.CK = { P, input, keys, raycast, getBlock, setBlock, BID, BLOCKS, ITEMS, M
   secOfTest:secOf, SECtest:SEC,
   fovRadTest:()=>lastFovRad,
   probeAsk:()=>{ pixProbe.want=true; pixProbe.result=null; }, probeGet:()=>pixProbe.result,
+  skyProbeAsk:()=>{ skyProbe.want=true; skyProbe.result=null; }, skyProbeGet:()=>skyProbe.result,
+  skyOff:(v)=>{ skyTestOff = v; }, tod:(v)=>{ if (v!==undefined) timeOfDay=v; return timeOfDay; },
+  dayCount:(v)=>{ if (v!==undefined) dayCount=v; return dayCount; },
   gpuInfoTest:()=>gpuInfo, glVerTest:()=>glVer,
   glStateTest:()=>({ cullEnabledDuringChunks:lastCullState, frontFace:gl.getParameter(gl.FRONT_FACE),
     cullFace:gl.getParameter(gl.CULL_FACE_MODE), CCW:gl.CCW, BACK:gl.BACK }),

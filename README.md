@@ -54,6 +54,7 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 ### Ekipman 🛡
 - ⚒️ **Dayanıklılık**: aletler ve zırhlar gerçek Minecraft değerleriyle yıpranır (tahta 59, taş 131, demir 250, altın 32, elmas 1561, netherite 2031; zırhlar da kendi değerleriyle) — gözlerde renkli dayanıklılık çubuğu
 - 🦺 **Zırh giyme**: deri/zincir/demir/altın/elmas/netherite kask-göğüslük-pantolon-bot; koruma puanı hasarı azaltır (en fazla %80)
+- ✨ **Büyüler**: aletler, kılıçlar, yay ve zırh büyü masasında büyülenir; büyüler eşya gözünde saklanır, kayıtta kalır
 - 🤚 **2. el (off-hand)**: envanterden eşya koy — **meşale/fener 2. eldeyken çevreni aydınlatır** (mağarada gerçekten işe yarar!)
 - ✨ **Ölümsüzlük Totemi**: 2. eldeyken ölümcül hasardan kurtarır
 
@@ -80,6 +81,21 @@ Taş ailesi (granit, diyorit, andezit, derin kayrak, tüf, kalsit, obsidyen…),
 - 🎨 **Doku paketi**: Ayarlar → **🎨 Kaynaklar** sekmesinden Minecraft `.zip` paketi veya tek tek PNG yükle; eksik doku varsa varsayılan kalır, çökmez, oyun içinden sıfırlanır
 - 🖼️ **Elle çizilmiş eşya ikonları**: her şekil 16x16 piksel ızgarası olarak elle çizildi (63 şekil; alet, zırh, külçe, cevher, şişe, kova, yiyecek, bitki, araç…). Eskiden ikonlar daire/çizgi matematiğiyle üretiliyordu ve her şey birbirine benzeyen bulanık lekelere dönüyordu — özellikle aletlerin uçları ve zırh parçaları tanınmıyordu. Artık her şeklin konturu, gölgesi ve parlaklığı var; renk paletten geliyor, böylece aynı şekil farklı renklerle kullanılabiliyor (tahta/taş/demir/altın/elmas/netherite aletleri, deri/zincir/demir/altın/elmas zırh, tüm iksirler, çiğ/pişmiş etler). Alet ve zırh kademeleri Minecraft'taki gibi bilerek ortak şekli paylaşır
 - 💾 **Kayıt iki parçalı**: **oyuncu** (envanter, zırh, 2. el, can, açlık, mod) cihaza ait — hangi dünyada olursan ol seninle gelir; **dünya** (konum, sandıklar, saat, kurallar) tohuma ait. Böylece **çok oyunculu odaya girip çıkınca eşyalar kaybolmaz** ve odadan çıkınca **kendi dünyana** dönersin. Eski tek parçalı kayıtlar ilk açılışta otomatik taşınır
+
+### ⭐ Deneyim (XP) & ✨ Büyü
+- 💚 **Deneyim küreleri**: cevher kırınca (kömür 0-2, lapis/kızıltaş 1-5, elmas/zümrüt 3-7, kuvars 2-5 — Minecraft değerleri), canlı öldürünce (düşman 5, evcil 1-3) ve **fırında bir şey eritince** yere düşer; yaklaşınca sana doğru süzülüp toplanır
+- 📊 **Seviye çubuğu**: çubuğun hemen üstünde yeşil XP çubuğu ve seviye sayısı. Seviye eğrisi Minecraft ile birebir aynı (`2L+7` → 16'dan sonra `5L-38` → 31'den sonra `9L-158`)
+- ☠️ **Ölünce** (envanter koruması kapalıysa) seviyelerin bir kısmı küre olarak yere düşer
+- ✨ **Büyü masası**: masaya dokun → eşyanı seç → üç teklif. Maliyet **seviye + lapis lazuli**; **çevresine bir blok boşluk bırakarak dizilen kitaplıklar** gücü 15'e kadar yükseltir, teklifler de o kadar güçlenir
+- 🔮 **14 büyü ve hepsi gerçekten çalışıyor**: Verimlilik (kazma hızı), Şans (fazladan cevher), İpeksi Dokunuş (bloğun kendisi düşer), Dayanıklılık (yıpranmayı azaltır), Keskinlik, Yağma (fazladan mob eşyası), Geri Tepme, Ateş Görünümü, Koruma, Tüy Düşüşü, Güç, Yumruk, Alev, Sonsuzluk. Şans ile İpeksi Dokunuş birlikte verilmez
+- 🌈 Büyülü eşyalar envanterde ve çubukta **mor parıltı** ile işaretlenir, dokununca büyüleri yazar; kayıtta kalıcıdır
+- 🏹 **Yay artık çalışıyor**: ok harcar, canlılara isabet eder (kendine değil), Güç hasarı, Yumruk geri tepmeyi, Alev canlıyı tutuşturur, Sonsuzluk oksuz atmanı sağlar
+
+### 🌅 Gökkubbe
+- ☀️ **Güneş ve ay** gün döngüsünün açısını izler: güneş doğudan doğar, batıdan batar; ay tam karşısındadır
+- 🌘 **Ay evreleri**: her oyun günü bir evre ilerler (8 evre)
+- ✨ **Yıldızlar**: 130 yıldız tek bir statik tamponda (**tek çizim çağrısı**) durur, gökkubbeyle birlikte döner ve gece yaklaştıkça gök renginden beyaza açılır — gündüz kendiliğinden kaybolur
+- Hepsi kod üretimi; hiçbir hazır görsel kullanılmaz. Gök cisimleri derinlik yazmadan çizilir, arazi önlerine geçer
 
 ### 🌟 Efektler (/effect)
 30 efekt: Hız, Yavaşlık, Acele, Güç, Zayıflık, Zıplama Desteği, Yenilenme, Zehir, Soldurma, Direnç, Ateş Direnci, Su Soluma, **Gece Görüşü**, Görünmezlik, Körlük, **Can Artışı**, Emme, Doygunluk, Havalanma, Yavaş Düşme, Bulantı, Açlık, Anında Can/Hasar… `/effect night_vision 60 1`, `/effect clear`
@@ -186,7 +202,7 @@ Ayarlar → *Doku paketi*'nden **kendi** Minecraft doku paketini (`.zip`) doğru
 > Oyun hiçbir Minecraft dosyası ile gelmez; yüklediğin paket yalnızca senin cihazında kullanılır.
 
 ## 🚫 Henüz olmayanlar
-Zırh süsleme şablonları, deneyim/büyü masası, gelişmiş köylü ticareti, tam gökkubbe (güneş/ay sprite'ı), sesli sohbet. Temel mekaniklerin çoğu artık mevcut.
+Zırh süsleme şablonları, örs (büyü birleştirme), gelişmiş köylü ticareti, bulut katmanı, sesli sohbet. Temel mekaniklerin çoğu artık mevcut.
 
 > ⚖️ **Telif:** Oyun hiçbir Minecraft dokusu, sesi, logosu, ismi veya telifli dosyası içermez — tüm görseller çalışma anında prosedürel üretilir. İstersen **kendi** skin ve doku paketini yükleyebilirsin.
 
