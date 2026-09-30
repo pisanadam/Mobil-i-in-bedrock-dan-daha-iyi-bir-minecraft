@@ -5529,9 +5529,11 @@ function connectGameServer() {
     ws.onclose = () => {
       if (MP.ws !== ws) return;
       const wasConnected = !!MP.room;
-      MP.ws = null; MP.peer = false; MP.conns = {}; MP.remotes = {};
+      MP.ws = null; MP.peer = false; MP.isHost = false; MP.room = null;
+      MP.conns = {}; MP.remotes = {}; MP.names = {};
+      MP.playerCount = 1; MP.playerNames = [];
       if (wasConnected) mpStatus('🔌 Sunucu bağlantısı kapandı.');
-      updateMPPlayers();
+      $('mproom').textContent = '——'; updateMPPlayers();
     };
     ws.onmessage = ev => {
       try { handleServerMessage(JSON.parse(ev.data)); } catch(e) {}
@@ -5581,7 +5583,7 @@ function handleServerMessage(m) {
   } else if (m.type === 'room_closed') {
     toast('🔌 Sunucu sahibi dünyayı kapattı');
     mpStatus('Sunucu kapandı.');
-    resetMP(false);
+    resetMP();
   } else if (m.type === 'error') {
     const map = {
       room_not_found:'Sunucu bulunamadı veya kapandı.',
