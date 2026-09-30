@@ -191,29 +191,35 @@
   <div class="scroll" id="furnbody"></div>
 </div>
 <div class="panel" id="mppanel">
-  <h3><span>👥 Arkadaşlarla Oyna</span><button class="x" data-close="mppanel">✕</button></h3>
+  <h3><span>🌐 Çok Oyunculu Sunucu</span><button class="x" data-close="mppanel">✕</button></h3>
   <div class="scroll">
-  <button id="mphost" class="act green">🏠 Dünya Aç (6 haneli davet kodu al)</button>
-  <div style="text-align:center;margin:8px 0">Davet kodu: <b id="mproom" style="font-size:26px;letter-spacing:4px;color:#ffd24a">——</b></div>
-  <button id="mpcopyroom" class="act" style="padding:8px">📋 Davet Kodunu Kopyala</button>
-  <div id="mpplayers" style="text-align:center;font-size:12px;color:#bfe;margin:7px 0">👥 Oyuncular: 1</div>
-  <div style="display:flex;gap:6px;margin-bottom:6px">
-    <input id="mpjoincode" inputmode="numeric" maxlength="6" placeholder="6 haneli kod"
-      style="flex:1;padding:10px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:18px;letter-spacing:3px;text-align:center">
-    <button id="mpjoin" class="act" style="width:auto;padding:0 18px;margin:0">Katıl</button>
-  </div>
-  <div id="mpstatus" style="font-size:12px;color:#8fd;margin:8px 0">Hazır. Oda kur veya koda katıl. Oyuncu çıkıp girse de oda açık kalır.</div>
-  <details style="font-size:12px;opacity:.85">
-    <summary>🔧 Manuel bağlantı (aracı sunucu çalışmazsa)</summary>
-    <div style="font-size:11px;opacity:.8;margin:6px 0">Katılan: <b>Manuel Kod Üret</b> → kodu ev sahibine gönder. Ev sahibi kodu aşağı yapıştırıp <b>İşle</b> → çıkan cevabı geri gönderir. Katılan cevabı yapıştırıp <b>İşle</b>.</div>
-    <button id="mpmanual" class="act" style="padding:8px">🔑 Manuel Kod Üret (katılan)</button>
-    <label style="font-size:11px;opacity:.7">Senin kodun:</label>
-    <textarea id="mpcode" readonly></textarea>
-    <button id="mpcopy" class="act" style="padding:6px">📋 Kopyala</button>
-    <label style="font-size:11px;opacity:.7;display:block;margin-top:6px">Gelen kod:</label>
-    <textarea id="mpin"></textarea>
-    <button id="mpgo" class="act green">✅ İşle</button>
-  </details>
+    <div style="font-size:11px;opacity:.65;margin-bottom:6px">Bu dünya Server.pro üzerindeki CepKraft sunucusu üzerinden paylaşılır.</div>
+
+    <div style="font-size:12px;font-weight:700;margin:7px 0 5px">🌍 Bu dünyayı sunucu olarak başlat</div>
+    <label style="font-size:11px;opacity:.75">Sunucu başlığı <span id="mptitlecount">0/20</span></label>
+    <input id="mpservertitle" maxlength="20" placeholder="Sunucu başlığı"
+      style="width:100%;padding:9px;margin:4px 0 7px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:14px">
+    <label style="font-size:11px;opacity:.75">Açıklama <span id="mpdesccount">0/50</span></label>
+    <textarea id="mpserverdesc" maxlength="50" placeholder="Sunucu açıklaması"
+      style="height:58px;font-size:13px"></textarea>
+    <button id="mphost" class="act green">🚀 Çok Oyunculu Olarak Sunucu Başlat</button>
+
+    <div id="mpserverinfo" style="display:none;margin:10px 0;padding:9px;border-radius:8px;background:rgba(255,255,255,.06);font-size:12px"></div>
+    <div style="text-align:center;margin:8px 0">Sunucu kodu: <b id="mproom" style="font-size:26px;letter-spacing:4px;color:#ffd24a">——</b></div>
+    <button id="mpcopyroom" class="act" style="padding:8px">📋 Sunucu Kodunu Kopyala</button>
+    <div id="mpplayers" style="text-align:center;font-size:12px;color:#bfe;margin:7px 0">👥 Oyuncular: 1</div>
+    <div id="mpnames" style="text-align:center;font-size:11px;opacity:.75;margin-bottom:10px"></div>
+
+    <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:12px 0">
+    <div style="font-size:12px;font-weight:700;margin-bottom:5px">🔗 Sunucuya katıl</div>
+    <input id="mpname" maxlength="20" placeholder="Oyuncu adı (zorunlu)"
+      style="width:100%;padding:9px;margin:4px 0 7px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:14px">
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input id="mpjoincode" inputmode="numeric" maxlength="6" placeholder="6 haneli sunucu kodu"
+        style="flex:1;padding:10px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:17px;letter-spacing:3px;text-align:center">
+      <button id="mpjoin" class="act" style="width:auto;padding:0 18px;margin:0">Katıl</button>
+    </div>
+    <div id="mpstatus" style="font-size:12px;color:#8fd;margin:8px 0">Hazır. Sunucu başlat veya bir sunucu koduyla katıl.</div>
   </div>
 </div>
 <div class="panel" id="brewpanel">
@@ -349,7 +355,7 @@ access: [
 game: [
   ['sel','difficulty','Zorluk','Barışçıl: düşman canlı doğmaz',[[0,'Barışçıl'],[1,'Kolay'],[2,'Normal'],[3,'Zor']]],
   ['sw','showCoords','Koordinatları Göster','Üst bilgi çubuğunda konum'],
-  ['btn','mpbtn','🎮 Çok Oyunculu'],
+  ['btn','mpbtn','🌐 Çok Oyunculu Olarak Sunucu Başlat'],
   ['btn','newworld','🌍 Yeni Dünya (siler!)','danger'],
 ],
 res: [
@@ -4632,7 +4638,7 @@ function fuzzyItem(q) {
 function runCmd(line) {
   line = line.trim();
   if (!line) return;
-  if (!line.startsWith('/')) { chatMsg('<Sen> ' + line); if (MP.peer) mpSend({t:'chat', msg:line}); return; }
+  if (!line.startsWith('/')) { const nm=(MP.isHost||MP.peer)?(MP.myName||'Sen'):'Sen'; chatMsg('<'+nm+'> '+line); if (MP.peer) mpSend({t:'chat',msg:line,name:nm}); return; }
   const [c, ...a] = line.slice(1).split(/\s+/);
   const cmd = c.toLowerCase();
   if (cmd === 'help' || cmd === 'yardım') {
@@ -5459,83 +5465,155 @@ async function onTexPackFile(e) {
   e.target.value = '';
 }
 
-/* ================= ÇOK OYUNCULU (WebRTC P2P + 6 haneli oda kodu) ================= */
-// MP.peer: en az bir bağlantı var mı? MP.conns: peerId -> {pc,ch,open}. MP.remotes: peerId -> pozisyon+skin
-const MP = { peer:false, isHost:false, applying:false, posT:0, room:null, conns:{}, remotes:{}, sig:null, myId:'p'+((Math.random()*1e6)|0) };
-const ICE = { iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}] };
-// birden çok ücretsiz aynadan sinyalleşme (biri engellenirse diğeri devreye girer)
-const SIG_MIRRORS = ['ntfy.sh', 'ntfy.envs.net'];
-const seenSig = new Set(); // aynı mesajı iki aynadan iki kez işlemeyi önle
+/* ================= ÇOK OYUNCULU (Server.pro WebSocket sunucusu) ================= */
+// Sunucu oda kodunu, başlık/açıklamayı, oyuncu adlarını ve oyun mesajlarının yönlendirmesini yönetir.
+// İsimler yalnızca açık dünya oturumunda tutulur; localStorage'a yazılmaz.
+const MP = {
+  peer:false, isHost:false, applying:false, posT:0, room:null, ws:null,
+  conns:{}, remotes:{}, names:{}, myName:'', pendingName:'',
+  serverTitle:'', serverDesc:'', playerCount:1, playerNames:[]
+};
+
 function mpStatus(t) { const el = $('mpstatus'); if (el) el.textContent = t; }
+function gameServerURL() {
+  try {
+    const q = new URLSearchParams(location.search).get('server');
+    if (q && /^wss?:\/\//i.test(q)) return q;
+  } catch(e) {}
+  if (!location.host) return '';
+  return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+}
 function updateMPPlayers() {
-  const el = $('mpplayers'); if (!el) return;
-  const connected = Object.values(MP.conns).filter(c => c && c.open).length;
-  el.textContent = '👥 Oyuncular: ' + (1 + connected) + (MP.room && MP.room !== 'MANU' ? ' • Oda ' + MP.room : '');
+  const el = $('mpplayers');
+  if (el) el.textContent = '👥 Oyuncular: ' + Math.max(1, MP.playerCount || 1) + (MP.room ? ' • Sunucu ' + MP.room : '');
+  const names = $('mpnames');
+  if (names) names.textContent = MP.playerNames && MP.playerNames.length ? MP.playerNames.join(' • ') : '';
 }
-
-// --- sinyalleşme: her aynada WS aç, mesajları tekilleştir ---
-function sigOpen(topic, onMsg) {
-  const sockets = [];
-  let anyOpen = false;
-  for (const host of SIG_MIRRORS) {
-    try {
-      const ws = new WebSocket('wss://' + host + '/' + topic + '/ws');
-      ws.onopen = () => { anyOpen = true; };
-      ws.onmessage = ev => { try { const d = JSON.parse(ev.data);
-        if (d.event === 'message' && d.message) {
-          const sig = topic + ':' + d.message;
-          if (seenSig.has(sig)) return; seenSig.add(sig);
-          onMsg(JSON.parse(d.message));
-        } } catch(e) {} };
-      sockets.push(ws);
-    } catch(e) {}
+function updateServerInfo() {
+  const el = $('mpserverinfo'); if (!el) return;
+  if (!MP.serverTitle && !MP.serverDesc) { el.style.display='none'; el.textContent=''; return; }
+  el.style.display='block';
+  el.textContent = '🖥️ ' + (MP.serverTitle || 'CepKraft Sunucusu') + (MP.serverDesc ? ' — ' + MP.serverDesc : '');
+}
+function resetMP(closeSocket) {
+  if (closeSocket !== false && MP.ws) try { MP.ws.close(); } catch(e) {}
+  MP.ws = null; MP.peer = false; MP.isHost = false; MP.room = null;
+  MP.conns = {}; MP.remotes = {}; MP.names = {};
+  MP.myName = ''; MP.pendingName = ''; MP.serverTitle = ''; MP.serverDesc = '';
+  MP.playerCount = 1; MP.playerNames = [];
+  $('mproom').textContent = '——'; updateMPPlayers(); updateServerInfo();
+}
+function wsSend(o) {
+  const ws = MP.ws;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  try { ws.send(JSON.stringify(o)); return true; } catch(e) { return false; }
+}
+function connectGameServer() {
+  return new Promise((resolve, reject) => {
+    const url = gameServerURL();
+    if (!url) { reject(new Error('Sunucu adresi yok')); return; }
+    if (MP.ws) try { MP.ws.close(); } catch(e) {}
+    let settled = false;
+    const ws = new WebSocket(url);
+    MP.ws = ws;
+    const timer = setTimeout(() => {
+      if (!settled) { settled = true; try { ws.close(); } catch(e) {} reject(new Error('Bağlantı zaman aşımı')); }
+    }, 6000);
+    ws.onopen = () => {
+      if (settled) return;
+      settled = true; clearTimeout(timer); resolve(ws);
+    };
+    ws.onerror = () => {
+      if (!settled) { settled = true; clearTimeout(timer); reject(new Error('WebSocket bağlantısı kurulamadı')); }
+    };
+    ws.onclose = () => {
+      if (MP.ws !== ws) return;
+      const wasConnected = !!MP.room;
+      MP.ws = null; MP.peer = false; MP.conns = {}; MP.remotes = {};
+      if (wasConnected) mpStatus('🔌 Sunucu bağlantısı kapandı.');
+      updateMPPlayers();
+    };
+    ws.onmessage = ev => {
+      try { handleServerMessage(JSON.parse(ev.data)); } catch(e) {}
+    };
+  });
+}
+function sendInitialWorld(peerId) {
+  chSend(peerId, { t:'hello', seed, tod:timeOfDay,
+    title:MP.serverTitle, description:MP.serverDesc,
+    edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
+  if (skinURL) chSend(peerId, { t:'skin', url:skinURL, slim:skinSlim, name:MP.myName || 'Sunucu Sahibi' });
+  for (const d of drops) if (d.dim === dim)
+    chSend(peerId, { t:'dropS', uid:d.uid, id:d.id, n:d.n, x:d.x, y:d.y, z:d.z, d:dim });
+}
+function handleServerMessage(m) {
+  if (!m || !m.type) return;
+  if (m.type === 'hosted') {
+    MP.isHost = true; MP.room = m.room; MP.myName = 'Sunucu Sahibi';
+    MP.serverTitle = m.title || ''; MP.serverDesc = m.description || '';
+    MP.playerCount = 1; MP.playerNames = [MP.myName];
+    $('mproom').textContent = MP.room;
+    updateMPPlayers(); updateServerInfo();
+    mpStatus('✅ Sunucu açık. Arkadaşların kodla katılabilir.');
+    toast('🚀 Sunucu ' + MP.room + ' başlatıldı');
+  } else if (m.type === 'joined') {
+    MP.isHost = false; MP.room = m.room; MP.myName = m.name || MP.pendingName || 'Oyuncu';
+    MP.serverTitle = m.title || ''; MP.serverDesc = m.description || '';
+    MP.conns = { host:{open:true,name:'Sunucu Sahibi'} }; MP.peer = true;
+    $('mproom').textContent = MP.room;
+    updateServerInfo();
+    mpStatus('✅ Sunucuya katıldın. Oyundaki adın: ' + MP.myName);
+    toast('🌐 ' + (MP.serverTitle || 'Sunucu') + ' sunucusuna katıldın');
+  } else if (m.type === 'player_joined' && MP.isHost) {
+    MP.conns[m.id] = {open:true,name:m.name}; MP.names[m.id] = m.name; MP.peer = true;
+    toast('🎮 ' + m.name + ' katıldı'); sfx(600,0.15,'sine',0.12,900);
+    sendInitialWorld(m.id);
+  } else if (m.type === 'player_left' && MP.isHost) {
+    const nm = MP.names[m.id] || 'Oyuncu';
+    delete MP.conns[m.id]; delete MP.names[m.id]; delete MP.remotes[m.id];
+    MP.peer = Object.values(MP.conns).some(x => x && x.open);
+    toast('🔌 ' + nm + ' ayrıldı');
+  } else if (m.type === 'player_count') {
+    MP.playerCount = m.count || 1; MP.playerNames = Array.isArray(m.players) ? m.players : [];
+    updateMPPlayers();
+  } else if (m.type === 'game' && m.data) {
+    mpRecv(m.from || 'host', m.data);
+  } else if (m.type === 'room_closed') {
+    toast('🔌 Sunucu sahibi dünyayı kapattı');
+    mpStatus('Sunucu kapandı.');
+    resetMP(false);
+  } else if (m.type === 'error') {
+    const map = {
+      room_not_found:'Sunucu bulunamadı veya kapandı.',
+      title_required:'Sunucu başlığı zorunlu.',
+      name_required:'Katılmak için oyuncu adı yazmalısın.',
+      already_in_room:'Zaten bir sunucu bağlantın var.'
+    };
+    mpStatus('✖ ' + (map[m.code] || m.message || 'Sunucu hatası'));
   }
-  setTimeout(() => { if (!anyOpen) mpStatus('⚠️ Aracı sunucuya ulaşılamadı. Manuel bağlantıyı deneyin.'); }, 4000);
-  return { close: () => sockets.forEach(w => { try { w.close(); } catch(e) {} }) };
 }
-function sigSend(topic, obj) {
-  const body = JSON.stringify(obj);
-  for (const host of SIG_MIRRORS)
-    try { fetch('https://' + host + '/' + topic, { method:'POST', body }).catch(()=>{}); } catch(e) {}
+function chSend(peerId, o) {
+  if (!MP.isHost) { wsSend({type:'game',data:o}); return; }
+  wsSend({type:'game',to:peerId,data:o});
 }
+function mpSend(o) { wsSend({type:'game',data:o}); }
+function mpBroadcastExcept(from, o) { wsSend({type:'game',except:from,data:o}); }
 
-// mkChannel=true → bu taraf TEKLİF verir ve datachannel'ı kurar (WebRTC kuralı)
-function newPC(peerId, mkChannel) {
-  const pc = new RTCPeerConnection(ICE);
-  const conn = { pc, ch:null, open:false };
-  MP.conns[peerId] = conn;
-  if (mkChannel) { conn.ch = pc.createDataChannel('ck'); bindCh(peerId, conn.ch); }
-  else pc.ondatachannel = e => { conn.ch = e.channel; bindCh(peerId, conn.ch); };
-  return conn;
+function applyRemoteSkin(pid, m) {
+  const r = MP.remotes[pid] = MP.remotes[pid] || {};
+  r.slim = m.slim; if (m.name) r.name = m.name;
+  if (m.url) {
+    const img = new Image();
+    img.onload = () => { try { r.skinTex = skinToTex(img); } catch(e){} };
+    img.src = m.url;
+  }
 }
-async function waitIce(pc) { // non-trickle: tüm adaylar toplanana kadar bekle (manuel kod için)
-  if (pc.iceGatheringState === 'complete') return;
-  await new Promise(res => { const to = setTimeout(res, 3000);
-    pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); } }); });
-}
-function bindCh(peerId, ch) {
-  ch.onopen = () => {
-    MP.conns[peerId].open = true; MP.peer = true; updateMPPlayers();
-    toast('🎮 Arkadaşın katıldı!'); sfx(600,0.15,'sine',0.12,900); mpStatus('✅ Bağlı! Oda: ' + MP.room);
-    if (MP.isHost) chSend(peerId, { t:'hello', seed, tod:timeOfDay,
-      edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
-    if (skinURL) chSend(peerId, { t:'skin', url:skinURL, slim:skinSlim });
-    for (const d of drops) if (d.dim === dim) chSend(peerId, { t:'dropS', uid:d.uid, id:d.id, n:d.n, x:d.x, y:d.y, z:d.z, d:dim });
-  };
-  ch.onclose = () => { if (MP.conns[peerId]) MP.conns[peerId].open = false; delete MP.remotes[peerId];
-    MP.peer = Object.values(MP.conns).some(c=>c.open); updateMPPlayers(); toast('🔌 Bir oyuncu ayrıldı'); };
-  ch.onmessage = ev => { try { mpRecv(peerId, JSON.parse(ev.data)); } catch(e) {} };
-}
-function chSend(peerId, o) { const c = MP.conns[peerId]; if (c && c.ch && c.ch.readyState === 'open') { try { c.ch.send(JSON.stringify(o)); } catch(e) {} } }
-function mpSend(o) { for (const pid in MP.conns) chSend(pid, o); } // herkese yayınla (odaya)
-function mpBroadcastExcept(from, o) { for (const pid in MP.conns) if (pid !== from) chSend(pid, o); }
-
 function mpRecv(from, m) {
   if (m.t === 'hello') {
-    savePlayerState();          // odaya girmeden önce envanteri güvenceye al
-    seed = m.seed;              // ck_seed'e DOKUNMA: oyuncunun kendi dünyası kaybolmasın
-    // (oda dünyası ck2_state_<hostSeed> altına kaydedilir, çıkınca kendi dünyana dönersin)
+    savePlayerState();
+    seed = m.seed;
     timeOfDay = m.tod;
+    MP.serverTitle = m.title || MP.serverTitle; MP.serverDesc = m.description || MP.serverDesc; updateServerInfo();
     worlds.overworld = { chunks:new Map(), edits:m.edits.o };
     worlds.nether = { chunks:new Map(), edits:m.edits.n };
     worlds.end = { chunks:new Map(), edits:m.edits.e };
@@ -5544,138 +5622,112 @@ function mpRecv(from, m) {
     ensureChunksNow(P.x, P.z, 1); ensureChunks();
     P.y = safeY(Math.floor(P.x), Math.floor(P.z));
     saveEdits();
-    toast('🌍 Ortak dünya yüklendi');
-  } else if (m.t === 'pos') { MP.remotes[from] = Object.assign(MP.remotes[from]||{}, m); }
-  else if (m.t === 'skin') { const r = MP.remotes[from] = MP.remotes[from]||{}; r.slim = m.slim;
-    if (m.url) { const img = new Image(); img.onload = () => { try { r.skinTex = skinToTex(img); } catch(e){} }; img.src = m.url; }
-    if (MP.isHost) mpBroadcastExcept(from, m); } // ev sahibi diğerlerine yansıtır
-  else if (m.t === 'set') {
+    toast('🌍 Sunucu dünyası yüklendi');
+  } else if (m.t === 'pos') {
+    const pid = m.pid || from;
+    const nm = m.name || MP.names[pid] || (pid === 'host' ? 'Sunucu Sahibi' : 'Oyuncu');
+    MP.remotes[pid] = Object.assign(MP.remotes[pid]||{}, m, {name:nm});
+    if (MP.isHost && from !== 'host')
+      mpBroadcastExcept(from, Object.assign({}, m, {t:'rpos',pid:from,name:MP.names[from]||nm}));
+  } else if (m.t === 'rpos' && m.pid) {
+    MP.remotes[m.pid] = Object.assign(MP.remotes[m.pid]||{}, m, {name:m.name||'Oyuncu'});
+  } else if (m.t === 'skin') {
+    applyRemoteSkin(from, Object.assign({},m,{name:MP.names[from]||m.name}));
+    if (MP.isHost && from !== 'host')
+      mpBroadcastExcept(from, {t:'rskin',pid:from,url:m.url,slim:m.slim,name:MP.names[from]||'Oyuncu'});
+  } else if (m.t === 'rskin' && m.pid) {
+    applyRemoteSkin(m.pid, m);
+  } else if (m.t === 'set') {
     applyRemoteSet(m);
     if (MP.isHost) mpBroadcastExcept(from, m);
-  } else if (m.t === 'dropS') { if (!drops.some(d=>d.uid===m.uid)) { const d = spawnDrop(m.id, m.n, m.x, m.y, m.z, 0, 0, 0, m.uid); if (d) d.dim = m.d; } if (MP.isHost) mpBroadcastExcept(from, m); }
-  else if (m.t === 'dropT') { const i = drops.findIndex(d=>d.uid===m.uid); if (i>=0) drops.splice(i,1); if (MP.isHost) mpBroadcastExcept(from, m); }
-  else if (m.t === 'chat') { chatMsg('<Oyuncu> ' + m.msg); if (MP.isHost) mpBroadcastExcept(from, m); }
-  else if (m.t === 'vehS') { if (!vehicles.some(v=>v.uid===m.uid)) { const v=spawnVehicle(m.vt,m.x,m.y,m.z); v.uid=m.uid; v.dim=m.d; } if (MP.isHost) mpBroadcastExcept(from,m); }
-  else if (m.t === 'mobs') { // ev sahibinden mob durumları (misafir çizer)
-    if (!MP.isHost) { const byId={}; for (const e of ents) if (e.rid) byId[e.rid]=e;
+  } else if (m.t === 'dropS') {
+    if (!drops.some(d=>d.uid===m.uid)) { const d=spawnDrop(m.id,m.n,m.x,m.y,m.z,0,0,0,m.uid); if(d)d.dim=m.d; }
+    if (MP.isHost) mpBroadcastExcept(from,m);
+  } else if (m.t === 'dropT') {
+    const i=drops.findIndex(d=>d.uid===m.uid); if(i>=0)drops.splice(i,1);
+    if (MP.isHost) mpBroadcastExcept(from,m);
+  } else if (m.t === 'chat') {
+    if (MP.isHost && from !== 'host') {
+      const nm = MP.names[from] || 'Oyuncu';
+      chatMsg('<' + nm + '> ' + m.msg);
+      mpBroadcastExcept(from, {t:'chat',msg:m.msg,name:nm});
+    } else {
+      chatMsg('<' + (m.name || (from === 'host' ? 'Sunucu Sahibi' : 'Oyuncu')) + '> ' + m.msg);
+    }
+  } else if (m.t === 'vehS') {
+    if (!vehicles.some(v=>v.uid===m.uid)) { const v=spawnVehicle(m.vt,m.x,m.y,m.z); v.uid=m.uid; v.dim=m.d; }
+    if (MP.isHost) mpBroadcastExcept(from,m);
+  } else if (m.t === 'mobs') {
+    if (!MP.isHost) {
+      const byId={}; for (const e of ents) if (e.rid) byId[e.rid]=e;
       for (const mm of m.list) { let e=byId[mm.id];
         if (!e) { const def=MOBS[mm.t]; if (!def) continue; e={type:mm.t,def,rid:mm.id,x:mm.x,y:mm.y,z:mm.z,yaw:mm.yaw,hp:mm.hp,w:def.w,hgt:def.hgt,vx:0,vz:0,hurtT:0,fuse:-1}; ents.push(e); }
-        else { e.vx=(mm.x-e.x)/0.15; e.vz=(mm.z-e.z)/0.15; e.x=mm.x; e.y=mm.y; e.z=mm.z; e.yaw=mm.yaw; e.hp=mm.hp; } }
-      // ev sahibinde olmayanları sil
+        else { e.vx=(mm.x-e.x)/0.15; e.vz=(mm.z-e.z)/0.15; e.x=mm.x; e.y=mm.y; e.z=mm.z; e.yaw=mm.yaw; e.hp=mm.hp; }
+      }
       const ids=new Set(m.list.map(x=>x.id));
       for (let k=ents.length-1;k>=0;k--) if (ents[k].rid && !ids.has(ents[k].rid)) ents.splice(k,1);
     }
-  } else if (m.t === 'mobHit') { // misafir bir mob'a vurdu → ev sahibi uygular
-    if (MP.isHost) { const e=ents.find(x=>x.rid===m.id || x.uid===m.id); if (e) hurtMob(e, m.dmg, m.kx||0, m.kz||0); }
+  } else if (m.t === 'mobHit') {
+    if (MP.isHost) { const e=ents.find(x=>x.rid===m.id || x.uid===m.id); if(e) hurtMob(e,m.dmg,m.kx||0,m.kz||0); }
   }
 }
 function applyRemoteSet(m) {
-  if (m.d === dim) { MP.applying = true; setBlock(m.x, m.y, m.z, m.b); MP.applying = false; }
-  else { const w = worlds[m.d];
-    if (w) { if (!w.edits) w.edits = loadEditsFor(m.d);
-      const k = Math.floor(m.x/CH)+','+Math.floor(m.z/CH);
-      (w.edits[k] = w.edits[k] || {})[bidx(((m.x%CH)+CH)%CH, m.y, ((m.z%CH)+CH)%CH)] = m.b;
+  if (m.d === dim) { MP.applying=true; setBlock(m.x,m.y,m.z,m.b); MP.applying=false; }
+  else { const w=worlds[m.d];
+    if (w) { if(!w.edits)w.edits=loadEditsFor(m.d);
+      const k=Math.floor(m.x/CH)+','+Math.floor(m.z/CH);
+      (w.edits[k]=w.edits[k]||{})[bidx(((m.x%CH)+CH)%CH,m.y,((m.z%CH)+CH)%CH)]=m.b;
       w.chunks.clear(); } }
 }
 
-// --- oda kur (ev sahibi): 6 haneli kod üret, katılımcıları dinle ---
-$('mphost').addEventListener('click', () => {
-  const code = ('' + ((Math.random()*900000|0) + 100000)).slice(0,6);
-  MP.room = code; MP.isHost = true;
-  $('mproom').textContent = code; updateMPPlayers();
-  mpStatus('⏳ Dünya açık. Arkadaşların davet kodunu girip katılabilir…');
+$('mphost').addEventListener('click', async () => {
+  const title = ($('mpservertitle').value || '').trim().slice(0,20);
+  const description = ($('mpserverdesc').value || '').trim().slice(0,50);
+  if (!title) { mpStatus('✖ Sunucu başlığı yazmalısın.'); $('mpservertitle').focus(); return; }
+  mpStatus('⏳ Server.pro sunucusuna bağlanılıyor…');
+  resetMP();
   try {
-    // katılım isteklerini dinle. Katılan=TEKLİF veren+datachannel kurucu; ev sahibi=CEVAP veren
-    MP.sig = sigOpen('ck-'+code+'-join', async (msg) => {
-      if (!msg.offer || !msg.from || MP.conns[msg.from]) return;
-      const conn = newPC(msg.from, false); // answerer
-      conn.pc.onicecandidate = e => { if (e.candidate) sigSend('ck-'+code+'-h2-'+msg.from, { ice:e.candidate }); };
-      sigOpen('ck-'+code+'-g2-'+msg.from, m2 => { if (m2.ice && conn.pc.remoteDescription) conn.pc.addIceCandidate(m2.ice).catch(()=>{}); });
-      await conn.pc.setRemoteDescription(msg.offer);
-      const ans = await conn.pc.createAnswer();
-      await conn.pc.setLocalDescription(ans);
-      sigSend('ck-'+code+'-ans-'+msg.from, { answer: ans });
-    });
-    toast('🏠 Oda ' + code + ' açıldı');
-  } catch(e) { mpStatus('⚠️ Aracı sunucuya ulaşılamadı — manuel bağlantıyı kullanın.'); }
+    await connectGameServer();
+    wsSend({type:'host',title,description});
+  } catch(e) {
+    mpStatus('⚠️ Oyun sunucusuna bağlanılamadı. Sayfayı Server.pro/deDYN adresinden açtığından emin ol.');
+  }
 });
-// --- odaya katıl (misafir = TEKLİF veren) ---
 $('mpjoin').addEventListener('click', async () => {
+  const name = ($('mpname').value || '').trim();
   const code = ($('mpjoincode').value || '').replace(/\D/g,'').slice(0,6);
-  if (code.length !== 6) { mpStatus('✖ 6 haneli kod girin.'); return; }
-  MP.room = code; MP.isHost = false;
-  $('mproom').textContent = code; updateMPPlayers();
-  mpStatus('⏳ Arkadaşının dünyasına bağlanılıyor…');
+  if (!name) { mpStatus('✖ Katılmak için oyuncu adı yazmalısın.'); $('mpname').focus(); return; }
+  if (code.length !== 6) { mpStatus('✖ 6 haneli sunucu kodu gir.'); $('mpjoincode').focus(); return; }
+  MP.pendingName = name.slice(0,20);
+  mpStatus('⏳ Sunucuya bağlanılıyor…');
+  resetMP();
+  MP.pendingName = name.slice(0,20);
   try {
-    const conn = newPC('host', true); // offerer + datachannel
-    conn.pc.onicecandidate = e => { if (e.candidate) sigSend('ck-'+code+'-g2-'+MP.myId, { ice:e.candidate }); };
-    sigOpen('ck-'+code+'-h2-'+MP.myId, m2 => { if (m2.ice && conn.pc.remoteDescription) conn.pc.addIceCandidate(m2.ice).catch(()=>{}); });
-    sigOpen('ck-'+code+'-ans-'+MP.myId, async m2 => {
-      if (m2.answer && !conn.pc.currentRemoteDescription) await conn.pc.setRemoteDescription(m2.answer).catch(()=>{});
-    });
-    const off = await conn.pc.createOffer();
-    await conn.pc.setLocalDescription(off);
-    // teklifi birkaç kez tekrar gönder (ev sahibi henüz odayı açmadıysa veya paket düştüyse)
-    let tries = 0;
-    const resend = setInterval(() => {
-      if (MP.peer || tries++ > 10) { clearInterval(resend); return; }
-      sigSend('ck-'+code+'-join', { offer: off, from: MP.myId, n: tries });
-    }, 2000);
-    sigSend('ck-'+code+'-join', { offer: off, from: MP.myId, n: 0 });
-    mpStatus('⏳ Ev sahibine katılım isteği gönderildi…');
-  } catch(e) { mpStatus('⚠️ Bağlanılamadı — manuel bağlantıyı deneyin.'); }
+    await connectGameServer();
+    wsSend({type:'join',room:code,name:MP.pendingName});
+  } catch(e) {
+    mpStatus('⚠️ Oyun sunucusuna bağlanılamadı.');
+  }
 });
 $('mpcopyroom').addEventListener('click', () => {
-  const code = MP.room;
-  if (!code || code === 'MANU') { mpStatus('✖ Önce bir dünya açın.'); return; }
-  const copyFallback = () => {
-    const ta = document.createElement('textarea'); ta.value = code; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    ta.remove();
-  };
-  try {
-    const p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : null;
-    if (p && p.then) p.then(()=>toast('📋 Davet kodu kopyalandı: '+code)).catch(()=>{ copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); });
-    else { copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); }
-  } catch(e) { copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); }
+  const code=MP.room;
+  if(!code){mpStatus('✖ Önce sunucu başlat.');return;}
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=code;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();};
+  try { const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(code):null;
+    if(p&&p.then)p.then(()=>toast('📋 Sunucu kodu kopyalandı: '+code)).catch(()=>{fallback();toast('📋 Sunucu kodu kopyalandı: '+code);});
+    else {fallback();toast('📋 Sunucu kodu kopyalandı: '+code);}
+  } catch(e){fallback();toast('📋 Sunucu kodu kopyalandı: '+code);}
 });
-$('mpjoincode').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g,'').slice(0,6); });
-
-// --- manuel yedek (aracı sunucu engelliyse: kopyala-yapıştır) ---
-let manualConn = null;
-$('mpmanual').addEventListener('click', async () => {
-  MP.isHost = false; MP.room = MP.room || 'MANU';
-  manualConn = newPC('host', true); // katılan = teklif veren + datachannel
-  const off = await manualConn.pc.createOffer();
-  await manualConn.pc.setLocalDescription(off);
-  await waitIce(manualConn.pc);
-  $('mpcode').value = btoa(unescape(encodeURIComponent(JSON.stringify(manualConn.pc.localDescription))));
-  mpStatus('⬆ Bu kodu ev sahibine gönderin.');
-});
-$('mpcopy').addEventListener('click', () => {
-  $('mpcode').select();
-  try { navigator.clipboard.writeText($('mpcode').value); toast('📋 Kopyalandı'); } catch(e) { try { document.execCommand('copy'); } catch(e2) {} }
-});
-$('mpgo').addEventListener('click', async () => {
-  try {
-    const d = JSON.parse(decodeURIComponent(escape(atob($('mpin').value.trim()))));
-    if (d.type === 'offer') { // ev sahibi: gelen teklife cevap üret (answerer)
-      MP.isHost = true; MP.room = MP.room || 'MANU';
-      const conn = newPC('guest'+Object.keys(MP.conns).length, false);
-      await conn.pc.setRemoteDescription(d);
-      const ans = await conn.pc.createAnswer();
-      await conn.pc.setLocalDescription(ans);
-      await waitIce(conn.pc);
-      $('mpcode').value = btoa(unescape(encodeURIComponent(JSON.stringify(conn.pc.localDescription))));
-      mpStatus('⬇ Bu cevabı katılana geri gönderin.');
-    } else if (d.type === 'answer' && manualConn) { // katılan: cevabı işle
-      await manualConn.pc.setRemoteDescription(d);
-      mpStatus('⏳ Bağlanıyor…');
-    }
-  } catch(e) { mpStatus('✖ Kod çözülemedi.'); }
-});
-function openMP() { menu.classList.remove('open'); closePanels(); $('mppanel').style.display='flex'; }
+$('mpjoincode').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);});
+$('mpservertitle').addEventListener('input',e=>{$('mptitlecount').textContent=Array.from(e.target.value).length+'/20';});
+$('mpserverdesc').addEventListener('input',e=>{$('mpdesccount').textContent=Array.from(e.target.value).length+'/50';});
+function openMP(mode) {
+  menu.classList.remove('open'); closePanels(); $('mppanel').style.display='flex';
+  setTimeout(() => {
+    if (mode === 'host') $('mpservertitle').focus();
+    else if (mode === 'join') $('mpname').focus();
+  }, 40);
+}
 
 /* ================= MENÜ & KAYIT ================= */
 const menu = $('menu');
@@ -5716,7 +5768,7 @@ function bindMenuActions() {
   });
   on('uibtn', 'click', startUiEdit);
   on('uireset', 'click', () => { localStorage.removeItem('ck2_ui'); location.reload(); });
-  on('mpbtn', 'click', openMP);
+  on('mpbtn', 'click', () => openMP('host'));
   on('newworld', 'click', () => {
     if (!confirm('Bu dünya silinecek ve yeni bir dünya oluşturulacak. Emin misin?')) return;
     localStorage.removeItem('ck2_edits_'+seed); localStorage.removeItem('ck2_state_'+seed);
@@ -5990,7 +6042,7 @@ $('playc').addEventListener('click', () => startGame('creative'));
 $('plays').addEventListener('click', () => startGame('survival'));
 $('playfriends').addEventListener('click', () => {
   startGame(gamemode === 'survival' ? 'survival' : 'creative');
-  setTimeout(openMP, 0);
+  setTimeout(() => openMP('join'), 0);
 });
 updateHotbar(); updateHearts();
 
