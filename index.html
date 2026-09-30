@@ -150,6 +150,7 @@
   #splash button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.4); }
   #playc { background:#57a832; }
   #plays { background:#b0722a; }
+  #playfriends { background:#3d6fa8; }
 </style>
 </head>
 <body>
@@ -190,10 +191,12 @@
   <div class="scroll" id="furnbody"></div>
 </div>
 <div class="panel" id="mppanel">
-  <h3><span>🎮 Çok Oyunculu (P2P Co-op)</span><button class="x" data-close="mppanel">✕</button></h3>
+  <h3><span>👥 Arkadaşlarla Oyna</span><button class="x" data-close="mppanel">✕</button></h3>
   <div class="scroll">
-  <button id="mphost" class="act green">🏠 Oda Kur (6 haneli kod al)</button>
-  <div style="text-align:center;margin:8px 0">Oda kodu: <b id="mproom" style="font-size:26px;letter-spacing:4px;color:#ffd24a">——</b></div>
+  <button id="mphost" class="act green">🏠 Dünya Aç (6 haneli davet kodu al)</button>
+  <div style="text-align:center;margin:8px 0">Davet kodu: <b id="mproom" style="font-size:26px;letter-spacing:4px;color:#ffd24a">——</b></div>
+  <button id="mpcopyroom" class="act" style="padding:8px">📋 Davet Kodunu Kopyala</button>
+  <div id="mpplayers" style="text-align:center;font-size:12px;color:#bfe;margin:7px 0">👥 Oyuncular: 1</div>
   <div style="display:flex;gap:6px;margin-bottom:6px">
     <input id="mpjoincode" inputmode="numeric" maxlength="6" placeholder="6 haneli kod"
       style="flex:1;padding:10px;border-radius:8px;border:1px solid #345;background:#0d1420;color:#fff;font-size:18px;letter-spacing:3px;text-align:center">
@@ -248,6 +251,7 @@
   <div class="modes">
     <button id="playc">🏗️ Yaratıcı</button>
     <button id="plays">⚔️ Hayatta Kalma</button>
+    <button id="playfriends">👥 Arkadaşlarla Oyna</button>
   </div>
 </div>
 <script>
@@ -5463,6 +5467,11 @@ const ICE = { iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:glob
 const SIG_MIRRORS = ['ntfy.sh', 'ntfy.envs.net'];
 const seenSig = new Set(); // aynı mesajı iki aynadan iki kez işlemeyi önle
 function mpStatus(t) { const el = $('mpstatus'); if (el) el.textContent = t; }
+function updateMPPlayers() {
+  const el = $('mpplayers'); if (!el) return;
+  const connected = Object.values(MP.conns).filter(c => c && c.open).length;
+  el.textContent = '👥 Oyuncular: ' + (1 + connected) + (MP.room && MP.room !== 'MANU' ? ' • Oda ' + MP.room : '');
+}
 
 // --- sinyalleşme: her aynada WS aç, mesajları tekilleştir ---
 function sigOpen(topic, onMsg) {
@@ -5506,15 +5515,15 @@ async function waitIce(pc) { // non-trickle: tüm adaylar toplanana kadar bekle 
 }
 function bindCh(peerId, ch) {
   ch.onopen = () => {
-    MP.conns[peerId].open = true; MP.peer = true;
-    toast('🎮 Oyuncu katıldı!'); sfx(600,0.15,'sine',0.12,900); mpStatus('✅ Bağlı! Oda: ' + MP.room);
+    MP.conns[peerId].open = true; MP.peer = true; updateMPPlayers();
+    toast('🎮 Arkadaşın katıldı!'); sfx(600,0.15,'sine',0.12,900); mpStatus('✅ Bağlı! Oda: ' + MP.room);
     if (MP.isHost) chSend(peerId, { t:'hello', seed, tod:timeOfDay,
       edits:{ o:worlds.overworld.edits||{}, n:worlds.nether.edits||{}, e:worlds.end.edits||{} } });
     if (skinURL) chSend(peerId, { t:'skin', url:skinURL, slim:skinSlim });
     for (const d of drops) if (d.dim === dim) chSend(peerId, { t:'dropS', uid:d.uid, id:d.id, n:d.n, x:d.x, y:d.y, z:d.z, d:dim });
   };
   ch.onclose = () => { if (MP.conns[peerId]) MP.conns[peerId].open = false; delete MP.remotes[peerId];
-    MP.peer = Object.values(MP.conns).some(c=>c.open); toast('🔌 Bir oyuncu ayrıldı'); };
+    MP.peer = Object.values(MP.conns).some(c=>c.open); updateMPPlayers(); toast('🔌 Bir oyuncu ayrıldı'); };
   ch.onmessage = ev => { try { mpRecv(peerId, JSON.parse(ev.data)); } catch(e) {} };
 }
 function chSend(peerId, o) { const c = MP.conns[peerId]; if (c && c.ch && c.ch.readyState === 'open') { try { c.ch.send(JSON.stringify(o)); } catch(e) {} } }
@@ -5573,8 +5582,8 @@ function applyRemoteSet(m) {
 $('mphost').addEventListener('click', () => {
   const code = ('' + ((Math.random()*900000|0) + 100000)).slice(0,6);
   MP.room = code; MP.isHost = true;
-  $('mproom').textContent = code;
-  mpStatus('⏳ Oda açık. Arkadaşların kodu girip katılabilir…');
+  $('mproom').textContent = code; updateMPPlayers();
+  mpStatus('⏳ Dünya açık. Arkadaşların davet kodunu girip katılabilir…');
   try {
     // katılım isteklerini dinle. Katılan=TEKLİF veren+datachannel kurucu; ev sahibi=CEVAP veren
     MP.sig = sigOpen('ck-'+code+'-join', async (msg) => {
@@ -5595,8 +5604,8 @@ $('mpjoin').addEventListener('click', async () => {
   const code = ($('mpjoincode').value || '').replace(/\D/g,'').slice(0,6);
   if (code.length !== 6) { mpStatus('✖ 6 haneli kod girin.'); return; }
   MP.room = code; MP.isHost = false;
-  $('mproom').textContent = code;
-  mpStatus('⏳ Odaya bağlanılıyor…');
+  $('mproom').textContent = code; updateMPPlayers();
+  mpStatus('⏳ Arkadaşının dünyasına bağlanılıyor…');
   try {
     const conn = newPC('host', true); // offerer + datachannel
     conn.pc.onicecandidate = e => { if (e.candidate) sigSend('ck-'+code+'-g2-'+MP.myId, { ice:e.candidate }); };
@@ -5615,6 +5624,21 @@ $('mpjoin').addEventListener('click', async () => {
     sigSend('ck-'+code+'-join', { offer: off, from: MP.myId, n: 0 });
     mpStatus('⏳ Ev sahibine katılım isteği gönderildi…');
   } catch(e) { mpStatus('⚠️ Bağlanılamadı — manuel bağlantıyı deneyin.'); }
+});
+$('mpcopyroom').addEventListener('click', () => {
+  const code = MP.room;
+  if (!code || code === 'MANU') { mpStatus('✖ Önce bir dünya açın.'); return; }
+  const copyFallback = () => {
+    const ta = document.createElement('textarea'); ta.value = code; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    ta.remove();
+  };
+  try {
+    const p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : null;
+    if (p && p.then) p.then(()=>toast('📋 Davet kodu kopyalandı: '+code)).catch(()=>{ copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); });
+    else { copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); }
+  } catch(e) { copyFallback(); toast('📋 Davet kodu kopyalandı: '+code); }
 });
 $('mpjoincode').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g,'').slice(0,6); });
 
@@ -5964,6 +5988,10 @@ function startGame(mode) {
 }
 $('playc').addEventListener('click', () => startGame('creative'));
 $('plays').addEventListener('click', () => startGame('survival'));
+$('playfriends').addEventListener('click', () => {
+  startGame(gamemode === 'survival' ? 'survival' : 'creative');
+  setTimeout(openMP, 0);
+});
 updateHotbar(); updateHearts();
 
 let tickScale = 1, tickFrozen = false, lowFpsT = 0;
