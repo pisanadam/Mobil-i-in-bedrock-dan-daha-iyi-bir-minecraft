@@ -17,36 +17,11 @@ echo " CepKraft • Server.pro + deDYN Kurulumu"
 echo "=========================================="
 echo
 
-read -rp "deDYN ana alan adın (ör. akif.dedyn.io): " DEDYN_ZONE </dev/tty
-DEDYN_ZONE="${DEDYN_ZONE,,}"
-DEDYN_ZONE="${DEDYN_ZONE%.}"
-if [[ ! "${DEDYN_ZONE}" =~ ^[a-z0-9.-]+\.dedyn\.io$ ]]; then
-  echo "Geçersiz deDYN alan adı: ${DEDYN_ZONE}"
-  exit 1
-fi
+DEDYN_ZONE="pisankus.dedyn.io"
+SUBNAME="cakmamc"
+FQDN="cakmamc.pisankus.dedyn.io"
 
-read -rp "Bu Server.pro sunucusunun alt adı (ör. mc1, mc2): " SUBNAME </dev/tty
-SUBNAME="${SUBNAME,,}"
-SUBNAME="${SUBNAME// /-}"
-if [[ "${SUBNAME}" == "@" ]]; then SUBNAME=""; fi
-if [[ -n "${SUBNAME}" && ! "${SUBNAME}" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ && ! "${SUBNAME}" =~ ^[a-z0-9]$ ]]; then
-  echo "Geçersiz alt ad: ${SUBNAME}"
-  exit 1
-fi
-
-read -rsp "deSEC/deDYN tokeni: " DESEC_TOKEN </dev/tty
-echo
-if [[ -z "${DESEC_TOKEN}" ]]; then
-  echo "deSEC tokeni boş olamaz."
-  exit 1
-fi
-
-if [[ -n "${SUBNAME}" ]]; then
-  FQDN="${SUBNAME}.${DEDYN_ZONE}"
-else
-  FQDN="${DEDYN_ZONE}"
-fi
-
+echo "Hedef adres: ${FQDN}"
 echo
 echo "[1/8] Sistem paketleri hazırlanıyor..."
 export DEBIAN_FRONTEND=noninteractive
@@ -145,15 +120,7 @@ if [[ ! "${PUBLIC_IP}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
   read -rp "Server.pro public IPv4 adresini yaz: " PUBLIC_IP </dev/tty
 fi
 
-echo "[7/8] deDYN DNS kaydı ayarlanıyor: ${FQDN} -> ${PUBLIC_IP}"
-DNS_JSON="$(printf '[{"subname":"%s","type":"A","ttl":3600,"records":["%s"]}]' "${SUBNAME}" "${PUBLIC_IP}")"
-DNS_CODE="$(curl -sS   -o "${TMP}/desec.json"   -w '%{http_code}'   -X PATCH "https://desec.io/api/v1/domains/${DEDYN_ZONE}/rrsets/"   -H "Authorization: Token ${DESEC_TOKEN}"   -H "Content-Type: application/json"   --data "${DNS_JSON}")"
-if [[ "${DNS_CODE}" != "200" ]]; then
-  echo "deDYN DNS kaydı ayarlanamadı (HTTP ${DNS_CODE}):"
-  cat "${TMP}/desec.json"
-  exit 1
-fi
-
+echo "[7/8] DNS kaydı daha önce elle oluşturuldu: ${FQDN}"
 echo "[8/8] HTTPS/WSS reverse proxy ayarlanıyor..."
 cat >/etc/caddy/Caddyfile <<EOF
 ${FQDN} {
