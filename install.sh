@@ -17,7 +17,7 @@ echo " CepKraft • Server.pro + deDYN Kurulumu"
 echo "=========================================="
 echo
 
-read -rp "deDYN ana alan adın (ör. akif.dedyn.io): " DEDYN_ZONE
+read -rp "deDYN ana alan adın (ör. akif.dedyn.io): " DEDYN_ZONE </dev/tty
 DEDYN_ZONE="${DEDYN_ZONE,,}"
 DEDYN_ZONE="${DEDYN_ZONE%.}"
 if [[ ! "${DEDYN_ZONE}" =~ ^[a-z0-9.-]+\.dedyn\.io$ ]]; then
@@ -25,7 +25,7 @@ if [[ ! "${DEDYN_ZONE}" =~ ^[a-z0-9.-]+\.dedyn\.io$ ]]; then
   exit 1
 fi
 
-read -rp "Bu Server.pro sunucusunun alt adı (ör. mc1, mc2): " SUBNAME
+read -rp "Bu Server.pro sunucusunun alt adı (ör. mc1, mc2): " SUBNAME </dev/tty
 SUBNAME="${SUBNAME,,}"
 SUBNAME="${SUBNAME// /-}"
 if [[ "${SUBNAME}" == "@" ]]; then SUBNAME=""; fi
@@ -34,7 +34,7 @@ if [[ -n "${SUBNAME}" && ! "${SUBNAME}" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ && ! "$
   exit 1
 fi
 
-read -rsp "deSEC/deDYN tokeni: " DESEC_TOKEN
+read -rsp "deSEC/deDYN tokeni: " DESEC_TOKEN </dev/tty
 echo
 if [[ -z "${DESEC_TOKEN}" ]]; then
   echo "deSEC tokeni boş olamaz."
@@ -142,7 +142,7 @@ echo "[6/8] Server.pro public IPv4 bulunuyor..."
 PUBLIC_IP="$(curl -4 -fsS --max-time 10 https://api.ipify.org || true)"
 if [[ ! "${PUBLIC_IP}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
   echo "Public IPv4 otomatik bulunamadı."
-  read -rp "Server.pro public IPv4 adresini yaz: " PUBLIC_IP
+  read -rp "Server.pro public IPv4 adresini yaz: " PUBLIC_IP </dev/tty
 fi
 
 echo "[7/8] deDYN DNS kaydı ayarlanıyor: ${FQDN} -> ${PUBLIC_IP}"
