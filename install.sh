@@ -17,15 +17,6 @@ echo " CepKraft • Server.pro + deDYN Kurulumu"
 echo "=========================================="
 echo
 
-if [[ -z "${GH_TOKEN:-}" ]]; then
-  read -rsp "GitHub erişim tokeni (repo Contents: Read): " GH_TOKEN
-  echo
-fi
-if [[ -z "${GH_TOKEN}" ]]; then
-  echo "GitHub tokeni boş olamaz."
-  exit 1
-fi
-
 read -rp "deDYN ana alan adın (ör. akif.dedyn.io): " DEDYN_ZONE
 DEDYN_ZONE="${DEDYN_ZONE,,}"
 DEDYN_ZONE="${DEDYN_ZONE%.}"
@@ -87,12 +78,12 @@ else
   echo "[3/8] Caddy zaten kurulu."
 fi
 
-echo "[4/8] GitHub özel reposu indiriliyor..."
+echo "[4/8] GitHub reposu indiriliyor..."
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
-HTTP_CODE="$(curl -sS -L   -o "${TMP}/repo.tgz"   -w '%{http_code}'   -H "Authorization: Bearer ${GH_TOKEN}"   -H "Accept: application/vnd.github+json"   -H "X-GitHub-Api-Version: 2022-11-28"   "https://api.github.com/repos/${REPO}/tarball")"
+HTTP_CODE="$(curl -sS -L -o "${TMP}/repo.tgz" -w '%{http_code}' "https://codeload.github.com/${REPO}/tar.gz/HEAD")"
 if [[ "${HTTP_CODE}" != "200" ]]; then
-  echo "GitHub repo indirilemedi (HTTP ${HTTP_CODE}). Tokenin bu özel repo için Contents: Read izni olduğundan emin ol."
+  echo "GitHub repo indirilemedi (HTTP ${HTTP_CODE})."
   exit 1
 fi
 
