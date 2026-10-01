@@ -25,6 +25,8 @@ echo "Hedef adres: ${FQDN}"
 echo
 echo "[1/8] Sistem paketleri hazırlanıyor..."
 export DEBIAN_FRONTEND=noninteractive
+rm -f /etc/apt/sources.list.d/caddy-stable.list /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null || true
+systemctl disable --now caddy.service 2>/dev/null || true
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg git tar dnsutils debian-keyring debian-archive-keyring apt-transport-https
 
@@ -41,17 +43,10 @@ else
   echo "[2/8] Node.js uygun: $(node -v)"
 fi
 
-if ! command -v caddy >/dev/null 2>&1; then
-  echo "[3/8] Caddy kuruluyor..."
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'     | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'     | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
-  chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  chmod o+r /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -y
-  apt-get install -y caddy
-else
-  echo "[3/8] Caddy zaten kurulu."
-fi
+echo "[3/8] Nginx + Certbot kuruluyor..."
+apt-get update -y
+apt-get install -y nginx certbot python3-certbot-nginx
+systemctl enable --now nginx
 
 echo "[4/8] GitHub reposu indiriliyor..."
 TMP="$(mktemp -d)"
@@ -122,34 +117,62 @@ fi
 
 echo "[7/8] DNS kaydı daha önce elle oluşturuldu: ${FQDN}"
 echo "[8/8] HTTPS/WSS reverse proxy ayarlanıyor..."
-cat >/etc/caddy/Caddyfile <<EOF
-${FQDN} {
-    encode zstd gzip
-    reverse_proxy 127.0.0.1:${APP_PORT}
+
+cat >/etc/nginx/sites-available/cepkraft <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${FQDN};
+
+    client_max_body_size 2m;
+
+    location /ws {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_read_timeout 3600;
+        proxy_send_timeout 3600;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
 }
 EOF
 
-caddy validate --config /etc/caddy/Caddyfile
-systemctl enable caddy >/dev/null 2>&1 || true
-systemctl restart caddy
+ln -sfn /etc/nginx/sites-available/cepkraft /etc/nginx/sites-enabled/cepkraft
+rm -f /etc/nginx/sites-enabled/default
+nginx -t
+systemctl restart nginx
 
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
   ufw allow 80/tcp >/dev/null || true
   ufw allow 443/tcp >/dev/null || true
 fi
 
-echo
-echo "DNS'in bu IP'ye gelmesi bekleniyor (Caddy sertifikayı kendisi alacak)..."
+echo "DNS kontrol ediliyor: ${FQDN} -> ${PUBLIC_IP}"
 for _ in $(seq 1 60); do
   GOT="$(dig +short A "${FQDN}" @1.1.1.1 | tail -n1 || true)"
   if [[ "${GOT}" == "${PUBLIC_IP}" ]]; then break; fi
   sleep 2
 done
 
-systemctl restart caddy
-sleep 2
+GOT="$(dig +short A "${FQDN}" @1.1.1.1 | tail -n1 || true)"
+if [[ "${GOT}" != "${PUBLIC_IP}" ]]; then
+  echo "UYARI: DNS henüz ${PUBLIC_IP} adresine çözülmüyor (şu an: ${GOT:-yok})."
+  echo "HTTP çalışır; HTTPS sertifikası DNS oturunca tekrar denenebilir."
+else
+  certbot --nginx -d "${FQDN}" --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
+fi
 
-echo
 echo "=========================================="
 echo " ✅ CepKraft kurulumu tamamlandı"
 echo "=========================================="
@@ -160,8 +183,8 @@ echo " Public IP   : ${PUBLIC_IP}"
 echo
 echo " Kontrol:"
 echo "   systemctl status cepkraft --no-pager"
-echo "   systemctl status caddy --no-pager"
-echo "   curl -fsS https://${FQDN}/health"
+echo "   systemctl status nginx --no-pager"
+echo "   curl -fsS https://${FQDN}/health || curl -fsS http://${FQDN}/health"
 echo
 echo "Birden fazla Server.pro sunucun varsa bu komutu her sunucuda tekrar çalıştır;"
 echo "yalnız alt adı farklı seç (mc1, mc2, mc3 gibi)."
