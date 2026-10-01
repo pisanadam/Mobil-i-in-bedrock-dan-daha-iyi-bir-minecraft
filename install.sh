@@ -31,16 +31,23 @@ apt-get update -y
 apt-get install -y ca-certificates curl gnupg git tar dnsutils debian-keyring debian-archive-keyring apt-transport-https
 
 NODE_OK=0
-if command -v node >/dev/null 2>&1; then
+if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
   NODE_MAJOR="$(node -p "Number(process.versions.node.split('.')[0])" 2>/dev/null || echo 0)"
   if [[ "${NODE_MAJOR}" -ge 18 ]]; then NODE_OK=1; fi
 fi
 if [[ "${NODE_OK}" -ne 1 ]]; then
-  echo "[2/8] Node.js 22 kuruluyor..."
+  echo "[2/8] Node.js 22 + npm hazırlanıyor..."
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y nodejs
+  apt-get install -y --reinstall nodejs || apt-get install -y nodejs
+  if ! command -v npm >/dev/null 2>&1; then
+    apt-get install -y npm
+  fi
 else
-  echo "[2/8] Node.js uygun: $(node -v)"
+  echo "[2/8] Node.js/npm uygun: $(node -v) / npm $(npm -v)"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm kurulamadı; kurulum durduruldu."
+  exit 1
 fi
 
 echo "[3/8] Nginx + Certbot kuruluyor..."
