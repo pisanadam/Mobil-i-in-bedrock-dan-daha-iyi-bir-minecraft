@@ -173,18 +173,23 @@ else
   certbot --nginx -d "${FQDN}" --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
 fi
 
+if [[ -f "/etc/letsencrypt/live/${FQDN}/fullchain.pem" ]]; then
+  GAME_URL="https://${FQDN}"
+  WS_URL="wss://${FQDN}/ws"
+else
+  GAME_URL="http://${FQDN}"
+  WS_URL="ws://${FQDN}/ws"
+fi
+
 echo "=========================================="
 echo " ✅ CepKraft kurulumu tamamlandı"
 echo "=========================================="
-echo " Oyun adresi : https://${FQDN}"
-echo " WebSocket   : wss://${FQDN}/ws"
+echo " Oyun adresi : ${GAME_URL}"
+echo " WebSocket   : ${WS_URL}"
 echo " Yerel port  : ${APP_PORT}"
 echo " Public IP   : ${PUBLIC_IP}"
 echo
 echo " Kontrol:"
 echo "   systemctl status cepkraft --no-pager"
 echo "   systemctl status nginx --no-pager"
-echo "   curl -fsS https://${FQDN}/health || curl -fsS http://${FQDN}/health"
-echo
-echo "Birden fazla Server.pro sunucun varsa bu komutu her sunucuda tekrar çalıştır;"
-echo "yalnız alt adı farklı seç (mc1, mc2, mc3 gibi)."
+echo "   curl -fsS ${GAME_URL}/health"
